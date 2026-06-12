@@ -1,0 +1,100 @@
+/* ============================================================
+   Shared warm theme — dark & light mode.
+   Loaded AFTER each page's inline <style>, so the variable
+   values here override the page palettes. Pages keep their
+   original variable NAMES (--green = primary accent slot).
+   ============================================================ */
+
+/* ---------- WARM DARK (default) ---------- */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces — warm charcoal / espresso, not navy */
+  --bg:      #181411;
+  --bg2:     #1e1915;
+  --bg3:     #272019;
+  --card:    #221c16;
+  --panel:   #221c16;
+  --panel2:  #2a231b;
+
+  /* primary accent (fills the old NVIDIA-green slot) — warm amber */
+  --green:      #e69b3e;
+  --green-dim:  #b37428;
+  --green-glow: rgba(230, 155, 62, .20);
+  --on-accent:  #20150a;   /* text placed on top of the accent color */
+
+  /* text */
+  --text:  #ece5da;
+  --muted: #a99d8c;
+
+  /* lines */
+  --border: #383025;
+  --line:   #383025;
+
+  /* secondary semantic colors, warmed */
+  --red:    #e2604f;
+  --amber:  #e0b14b;
+  --blue:   #6aa3cf;
+  --purple: #b08ee6;
+  --cyan:   #58bfae;
+
+  --mono: ui-monospace, SFMono-Regular, Consolas, 'Cascadia Mono', Menlo, monospace;
+}
+
+/* ---------- WARM LIGHT ---------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:      #faf6ef;
+  --bg2:     #f3ecdf;
+  --bg3:     #ece2d1;
+  --card:    #fffdf8;
+  --panel:   #fffdf8;
+  --panel2:  #f7f1e6;
+
+  --green:      #b45309;
+  --green-dim:  #8a3f06;
+  --green-glow: rgba(180, 83, 9, .12);
+  --on-accent:  #ffffff;
+
+  --text:  #2d251c;
+  --muted: #7d7163;
+
+  --border: #e5d9c5;
+  --line:   #e5d9c5;
+
+  --red:    #bf4434;
+  --amber:  #b97c10;
+  --blue:   #2a6f9e;
+  --purple: #7a52c7;
+  --cyan:   #1c7f70;
+}
+
+/* ---------- shared refinements ---------- */
+::selection { background: var(--green); color: var(--on-accent); }
+
+body { transition: background-color .25s ease, color .25s ease; }
+
+/* floating light/dark toggle — present on every page */
+.theme-toggle {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 900;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, .22);
+  transition: transform .15s, border-color .15s;
+}
+.theme-toggle:hover { transform: scale(1.08); border-color: var(--green); }

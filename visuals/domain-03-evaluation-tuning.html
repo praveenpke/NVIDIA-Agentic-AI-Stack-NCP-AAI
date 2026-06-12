@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 3 — Evaluation and Tuning</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:780px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* 3D SCENE */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-canvas{width:100%;height:100%;display:block}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:330px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#8fa0b8}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:860px;margin-bottom:26px;font-size:.98rem}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;color:var(--green)}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-all}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* SVG diagrams */
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* BAR CHART */
+  .bars{display:flex;flex-direction:column;gap:14px;margin:14px 0}
+  .bar-row{display:grid;grid-template-columns:170px 1fr 150px;gap:12px;align-items:center;font-size:.84rem}
+  .bar-row .label{text-align:right;color:var(--text);font-weight:600}
+  .bar-row .track{background:var(--bg3);border-radius:8px;height:26px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .bar-row .fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-left:10px;font-size:.7rem;font-weight:700;color:var(--on-accent);white-space:nowrap}
+  .bar-row .note{color:var(--muted);font-size:.74rem}
+  @media (max-width:640px){.bar-row{grid-template-columns:1fr;gap:4px}.bar-row .label{text-align:left}}
+
+  /* LADDER */
+  .ladder{display:flex;align-items:flex-end;gap:10px;margin:22px 0;padding:8px 4px;overflow-x:auto}
+  .rung{flex:1;min-width:130px;border-radius:12px 12px 6px 6px;padding:14px 12px;text-align:center;position:relative;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel))}
+  .rung .step-num{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:var(--on-accent);font-weight:800;font-size:.7rem;border-radius:999px;padding:2px 10px}
+  .rung h5{font-size:.9rem;margin:6px 0 4px}
+  .rung p{font-size:.72rem;color:var(--muted)}
+  .rung .cost{margin-top:8px;font-size:.68rem;font-weight:700;letter-spacing:.04em}
+  .arrow-up{align-self:center;color:var(--green);font-size:1.3rem;flex:0 0 auto}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · D3</a>
+  <a href="#scene-wrap">3D Pipeline</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#offline-online">Offline vs Online</a>
+  <a href="#golden">Golden Sets</a>
+  <a href="#judge">LLM Judge</a>
+  <a href="#agent-metrics">Agent Metrics</a>
+  <a href="#rag-eval">RAG Eval</a>
+  <a href="#tuning">Tuning Ladder</a>
+  <a href="#benchmarks">Benchmarks</a>
+  <a href="#cigates">CI Gates</a>
+  <a href="#nvidia">NVIDIA Layer</a>
+  <a href="#frameworks">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#drills">Quiz</a>
+  <a href="#code-companion">Code Companion</a>
+  <a href="#voices">Engineer Takes</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Domain 3 <span class="pct">13% · ~8–9 questions</span></div>
+  <h1>Evaluation <span class="accent">&amp;</span> Tuning</h1>
+  <p class="hook">The <b>measure → diagnose → tune → gate</b> loop for agentic systems: score the agent's trajectory, find <b>which layer</b> is failing — prompt, retrieval, model skill, or alignment — then pick the <b>cheapest intervention that fixes it</b>.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover objects for info</div>
+  <div class="scene-legend">
+    <h4>Legend — the eval pipeline &amp; tuning ladder</h4>
+    <ul>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Cyan cubes = golden-dataset test cases flowing through evaluation</span></li>
+      <li><span class="sw" style="background:#4da3ff"></span><span>Judge stations: Exact-Match → LLM-Judge → Human (stamps each cube)</span></li>
+      <li><span class="sw" style="background:#76b900"></span><span>Green stamp = pass → scoreboard PASS; red = fail → feeds the tuning ladder</span></li>
+      <li><span class="sw" style="background:#b07cff"></span><span>Staircase = tuning escalation: Prompting → RAG → LoRA → SFT → DPO/RLHF</span></li>
+      <li><span class="sw" style="background:#e8a33d"></span><span>Amber bars beside each step = rising cost &amp; data needed per rung</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why &amp; how to think about it</div>
+  <h2>Mental model — the restaurant kitchen</h2>
+  <p class="lede">Agents are non-deterministic, multi-step systems: a single prompt tweak, model swap, or retriever change can silently break task completion, inflate cost, or introduce hallucinations. The exam tests: (a) measure rigorously offline + online, (b) diagnose <b>which layer</b> failed, (c) pick the <b>cheapest fix</b>.</p>
+
+  <div class="grid c4">
+    <div class="card cyan"><h4><span class="icon">🍽️</span>Offline eval</h4><p><b>Tasting-menu rehearsal</b> before opening night — fixed dishes (golden dataset), trusted critics (human eval / LLM judge), repeatable.</p></div>
+    <div class="card blue"><h4><span class="icon">👀</span>Online eval</h4><p><b>Reading the dining room</b> — real customers, A/B testing two recipes, watching ticket times (latency) and food cost per plate (cost per task).</p></div>
+    <div class="card amber"><h4><span class="icon">🧾</span>Cheap fixes first</h4><p>Fix the <b>recipe card</b> (prompt) → fix the <b>pantry/sourcing</b> (RAG: chunking, embeddings, reranker).</p></div>
+    <div class="card purple"><h4><span class="icon">👨‍🍳</span>Expensive fixes last</h4><p>Retrain the chef's <b>technique</b> (SFT/LoRA) → retrain the chef's <b>taste</b> (DPO/RLHF). <b>Never retrain the chef because the pantry was missing an ingredient.</b></p></div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 980 470" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker>
+      </defs>
+      <!-- top node -->
+      <rect x="390" y="10" width="200" height="44" rx="10" style="fill:var(--panel2);stroke:var(--green)"/>
+      <text x="490" y="37" text-anchor="middle" style="fill:var(--text)" font-size="14" font-weight="700">Agent / RAG system</text>
+      <!-- offline & online -->
+      <rect x="120" y="90" width="290" height="60" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/>
+      <text x="265" y="113" text-anchor="middle" style="fill:var(--cyan)" font-size="13" font-weight="700">OFFLINE EVAL</text>
+      <text x="265" y="132" text-anchor="middle" style="fill:var(--muted)" font-size="11">golden dataset · benchmarks · LLM-judge · human eval</text>
+      <rect x="570" y="90" width="290" height="60" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="715" y="113" text-anchor="middle" style="fill:var(--blue)" font-size="13" font-weight="700">ONLINE EVAL</text>
+      <text x="715" y="132" text-anchor="middle" style="fill:var(--muted)" font-size="11">A/B tests · user feedback · live metrics · drift detection</text>
+      <line x1="440" y1="54" x2="280" y2="90" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="540" y1="54" x2="700" y2="90" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- diagnose diamond -->
+      <polygon points="490,165 620,205 490,245 360,205" style="fill:var(--panel2);stroke:var(--amber)"/>
+      <text x="490" y="200" text-anchor="middle" style="fill:var(--amber)" font-size="13" font-weight="700">Diagnose</text>
+      <text x="490" y="218" text-anchor="middle" style="fill:var(--muted)" font-size="11">failure layer?</text>
+      <line x1="265" y1="150" x2="400" y2="190" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="715" y1="150" x2="580" y2="190" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- four fixes -->
+      <g font-size="11.5">
+        <rect x="20" y="285" width="215" height="62" rx="10" style="fill:var(--panel);stroke:var(--green)"/>
+        <text x="127" y="307" text-anchor="middle" style="fill:var(--green)" font-weight="700" font-size="12">Prompt optimization</text>
+        <text x="127" y="325" text-anchor="middle" style="fill:var(--muted)">wrong format / behavior,</text>
+        <text x="127" y="340" text-anchor="middle" style="fill:var(--muted)">fast iteration · ~free</text>
+        <rect x="260" y="285" width="215" height="62" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/>
+        <text x="367" y="307" text-anchor="middle" style="fill:var(--cyan)" font-weight="700" font-size="12">RAG tuning</text>
+        <text x="367" y="325" text-anchor="middle" style="fill:var(--muted)">missing / wrong FACTS retrieved:</text>
+        <text x="367" y="340" text-anchor="middle" style="fill:var(--muted)">chunking · embeddings · reranker</text>
+        <rect x="500" y="285" width="215" height="62" rx="10" style="fill:var(--panel);stroke:var(--purple)"/>
+        <text x="607" y="307" text-anchor="middle" style="fill:var(--purple)" font-weight="700" font-size="12">Fine-tuning</text>
+        <text x="607" y="325" text-anchor="middle" style="fill:var(--muted)">consistent SKILL / style / format gap:</text>
+        <text x="607" y="340" text-anchor="middle" style="fill:var(--muted)">SFT · LoRA/PEFT · QLoRA</text>
+        <rect x="740" y="285" width="220" height="62" rx="10" style="fill:var(--panel);stroke:var(--red)"/>
+        <text x="850" y="307" text-anchor="middle" style="fill:var(--red)" font-weight="700" font-size="12">Preference alignment</text>
+        <text x="850" y="325" text-anchor="middle" style="fill:var(--muted)">tone / preference / safety:</text>
+        <text x="850" y="340" text-anchor="middle" style="fill:var(--muted)">DPO · RLHF · GRPO</text>
+      </g>
+      <line x1="400" y1="225" x2="135" y2="285" style="stroke:var(--amber)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="455" y1="242" x2="375" y2="285" style="stroke:var(--amber)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="525" y1="242" x2="600" y2="285" style="stroke:var(--amber)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="580" y1="225" x2="840" y2="285" style="stroke:var(--amber)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <!-- gate -->
+      <rect x="320" y="385" width="340" height="48" rx="10" style="fill:var(--panel2);stroke:var(--green)" stroke-width="2"/>
+      <text x="490" y="406" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="700">Regression suite + CI eval gate</text>
+      <text x="490" y="424" text-anchor="middle" style="fill:var(--muted)" font-size="11">pass thresholds → deploy → monitor online</text>
+      <line x1="127" y1="347" x2="340" y2="390" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="367" y1="347" x2="420" y2="385" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="607" y1="347" x2="560" y2="385" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="850" y1="347" x2="645" y2="390" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <!-- feedback loop -->
+      <path d="M 660 409 C 930 409 950 120 862 120" fill="none" style="stroke:var(--blue)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrB)"/>
+      <text x="930" y="250" style="fill:var(--blue)" font-size="11" transform="rotate(90 930 250)" text-anchor="middle">deploy → monitor → repeat</text>
+    </svg>
+    <div class="caption">The loop is the point: <b>evaluate → diagnose → tune cheapest layer → re-evaluate via regression gate → deploy → monitor → repeat</b> (eval-driven development).</div>
+  </div>
+</section>
+
+<!-- ============ OFFLINE VS ONLINE ============ -->
+<section id="offline-online">
+  <div class="kicker">Section 2 · Core concepts</div>
+  <h2>Offline vs Online evaluation</h2>
+  <p class="lede">They are <b>complementary, not alternatives</b>. Pattern: offline gates block bad changes from shipping; online monitoring detects what offline missed; novel online failures get added back into the golden set.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th></th><th>Offline</th><th>Online</th></tr>
+    <tr><td><b>When</b></td><td class="good">Pre-deployment, in CI</td><td class="mid">Post-deployment, live traffic</td></tr>
+    <tr><td><b>Data</b></td><td>Golden/curated datasets, benchmarks</td><td>Real user queries</td></tr>
+    <tr><td><b>Examples</b></td><td>Benchmark runs, LLM-as-judge on test set, regression suites</td><td>A/B tests, canary releases, user thumbs up/down, CSAT, drift monitoring</td></tr>
+    <tr><td><b>Strength</b></td><td class="good">Repeatable, catches <b>known</b> failure modes, safe</td><td class="good">Catches <b>novel</b> failures, distribution shift, real user value</td></tr>
+    <tr><td><b>Weakness</b></td><td class="bad">Can't anticipate real-world distribution</td><td class="bad">Risky, slow, needs traffic + statistical significance</td></tr>
+  </table></div>
+
+  <h3>A/B testing flow <span class="tag">online</span></h3>
+  <div class="diagram">
+    <svg viewBox="0 0 960 96" font-family="inherit">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker></defs>
+      <g font-size="11.5">
+        <rect x="5" y="24" width="130" height="48" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="70" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Define</text><text x="70" y="61" text-anchor="middle" style="fill:var(--muted)">hypothesis</text>
+        <rect x="170" y="24" width="130" height="48" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="235" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Split traffic</text><text x="235" y="61" text-anchor="middle" style="fill:var(--muted)">e.g. 50 / 50</text>
+        <rect x="335" y="24" width="130" height="48" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="400" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Measure</text><text x="400" y="61" text-anchor="middle" style="fill:var(--muted)">key metrics</text>
+        <rect x="500" y="24" width="150" height="48" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="575" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Enough samples</text><text x="575" y="61" text-anchor="middle" style="fill:var(--muted)">~1,000+ / variant</text>
+        <rect x="685" y="24" width="140" height="48" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="755" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Significance</text><text x="755" y="61" text-anchor="middle" style="fill:var(--muted)">p &lt; 0.05</text>
+        <rect x="860" y="24" width="95" height="48" rx="9" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)"/><text x="907" y="45" text-anchor="middle" style="fill:var(--green)" font-weight="700">Ship</text><text x="907" y="61" text-anchor="middle" style="fill:var(--muted)">winner</text>
+      </g>
+      <line x1="135" y1="48" x2="170" y2="48" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="300" y1="48" x2="335" y2="48" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="465" y1="48" x2="500" y2="48" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="650" y1="48" x2="685" y2="48" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="825" y1="48" x2="860" y2="48" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arr2)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ============ GOLDEN DATASETS ============ -->
+<section id="golden">
+  <h2>Golden datasets</h2>
+  <p class="lede">A <b>golden dataset</b> is a curated, versioned set of input → expected-output (or expected-trajectory) pairs that represent your task distribution, including edge cases and known past failures.</p>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">✅</span>Human-verified ground truth</h4><p>Every example's expected output is verified by people — that's what makes it "golden".</p></div>
+    <div class="card green"><h4><span class="icon">🗂️</span>Version-controlled</h4><p>Versioned <b>alongside prompts and configs</b> so every score is reproducible.</p></div>
+    <div class="card green"><h4><span class="icon">🌱</span>Grows over time</h4><p><b>"Every production bug becomes a test case."</b> Novel online failures feed back into the set.</p></div>
+    <div class="card amber"><h4><span class="icon">⚖️</span>Quality &gt; quantity</h4><p>A few hundred well-chosen examples beat thousands of noisy ones.</p></div>
+    <div class="card blue" style="grid-column:span 2"><h4><span class="icon">🧪</span>Tiny example record</h4>
+      <p><code>{"input": "Cancel order #1234", "expected_tools": ["lookup_order", "cancel_order"], "expected_outcome": "order 1234 cancelled, confirmation sent"}</code></p>
+      <p style="margin-top:8px">Note it specifies expected <b>tools</b> and <b>outcome</b> — agents are scored on trajectories, not just final text.</p></div>
+  </div>
+</section>
+
+<!-- ============ LLM JUDGE ============ -->
+<section id="judge">
+  <h2>LLM-as-a-judge &amp; human evaluation</h2>
+  <p class="lede">Use a strong LLM to score outputs against a rubric — a scalable approximation of human judgment. The judge should be <b>at least as capable as (ideally stronger than, and different from)</b> the model being judged, with sufficient domain knowledge.</p>
+
+  <h3>Three judging modes</h3>
+  <div class="grid c3">
+    <div class="card blue"><h4><span class="icon">🎯</span>Single-output scoring</h4><p><b>Pointwise / direct scoring:</b> judge rates one answer on a scale or pass/fail against criteria (e.g., faithfulness 1–5). Low calibration on absolute scales — pairwise is more reliable.</p></div>
+    <div class="card blue"><h4><span class="icon">⚔️</span>Pairwise comparison</h4><p>Judge sees two answers (A vs B), picks the better. Best for relative model/prompt comparisons; outputs win rates / Elo-style rankings (Chatbot Arena style). <b>Always position-swap.</b></p></div>
+    <div class="card blue"><h4><span class="icon">📐</span>Reference-based</h4><p>Judge compares the output against a <b>gold reference answer</b> from the golden dataset.</p></div>
+  </div>
+
+  <h3>The three exam-named judge biases ⚠</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Bias</th><th>What happens</th><th>Mitigation</th></tr>
+    <tr><td><b>Position bias</b></td><td class="bad">In pairwise comparison, judge favors the answer in a particular slot (typically first / slot A) regardless of quality</td><td class="good"><b>Swap the order and judge twice</b> (both orderings); only count consistent verdicts, or randomize positions</td></tr>
+    <tr><td><b>Verbosity bias</b></td><td class="bad">Judge prefers longer answers even when not better (studies show 15–30 pts inflated preference for longer outputs)</td><td class="good">Rubrics that explicitly reward conciseness; length-controlled scoring; penalize padding</td></tr>
+    <tr><td><b>Self-preference (self-enhancement) bias</b></td><td class="bad">Judge favors outputs from itself / its own model family (~10–25%)</td><td class="good">Use a <b>different</b> model as judge than the one evaluated; use a panel/jury of diverse judges</td></tr>
+  </table></div>
+  <div class="callout warn"><b>⚠ Also known:</b> format bias, and low calibration on absolute scales — prefer <b>pairwise + position swapping</b>, or well-anchored rubrics.</div>
+
+  <h3>Human evaluation <span class="tag">gold standard</span></h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🥇</span>Role</h4><p>Gold standard for quality; used to <b>calibrate and validate LLM judges</b> (measure judge–human agreement before trusting the judge at scale). Forms: expert review, side-by-side preference annotation, user ratings.</p></div>
+    <div class="card red"><h4><span class="icon">🐢</span>Tradeoffs</h4><p>Most accurate for nuance/safety/domain correctness, but <b>slow, expensive, doesn't scale</b>, and suffers inter-annotator disagreement — mitigate with rubrics + multiple annotators + agreement metrics like <b>Cohen's kappa</b>.</p></div>
+  </div>
+  <div class="callout"><b>Production split:</b> humans label a small calibration set → LLM judge handles volume → humans audit samples.</div>
+</section>
+
+<!-- ============ AGENT METRICS ============ -->
+<section id="agent-metrics">
+  <div class="kicker">Section 3 · Scoring the agent itself</div>
+  <h2>Agent-specific metrics — trajectories, not trivia</h2>
+  <p class="lede">Model benchmarks (MMLU etc.) measure <b>static knowledge</b>; agent evaluation measures <b>dynamic behavior over trajectories</b>. NVIDIA's agent-eval guidance: prioritize task success, log full trajectories, treat tool usage as first-class, score reasoning + efficiency, and design for evaluability (stable IDs so trajectories can be reconstructed).</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Metric</th><th>Definition</th><th>Rule-of-thumb target / notes</th></tr>
+    <tr><td><b>Task completion rate (TSR / goal completion)</b></td><td>% of tasks where the agent achieved the user's goal end-to-end. Define task = intent + constraints ("update record via this API within 2 tool calls")</td><td class="good">The headline metric. <b>&gt;85%</b> for production; measure under normal, degraded, and ambiguous scenarios</td></tr>
+    <tr><td><b>Tool-call accuracy</b></td><td>Right tool, schema-valid &amp; correct arguments? (tool selection precision/recall, parameter correctness)</td><td class="good"><b>&gt;90%</b>. Also detect <b>hallucinated tools/APIs</b> (calling tools that don't exist) and tool overuse</td></tr>
+    <tr><td><b>Trajectory / step efficiency</b></td><td>steps_optimal / steps_taken (3 needed, 7 taken → ~43%). Trajectory eval can require exact, in-order, or any-order match of expected steps</td><td class="mid">Inefficient trajectories = higher latency + cost; compare against a reference trajectory</td></tr>
+    <tr><td><b>Hallucination rate</b></td><td>% of responses with claims unsupported by retrieved context / ground truth</td><td class="good"><b>&lt;5%</b> in RAG settings; measured via groundedness checks (LLM judge or NLI)</td></tr>
+    <tr><td><b>Reasoning accuracy</b></td><td>Correctness of intermediate reasoning steps, not just the final answer</td><td class="good"><b>&gt;90%</b> on critical tasks; catches "right answer, wrong reasoning"</td></tr>
+    <tr><td><b>Latency</b></td><td>End-to-end response time; also per-step. P50/P95/P99</td><td class="mid"><b>&lt;5 s interactive, &lt;30 s async</b> (rules of thumb); agents multiply LLM calls so it compounds</td></tr>
+    <tr><td><b>Cost per task</b></td><td>Total LLM tokens + tool/API calls + infra per completed task</td><td class="mid">Tracks economic viability; trajectory inefficiency directly inflates it</td></tr>
+  </table></div>
+
+  <h3>Step efficiency, visualized</h3>
+  <div class="bars">
+    <div class="bar-row"><div class="label">Optimal trajectory</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--green-dim),var(--green))">3 steps needed → 100%</div></div><div class="note">reference trajectory</div></div>
+    <div class="bar-row"><div class="label">Observed trajectory</div><div class="track"><div class="fill" style="width:43%;background:linear-gradient(90deg,var(--amber),var(--red))">7 steps taken → ~43%</div></div><div class="note">extra steps = latency + cost</div></div>
+  </div>
+  <div class="callout"><b>Key diagnostic artifact:</b> the <b>failure-mode distribution</b> — where in the trajectory do failures occur: planning, tool call, or synthesis?</div>
+</section>
+
+<!-- ============ RAG EVAL ============ -->
+<section id="rag-eval">
+  <h2>RAG evaluation — two halves</h2>
+  <p class="lede">Evaluate retrieval and generation <b>separately</b>: the half that fails tells you what to fix. Bad end-to-end with recall@k = 0.9 → fix the generator; with recall@k = 0.4 → fix chunking/embeddings/reranker.</p>
+
+  <h3>Half 1 — Retrieval metrics <span class="tag">did we fetch the right chunks?</span></h3>
+  <p class="flow-note">Computed against labeled query→relevant-doc pairs (e.g., BEIR-format datasets).</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Metric</th><th>Question it answers</th><th>Order-aware?</th><th>Tiny example</th></tr>
+    <tr><td><b>Recall@k</b></td><td>Of <b>all relevant docs</b>, what fraction appear in top-k? (coverage)</td><td class="bad">No</td><td>12 of 20 relevant docs in top-50 → Recall@50 = 0.6</td></tr>
+    <tr><td><b>Precision@k</b></td><td>Of the <b>top-k retrieved</b>, what fraction are relevant? (noise)</td><td class="bad">No</td><td>3 relevant of top-5 → P@5 = 0.6</td></tr>
+    <tr><td><b>MRR</b> (Mean Reciprocal Rank)</td><td>How early does the <b>first</b> relevant doc appear? Average of 1/rank<sub>first relevant</sub></td><td class="good">Yes (first hit only)</td><td>First relevant at rank 2 → RR = 0.5</td></tr>
+    <tr><td><b>NDCG@k</b></td><td>Quality of the <b>whole ranking</b> with <b>graded</b> relevance (0–5), discounted by position; normalized vs ideal ranking</td><td class="good">Yes (full list, graded)</td><td>Highly-relevant doc at rank 4 instead of 1 → NDCG drops</td></tr>
+  </table></div>
+  <p class="flow-note">Formulas: <code>MRR = (1/|Q|) Σ 1/rank_first_relevant</code> · <code>DCG@k = Σ rel_i / log2(i+1)</code> · <code>NDCG@k = DCG@k / IDCG@k</code> (ideal ranking → NDCG = 1.0).</p>
+  <div class="grid c3">
+    <div class="card red"><h4><span class="icon">📉</span>Low recall@k</h4><p>The answer isn't even in context — the model <b>can't</b> be right. Fix retrieval first.</p></div>
+    <div class="card amber"><h4><span class="icon">🗑️</span>Low precision@k</h4><p>Context stuffed with junk → confusion / hallucination risk, wasted tokens.</p></div>
+    <div class="card blue"><h4><span class="icon">🔝</span>Why rank matters</h4><p>MRR/NDCG matter because <b>LLMs weight earlier context more</b>.</p></div>
+  </div>
+
+  <h3>Half 2 — Generation metrics: the RAGAS triad <span class="tag">LLM-judged, reference-free</span></h3>
+  <div class="diagram">
+    <svg viewBox="0 0 720 330" font-family="inherit">
+      <!-- triangle -->
+      <line x1="360" y1="50" x2="130" y2="270" style="stroke:var(--blue)" stroke-width="2.5"/>
+      <line x1="130" y1="270" x2="590" y2="270" style="stroke:var(--green)" stroke-width="2.5"/>
+      <line x1="590" y1="270" x2="360" y2="50" style="stroke:var(--purple)" stroke-width="2.5"/>
+      <!-- nodes -->
+      <circle cx="360" cy="50" r="36" style="fill:var(--panel);stroke:var(--amber)" stroke-width="2"/>
+      <text x="360" y="55" text-anchor="middle" style="fill:var(--amber)" font-size="13" font-weight="800">Question</text>
+      <circle cx="130" cy="270" r="36" style="fill:var(--panel);stroke:var(--cyan)" stroke-width="2"/>
+      <text x="130" y="266" text-anchor="middle" style="fill:var(--cyan)" font-size="12" font-weight="800">Retrieved</text>
+      <text x="130" y="282" text-anchor="middle" style="fill:var(--cyan)" font-size="12" font-weight="800">context</text>
+      <circle cx="590" cy="270" r="36" style="fill:var(--panel);stroke:var(--green)" stroke-width="2"/>
+      <text x="590" y="275" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="800">Answer</text>
+      <!-- edge labels -->
+      <rect x="120" y="125" width="150" height="40" rx="8" style="fill:var(--bg2);stroke:var(--blue)"/>
+      <text x="195" y="142" text-anchor="middle" style="fill:var(--blue)" font-size="12" font-weight="700">Context relevance</text>
+      <text x="195" y="157" text-anchor="middle" style="fill:var(--muted)" font-size="10">is context relevant to question?</text>
+      <rect x="280" y="282" width="160" height="40" rx="8" style="fill:var(--bg2);stroke:var(--green)"/>
+      <text x="360" y="299" text-anchor="middle" style="fill:var(--green)" font-size="12" font-weight="700">Faithfulness</text>
+      <text x="360" y="314" text-anchor="middle" style="fill:var(--muted)" font-size="10">are answer claims in context?</text>
+      <rect x="455" y="125" width="150" height="40" rx="8" style="fill:var(--bg2);stroke:var(--purple)"/>
+      <text x="530" y="142" text-anchor="middle" style="fill:var(--purple)" font-size="12" font-weight="700">Answer relevance</text>
+      <text x="530" y="157" text-anchor="middle" style="fill:var(--muted)" font-size="10">does answer address question?</text>
+    </svg>
+    <div class="caption">The triad covers the three edges of the question ↔ context ↔ answer triangle.</div>
+  </div>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Metric</th><th>Measures</th><th>Diagnoses</th></tr>
+    <tr><td><b>Faithfulness / groundedness</b></td><td>Are claims in the <b>answer</b> supported by the <b>retrieved context</b>? (claims supported ÷ total claims, 0–1)</td><td class="bad">Hallucination by the generator</td></tr>
+    <tr><td><b>Answer relevance</b></td><td>Does the <b>answer</b> actually address the <b>question</b>? (RAGAS: generate questions from the answer, cosine-similarity to original question)</td><td class="mid">Evasive, off-topic, or incomplete answers</td></tr>
+    <tr><td><b>Context relevance (context precision/recall)</b></td><td>Is the <b>retrieved context</b> relevant to the <b>question</b>, with minimal noise?</td><td class="mid">Retrieval quality, as seen from the generation side</td></tr>
+  </table></div>
+  <div class="callout"><b>Key exam pattern:</b> faithful but wrong overall = <b>retrieval problem</b>; relevant context but unfaithful answer = <b>generation problem</b>.</div>
+</section>
+
+<!-- ============ TUNING ============ -->
+<section id="tuning">
+  <div class="kicker">Section 4 · Fixing what eval found</div>
+  <h2>The tuning decision tree — cheapest fix that works</h2>
+  <p class="lede"><b>Exam mantra: prompt → RAG → fine-tune → align.</b> Most "we need fine-tuning" requests are actually solved by prompting or retrieval. <b>Fine-tuning is for skills/behavior; RAG is for knowledge/facts</b> — fine-tuning does NOT reliably inject up-to-date facts; RAG can't fix style/format inconsistency at scale.</p>
+
+  <div class="ladder">
+    <div class="rung" style="border-bottom:4px solid var(--green)"><span class="step-num">1</span><h5>🗒️ Prompting</h5><p>Instructions, few-shot examples, output schemas</p><div class="cost" style="color:var(--green)">~free · minutes · no data</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--cyan)"><span class="step-num">2</span><h5>📚 RAG tuning</h5><p>Chunking, embedding model, reranker, hybrid search, top-k</p><div class="cost" style="color:var(--cyan)">facts &amp; fresh knowledge</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--purple)"><span class="step-num">3</span><h5>🔧 LoRA / QLoRA</h5><p>PEFT adapters; QLoRA = 4-bit base for small GPUs</p><div class="cost" style="color:var(--purple)">100s–10k examples</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--amber)"><span class="step-num">4</span><h5>🏋️ Full SFT</h5><p>All weights updated; best quality ceiling</p><div class="cost" style="color:var(--amber)">most data + GPU memory</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--red)"><span class="step-num">5</span><h5>🎭 DPO / RLHF</h5><p>Preference alignment on (chosen, rejected) pairs</p><div class="cost" style="color:var(--red)">preference pairs</div></div>
+  </div>
+  <div class="callout"><b>Climb the ladder, never jump it:</b> each rung is ~10× the cost of the previous; most production issues die on the first two rungs. Re-run the full eval suite after every rung — fixes at one layer routinely regress another (e.g., a reranker change shifting answer style).</div>
+
+  <h3>Decision flow</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 980 360" font-family="inherit">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--muted)"/></marker></defs>
+      <rect x="390" y="8" width="200" height="40" rx="9" style="fill:var(--panel2);stroke:var(--red)"/>
+      <text x="490" y="33" text-anchor="middle" style="fill:var(--text)" font-size="13" font-weight="700">Quality problem detected</text>
+      <g font-size="11">
+        <polygon points="490,70 660,108 490,146 320,108" style="fill:var(--panel);stroke:var(--green)"/>
+        <text x="490" y="100" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">Better instructions, few-shot,</text>
+        <text x="490" y="116" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">or output schemas fix it?</text>
+        <rect x="40" y="86" width="190" height="46" rx="9" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)"/>
+        <text x="135" y="105" text-anchor="middle" style="fill:var(--green)" font-weight="700" font-size="12">Prompt optimization</text>
+        <text x="135" y="122" text-anchor="middle" style="fill:var(--muted)">~free, minutes, no data needed</text>
+        <polygon points="490,170 660,208 490,246 320,208" style="fill:var(--panel);stroke:var(--cyan)"/>
+        <text x="490" y="200" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">Failure about FACTS /</text>
+        <text x="490" y="216" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">fresh or private knowledge?</text>
+        <rect x="30" y="184" width="210" height="50" rx="9" style="fill:color-mix(in srgb, var(--cyan) 12%, var(--panel));stroke:var(--cyan)"/>
+        <text x="135" y="203" text-anchor="middle" style="fill:var(--cyan)" font-weight="700" font-size="12">RAG tuning</text>
+        <text x="135" y="219" text-anchor="middle" style="fill:var(--muted)">chunk size/strategy · embeddings ·</text>
+        <text x="135" y="231" text-anchor="middle" style="fill:var(--muted)">reranker · hybrid search · top-k</text>
+        <polygon points="490,268 670,306 490,344 310,306" style="fill:var(--panel);stroke:var(--purple)"/>
+        <text x="490" y="298" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">Consistent SKILL, STYLE, FORMAT,</text>
+        <text x="490" y="314" text-anchor="middle" style="fill:var(--text)" font-weight="700" font-size="12">or domain vocabulary?</text>
+        <rect x="30" y="282" width="210" height="50" rx="9" style="fill:color-mix(in srgb, var(--purple) 12%, var(--panel));stroke:var(--purple)"/>
+        <text x="135" y="301" text-anchor="middle" style="fill:var(--purple)" font-weight="700" font-size="12">Fine-tuning</text>
+        <text x="135" y="316" text-anchor="middle" style="fill:var(--muted)">SFT full or LoRA/PEFT/QLoRA</text>
+        <text x="135" y="328" text-anchor="middle" style="fill:var(--muted)">needs 100s–10k labeled examples</text>
+        <rect x="740" y="282" width="220" height="50" rx="9" style="fill:color-mix(in srgb, var(--red) 12%, var(--panel));stroke:var(--red)"/>
+        <text x="850" y="301" text-anchor="middle" style="fill:var(--red)" font-weight="700" font-size="12">Preference alignment</text>
+        <text x="850" y="316" text-anchor="middle" style="fill:var(--muted)">DPO preferred, RLHF classic</text>
+        <text x="850" y="328" text-anchor="middle" style="fill:var(--muted)">needs preference pairs</text>
+      </g>
+      <line x1="490" y1="48" x2="490" y2="70" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arr3)"/>
+      <line x1="320" y1="108" x2="230" y2="108" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="270" y="100" style="fill:var(--green)" font-size="11" text-anchor="middle">Yes</text>
+      <line x1="490" y1="146" x2="490" y2="170" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="505" y="163" style="fill:var(--muted)" font-size="11">No</text>
+      <line x1="320" y1="208" x2="240" y2="208" style="stroke:var(--cyan)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="275" y="200" style="fill:var(--cyan)" font-size="11" text-anchor="middle">Yes</text>
+      <line x1="490" y1="246" x2="490" y2="268" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="505" y="262" style="fill:var(--muted)" font-size="11">No</text>
+      <line x1="310" y1="306" x2="240" y2="306" style="stroke:var(--purple)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="270" y="298" style="fill:var(--purple)" font-size="11" text-anchor="middle">Yes</text>
+      <line x1="670" y1="306" x2="740" y2="306" style="stroke:var(--red)" stroke-width="1.8" marker-end="url(#arr3)"/><text x="705" y="296" style="fill:var(--red)" font-size="10" text-anchor="middle">No — it's TONE /</text><text x="705" y="322" style="fill:var(--red)" font-size="10" text-anchor="middle">PREFERENCE / safety</text>
+    </svg>
+  </div>
+
+  <h3>RAG tuning levers <span class="tag">when retrieval metrics are low</span></h3>
+  <div class="grid c2">
+    <div class="card cyan"><h4><span class="icon">✂️</span>Chunking</h4><p>Typical <b>100–600 tokens</b> (up to ~1,024 for dense financial docs). NVIDIA's study found <b>page-level chunking</b> gave the best <b>average</b> end-to-end accuracy (<b>0.648 avg, lowest variance</b>) vs token-based (128–2,048 w/ 15% overlap) and section-level — but the optimum varies per corpus (per-dataset winners ranged 512–1,024 tokens), so <b>test on your data</b>.</p></div>
+    <div class="card cyan"><h4><span class="icon">🧲</span>Embedding model</h4><p>Swap to a stronger / domain-tuned retriever (or LoRA-fine-tune the embedder); measured with <b>recall@k / NDCG</b>.</p></div>
+    <div class="card cyan"><h4><span class="icon">🥇</span>Reranker</h4><p>Add a <b>cross-encoder</b> reranking stage over a wider candidate set (retrieve top-50 → rerank → keep top-5) — boosts precision of final context, improving accuracy <b>and</b> reducing tokens sent to the LLM.</p></div>
+    <div class="card cyan"><h4><span class="icon">🛠️</span>Also</h4><p>Hybrid (dense+sparse) search, metadata filtering, query rewriting, tuning top-k.</p></div>
+  </div>
+
+  <h3>Fine-tuning family</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Technique</th><th>What it is</th><th>Data / compute</th><th>When</th></tr>
+    <tr><td><b>SFT (full)</b></td><td>Update <b>all weights</b> on instruction→response pairs</td><td class="bad">Most data + GPU memory (full model in training precision); best quality ceiling</td><td>Production-grade deep adaptation, big budgets</td></tr>
+    <tr><td><b>LoRA (PEFT)</b></td><td>Freeze base; train small low-rank adapter matrices (<b>~0.1–1% of params</b>); adapters are swappable &amp; serveable per-tenant</td><td class="good">100s–10k quality examples; far less GPU; ~$5–15 cloud for 8B / 1k examples</td><td><b>Default fine-tune</b> for domain vocab, format, tool-calling skill</td></tr>
+    <tr><td><b>QLoRA</b></td><td>LoRA on top of a <b>4-bit-quantized</b> base model</td><td class="good">Fine-tune 7–8B on <b>8–12 GB consumer GPU</b>; near-LoRA quality</td><td>Tight GPU budgets, experimentation</td></tr>
+    <tr><td><b>DPO</b></td><td>Direct Preference Optimization: train directly on (prompt, chosen, rejected) pairs with a simple classification-style loss; <b>no reward model, no RL loop</b></td><td class="good">Preference pairs; cheaper, more stable than RLHF; <b>now the production default</b></td><td>Tone, helpfulness, preference alignment <b>after SFT</b></td></tr>
+    <tr><td><b>RLHF (PPO)</b></td><td>Train a <b>reward model</b> from human rankings, then RL-optimize the policy against it</td><td class="bad">Most complex / expensive pipeline; can be unstable</td><td>Frontier-scale alignment; classic approach DPO largely displaced</td></tr>
+    <tr><td><b>GRPO</b></td><td>Group Relative Policy Optimization — RL variant (reasoning-focused, used in NeMo Customizer)</td><td></td><td>Reasoning-style preference training</td></tr>
+  </table></div>
+  <div class="callout"><b>SFT vs alignment:</b> SFT teaches <b>what to do</b> from demonstrations; alignment shapes <b>preference/tone</b>. Typical recipe: <b>SFT first, then DPO on top</b>.</div>
+</section>
+
+<!-- ============ BENCHMARKS ============ -->
+<section id="benchmarks">
+  <h2>Benchmarks — what they measure (and what they don't)</h2>
+  <p class="lede">Public benchmarks ≠ your task; always pair with custom evals, and beware <b>benchmark contamination</b> (test data leaked into training data). High MMLU does not predict agent task success.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Benchmark</th><th>What it measures</th><th>Gotcha</th></tr>
+    <tr><td><b>MMLU</b></td><td>Knowledge + problem solving: <b>57 subjects, multiple-choice, accuracy</b></td><td class="bad">Measures <b>model</b> knowledge breadth, not agent behavior; vendor-reported scores often use inconsistent prompting</td></tr>
+    <tr><td><b>HELM</b> (Stanford)</td><td><b>Holistic</b> multi-metric framework: <b>7 metrics</b> (accuracy, calibration, robustness, fairness, bias, toxicity, efficiency) across <b>16 scenarios</b>; standardized + transparent</td><td class="mid">A methodology/framework, not a single score; HELM-MMLU = standardized MMLU runs</td></tr>
+    <tr><td><b>GSM8K / MATH</b></td><td>Grade-school / competition math reasoning</td><td></td></tr>
+    <tr><td><b>HumanEval / MBPP</b> (BigCode)</td><td>Code generation functional correctness (<b>pass@k</b>)</td><td></td></tr>
+    <tr><td><b>BFCL</b> (Berkeley Function-Calling Leaderboard)</td><td>Tool / function-calling accuracy</td><td class="good"><b>The agent-relevant one</b></td></tr>
+    <tr><td><b>IFEval</b></td><td>Instruction following</td><td></td></tr>
+    <tr><td><b>TruthfulQA, HellaSwag, ARC, Winogrande, BBH</b></td><td>Truthfulness / commonsense / reasoning (LM-Harness suite)</td><td></td></tr>
+    <tr><td><b>Domain benchmarks</b></td><td>Your golden dataset + domain sets (FinanceBench, MedQA, ProfBench for professional agentic tasks…)</td><td class="mid">Public benchmarks ≠ your task; pair with custom evals; beware contamination</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ CI GATES ============ -->
+<section id="cigates">
+  <h2>Regression testing, EDD &amp; CI eval gates</h2>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">🔁</span>Regression testing</h4><p>Every prompt/model/retriever change re-runs the golden suite; compare against baseline; any metric drop beyond tolerance = regression. <b>Version everything together:</b> dataset version + prompt version + model + config.</p></div>
+    <div class="card green"><h4><span class="icon">🧪</span>Eval-driven development (EDD)</h4><p>Like TDD — write/extend evals <b>before or alongside</b> the feature; every production failure becomes a new eval case; iterate until evals pass; ship.</p></div>
+    <div class="card green"><h4><span class="icon">🚦</span>CI eval gates</h4><p>Automated merge-blocking checks (e.g., GitHub Actions) run the eval suite on each PR and <b>block deploys if scores fall below thresholds</b> (e.g., "TSR ≥ 85%, faithfulness ≥ 0.8, no metric drops &gt;2 pts"). Catch regressions human review misses. Account for non-determinism: multiple runs / temperature 0 / statistical thresholds.</p></div>
+  </div>
+  <div class="callout"><b>Loop closure:</b> the same checks run online — when online metrics diverge from offline baselines → investigate drift, harvest new eval cases into the golden set.</div>
+</section>
+
+<!-- ============ NVIDIA ============ -->
+<section id="nvidia">
+  <div class="kicker">Section 5 · The NVIDIA layer</div>
+  <h2>NVIDIA tools — who measures, who tunes, who profiles</h2>
+  <p class="lede">Exam questions love swapping these: <b>Evaluator measures · Customizer tunes · Agent Toolkit profiles &amp; evaluates agent workflows</b>.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">📏</span>NeMo Evaluator <span class="pill g">measures</span></h4>
+      <p>THE evaluation microservice of the NeMo platform. Evaluates <b>LLMs, retriever pipelines, RAG pipelines, and AI agents</b> via API: create eval <b>target</b> + eval <b>config</b> → launch eval <b>job</b>.</p>
+      <ul>
+        <li><b>Academic harnesses:</b> LM Evaluation Harness (60+ benchmarks: MMLU, GSM8K, HellaSwag, BBH, TruthfulQA, ARC, IFEval, MGSM…), BigCode (HumanEval, MBPP), BFCL (function calling), Safety Harness, Simple Evals</li>
+        <li><b>Custom evals:</b> similarity metrics (F1, ROUGE vs ground truth) and LLM-as-a-Judge — <b>any NIM can be judge</b>; <code>chat-completion</code> task = generate-then-judge; <code>data</code> task = judge pre-existing prompt/response pairs</li>
+        <li><b>Retriever evals:</b> BEIR-format datasets with Recall@K, NDCG@K</li>
+        <li><b>RAG evals:</b> faithfulness, answer relevancy, context precision (RAGAS-style)</li>
+        <li><b>Agent evals:</b> multi-step reasoning, tool-use accuracy, topic adherence, goal completion (ProfBench supported)</li>
+        <li>NeMo Evaluator <b>SDK is open source</b> for reproducible benchmarking</li>
+      </ul>
+    </div>
+    <div class="card purple"><h4><span class="icon">🔧</span>NeMo Customizer <span class="pill p">tunes</span></h4>
+      <p>THE tuning microservice — API-first fine-tuning on top of NeMo Framework.</p>
+      <ul>
+        <li>Supports <b>LoRA (PEFT config), full SFT (<code>all_weights</code> config), DPO, GRPO, knowledge distillation, and LoRA fine-tuning of embedding models</b></li>
+        <li>LoRA config = experimentation / limited resources; <code>all_weights</code> = max performance</li>
+        <li>Pairs with NeMo Evaluator in the loop: <b>customize → evaluate → deploy via NIM</b></li>
+      </ul>
+    </div>
+    <div class="card blue"><h4><span class="icon">🤖</span>NeMo Agent Toolkit <span class="pill b">profiles + evaluates</span></h4>
+      <p>Open source (fka AgentIQ / AIQ); <b>framework-agnostic</b> agent profiling + evaluation. <b><code>nat eval</code></b> CLI takes the workflow YAML (with an <code>eval</code> section: dataset, evaluators, <code>general.output_dir</code>, <code>general.profiler</code>, max_jobs) and runs dataset → workflow → evaluators.</p>
+      <ul>
+        <li><b>Built-in evaluators:</b> <code>ragas</code> (public RAGAS API), <code>trajectory</code> (LangChain/LangGraph agent trajectory eval), <code>tunable_rag_evaluator</code> (customizable LLM judge for RAG), <code>langsmith</code> / <code>langsmith_custom</code></li>
+        <li>Install <code>nvidia-nat[eval]</code> (+ profiler package)</li>
+        <li><b>Profiler:</b> per-step latency, token usage, workflow runtime forecasts, bottleneck detection — outputs workflow outputs + evaluator outputs + profiler artifacts</li>
+      </ul>
+    </div>
+    <div class="card cyan"><h4><span class="icon">🧲</span>NeMo Retriever NIMs <span class="pill b">RAG levers</span></h4>
+      <p>The RAG-tuning levers as products.</p>
+      <ul>
+        <li><b>Embedding NIMs:</b> NV-EmbedQA-E5-v5, NV-EmbedQA-Mistral7B-v2 (multilingual), Snowflake-Arctic-Embed-L</li>
+        <li><b>Reranking NIM:</b> NV-RerankQA-Mistral4B-v3 — LoRA-tuned Mistral, <b>first 16 layers only, binary classification head</b></li>
+        <li>Adding the reranking NIM over a wider retrieval set <b>improves accuracy and cuts cost</b> (fewer, better chunks to the LLM)</li>
+      </ul>
+    </div>
+    <div class="card amber"><h4><span class="icon">🗄️</span>NeMo Data Store / Datasets</h4>
+      <p>Stores eval datasets &amp; fine-tuning data for the microservices (<b>HF-compatible API</b>). Golden datasets live here in the NeMo platform flow.</p>
+    </div>
+    <div class="card red"><h4><span class="icon">🛡️</span>NeMo Guardrails</h4>
+      <p>Not an evaluator per se, but <b>runtime hallucination / groundedness checks</b> (fact-checking rails) complement offline eval.</p>
+    </div>
+  </div>
+
+  <div class="callout"><b>When NVIDIA vs generic:</b> NeMo Evaluator for managed, API-driven, reproducible eval of NIM-deployed models/RAG/agents inside the NeMo platform (the flywheel: <b>Curator → Customizer → Evaluator → Guardrails → NIM</b>). NeMo Agent Toolkit for framework-agnostic (LangGraph, CrewAI, etc.) agent-level eval + profiling in your own repo/CI. Generic tools (RAGAS, LangSmith…) integrate <b>inside</b> the Agent Toolkit anyway.</div>
+</section>
+
+<!-- ============ DECISION FRAMEWORKS ============ -->
+<section id="frameworks">
+  <h2>Decision frameworks — symptom → action</h2>
+
+  <h3>Tuning method selection <span class="tag">the big one</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Symptom</th><th>Best first action</th><th>Why not the others</th></tr>
+    <tr><td>Wrong output format / tone varies / misses instructions occasionally</td><td class="good"><b>Prompt optimization</b> (instructions, few-shot, schema)</td><td>Free + minutes; tuning is overkill</td></tr>
+    <tr><td>Answers lack fresh/private/company facts; recall@k low</td><td class="good"><b>RAG tuning</b> (or add RAG)</td><td>Fine-tuning doesn't reliably inject facts and goes stale</td></tr>
+    <tr><td>Context retrieved is noisy, right doc ranked low</td><td class="good"><b>Add reranker</b> / better embeddings / fix chunking</td><td>Generation-side fixes can't repair bad context</td></tr>
+    <tr><td>Faithfulness low but retrieval metrics high</td><td class="good"><b>Generation side:</b> grounding prompt, stronger LLM, fine-tune for groundedness</td><td>Retrieval is already fine</td></tr>
+    <tr><td>Consistent domain vocabulary / format / tool-calling skill gaps despite good prompts</td><td class="good"><b>LoRA SFT</b> (QLoRA if GPU-poor; full SFT for max perf)</td><td>Prompting plateaued; it's a skill, not a fact</td></tr>
+    <tr><td>Output style/tone/preference issues, have human preference pairs</td><td class="good"><b>DPO</b> (RLHF only for frontier-scale, reward-model setups)</td><td>DPO is cheaper/more stable, no reward model</td></tr>
+    <tr><td>Base model fundamentally too weak</td><td class="good"><b>Upgrade base model</b></td><td>Fine-tuning can't fix a weak foundation</td></tr>
+  </table></div>
+
+  <h3>Evaluation method selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>Repeatable pre-deploy check on known cases</td><td class="good">Offline eval on golden dataset</td></tr>
+    <tr><td>Compare two prompts/models for "which is better"</td><td class="good">Pairwise LLM-judge comparison <b>with position swapping</b></td></tr>
+    <tr><td>Score open-ended quality at scale</td><td class="good">LLM-as-a-judge with rubric, calibrated against human labels</td></tr>
+    <tr><td>Final authority on nuance/safety/domain correctness</td><td class="good">Human eval</td></tr>
+    <tr><td>Validate change on real users</td><td class="good">Online A/B test (≥ ~1k interactions/variant, p &lt; 0.05)</td></tr>
+    <tr><td>Catch regressions on every PR</td><td class="good">CI eval gate on golden suite with thresholds</td></tr>
+    <tr><td>Rank retrieval quality with graded relevance</td><td class="good">NDCG@k (MRR if you only care about first hit; recall@k for coverage; precision@k for noise)</td></tr>
+  </table></div>
+
+  <h3>NVIDIA tool selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Task</th><th>Tool</th></tr>
+    <tr><td>Run MMLU/GSM8K/BFCL on a NIM-deployed model via API</td><td class="good">NeMo Evaluator (LM-Harness / BigCode / BFCL types)</td></tr>
+    <tr><td>Judge custom outputs with another NIM as judge</td><td class="good">NeMo Evaluator LLM-as-a-Judge</td></tr>
+    <tr><td>Evaluate retriever with Recall@K, NDCG@K (BEIR data)</td><td class="good">NeMo Evaluator retriever pipeline eval</td></tr>
+    <tr><td>Evaluate a LangGraph agent's trajectory + profile latency/tokens in CI</td><td class="good">NeMo Agent Toolkit <code>nat eval</code> (+ profiler)</td></tr>
+    <tr><td>LoRA / SFT / DPO / GRPO a model via API</td><td class="good">NeMo Customizer</td></tr>
+    <tr><td>Improve retrieval ranking in production RAG</td><td class="good">NeMo Retriever reranking NIM</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 6 · Don't fall for these</div>
+  <h2>⚠ Exam traps &amp; gotchas</h2>
+  <div class="grid c2">
+    <div class="trap"><h4><span class="n">#1</span>"Fine-tune to add new facts"</h4><p>Trap. Fine-tuning teaches <b>behavior/skills/style</b>; for facts and fresh knowledge use <span class="fix">RAG</span>. Knowledge changes → <span class="fix">re-index documents, not re-train</span>.</p></div>
+    <div class="trap"><h4><span class="n">#2</span>Position bias fix ≠ better prompt wording</h4><p>The fix for pairwise judging is <span class="fix">swapping answer order and judging both orderings</span> (or randomization) — not just telling the judge to be fair.</p></div>
+    <div class="trap"><h4><span class="n">#3</span>Self-preference bias</h4><p>Using GPT-X to judge GPT-X's outputs inflates scores; the fix is a <span class="fix">different (and stronger) judge model or a panel of judges</span>.</p></div>
+    <div class="trap"><h4><span class="n">#4</span>Recall@k vs precision@k inversion</h4><p>Recall@k = fraction of <b>all relevant docs</b> captured in top-k (coverage); precision@k = fraction of <b>top-k</b> that is relevant (noise). <span class="fix">Low recall → answer missing from context; low precision → context noise/hallucination risk</span>.</p></div>
+    <div class="trap"><h4><span class="n">#5</span>MRR vs NDCG</h4><p>MRR only cares about the rank of the <b>first</b> relevant result (binary relevance); NDCG scores the <b>whole ranked list</b> with <b>graded</b> relevance. <span class="fix">"Graded relevance, position-discounted" → NDCG</span>.</p></div>
+    <div class="trap"><h4><span class="n">#6</span>Faithfulness ≠ answer relevance ≠ correctness</h4><p>Faithfulness = answer↔context consistency (an answer can be faithful to retrieved context and still factually wrong if retrieval was bad); answer relevance = answer↔question fit. <span class="fix">A perfectly faithful "I don't know" can have low answer relevance</span>.</p></div>
+    <div class="trap"><h4><span class="n">#7</span>Offline pass ≠ production safe</h4><p>Golden-set success doesn't cover distribution shift; the exam answer is <span class="fix">"both offline gates AND online monitoring," never one alone</span>.</p></div>
+    <div class="trap"><h4><span class="n">#8</span>DPO vs RLHF</h4><p>DPO needs <b>no reward model and no RL loop</b> (direct loss on preference pairs); RLHF trains a separate reward model then runs PPO. <span class="fix">"Simpler / cheaper / more stable preference alignment" → DPO</span>.</p></div>
+    <div class="trap"><h4><span class="n">#9</span>LoRA vs QLoRA</h4><p>Both train low-rank adapters; QLoRA additionally <b>quantizes the frozen base to 4-bit</b>, slashing memory (7–8B on ~8–12 GB). <span class="fix">"Fine-tune on a single small GPU" → QLoRA</span>.</p></div>
+    <div class="trap"><h4><span class="n">#10</span>MMLU vs HELM</h4><p>MMLU is <b>one benchmark</b> (57-subject multiple choice, accuracy). HELM is a <b>holistic framework</b> (7 metrics × many scenarios incl. calibration, robustness, fairness, toxicity, efficiency). <span class="fix">"Evaluates beyond accuracy" → HELM</span>.</p></div>
+    <div class="trap"><h4><span class="n">#11</span>Task completion ≠ tool-call accuracy</h4><p>An agent can call every tool correctly and still fail the goal (bad plan/synthesis), or complete the task with wasteful extra calls (low step efficiency). <span class="fix">Measured separately; trajectory logs needed to tell them apart</span>.</p></div>
+    <div class="trap"><h4><span class="n">#12</span>Evaluator vs Customizer vs Agent Toolkit</h4><p>Evaluator <b>measures</b> (benchmarks, judge, RAG/agent metrics); Customizer <b>tunes</b> (LoRA/SFT/DPO/GRPO); Agent Toolkit <b>profiles &amp; evaluates agent workflows</b> in your code (<code>nat eval</code>). <span class="fix">Questions love swapping these</span>.</p></div>
+    <div class="trap"><h4><span class="n">#13</span>Benchmark scores as production proof</h4><p>High MMLU doesn't predict agent task success; agent eval needs <span class="fix">trajectory-level, task-specific metrics</span>. Also beware test-set contamination in public benchmarks.</p></div>
+    <div class="trap"><h4><span class="n">#14</span>Verbosity bias</h4><p>Longer ≠ better; judges inflate long answers. If two answers tie on content, an LLM judge will often pick the longer. <span class="fix">Control for length in rubrics</span>.</p></div>
+  </div>
+</section>
+
+<!-- ============ DRILLS ============ -->
+<section id="drills">
+  <div class="kicker">Section 7 · Test yourself</div>
+  <h2>Scenario drills — click to reveal</h2>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>Your RAG agent's answers are fluent but contradict the retrieved documents. Faithfulness = 0.55, context relevance = 0.9. What do you tune?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The generation side</b> — grounding instructions, stronger LLM / judge-gated regeneration, or fine-tune for groundedness.<span class="why">Retrieval is fine (context relevance 0.9); the generator is hallucinating past good context.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>Recall@10 is 0.35 on your retriever eval; answers frequently miss key facts. First fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>RAG tuning: improve retrieval</b> — chunking strategy, better/domain-tuned embedding model, hybrid search, raise k + rerank.<span class="why">The right info never reaches the model, so prompt or fine-tune changes can't help.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>You compare prompt v2 vs v1 with GPT-judge pairwise eval; v2 "wins" 70%. A colleague reruns with answer order flipped and v1 wins 65%. What happened and what's the fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Position bias.</b><span class="why">Fix: judge both orderings (swap A/B) and count only consistent wins, or randomize positions across the dataset.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>A legal-tech agent must always output a strict JSON citation schema. Prompt engineering gets you to 92% compliance, but at 10k requests/day that's 800 failures. Plenty of labeled examples exist. Best next step?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>LoRA SFT (PEFT)</b> on the labeled examples.<span class="why">Consistent format/behavior at scale is the textbook fine-tuning trigger — a skill gap, not a knowledge gap, and prompting has plateaued.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span>Team wants to align a support bot's tone using 5k (chosen, rejected) response pairs, minimal infra budget, no reward-model expertise. Which technique?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>DPO</b> — trains directly on preference pairs, no reward model or RL loop, cheaper and more stable than RLHF.<span class="why">In NeMo: a Customizer DPO job.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>You need to benchmark a NIM-deployed Llama model on MMLU and GSM8K, judge custom chat responses with another NIM as evaluator, and score your retriever with Recall@K/NDCG@K — all via API in the NeMo platform. Which component?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>NeMo Evaluator microservice</b>.<span class="why">It covers academic harness benchmarks, LLM-as-a-judge (any NIM as judge), and retriever/RAG pipeline metrics in one service via eval targets / configs / jobs.</span></div>
+  </details>
+
+  <h3>Builder's corner — habits that make this real</h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🌱</span>Golden set from day one</h4><p>Harvest from production forever — even <b>30 cases</b> catches regressions manual review misses. Wire <code>nat eval</code> (or your harness) into CI as a merge-blocking gate with explicit thresholds (e.g., TSR ≥ 85%, faithfulness ≥ 0.8); version dataset + prompt + model config together.</p></div>
+    <div class="card green"><h4><span class="icon">🧾</span>Log full trajectories with stable IDs</h4><p>From the first commit: plans, tool calls, args, retries, tokens, latency per step. You <b>cannot compute</b> tool-call accuracy, step efficiency, or failure-mode distribution retroactively from final answers. The Agent Toolkit profiler gives you this almost free.</p></div>
+    <div class="card green"><h4><span class="icon">✂️</span>Evaluate halves before end-to-end</h4><p>recall@k = 0.9 → fix the generator; recall@k = 0.4 → fix chunking/embeddings/reranker. Chunking optima vary wildly per corpus (page-level best on average at 0.648 accuracy, per-dataset winners 512–1,024 tokens) — <b>sweep it on your own data</b>.</p></div>
+    <div class="card green"><h4><span class="icon">🧑‍⚖️</span>Your judge is a model too</h4><p>Calibrate it against ~100 human-labeled examples, check agreement, always position-swap pairwise comparisons, and use a <b>different model family</b> as judge than the one being judged.</p></div>
+  </div>
+</section>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code-companion">
+  <div class="kicker">Section 8 · Hands-on</div>
+  <h2>Code Companion — the domain in runnable snippets</h2>
+  <p class="lede">Every core idea from this domain, reduced to the smallest piece of code that exercises it: golden-set regression suites, position-swapped LLM judging, the RAGAS triad, trajectory scoring, <code>nat eval</code>, CI gates, and the LoRA-vs-Customizer split.</p>
+
+  <div class="card green">
+    <h4><span class="icon">🧪</span>1 · Minimal pytest eval harness <span class="pill g">golden JSONL → run agent → assert</span></h4>
+    <pre class="code-block"><code># test_agent_eval.py — run with: pytest -q
+import json, pathlib, pytest
+from my_agent import run_agent  # your agent: returns {"answer": str, "tool_calls": [str, ...]}
+
+CASES = [json.loads(l) for l in pathlib.Path("golden.jsonl").read_text().splitlines()]
+# golden.jsonl line: {"id":"t1","input":"Cancel order #1234","expected_tools":["lookup_order","cancel_order"],"expected_outcome":"order 1234 cancelled"}
+
+@pytest.mark.parametrize("case", CASES, ids=[c["id"] for c in CASES])
+def test_golden_case(case):
+    out = run_agent(case["input"])
+    # Task completion: cheap substring oracle (swap in an LLM judge for open-ended outputs)
+    assert case["expected_outcome"].lower() in out["answer"].lower()
+    # Tool-call accuracy: in-order match of expected tools + precision over actual calls
+    expected, actual = case["expected_tools"], out["tool_calls"]
+    assert [t for t in actual if t in expected] == expected, f"order/selection wrong: {actual}"
+    assert sum(t in expected for t in actual) / max(len(actual), 1) &gt;= 0.9, "tool overuse"</code></pre>
+    <p><b>What to notice:</b> this is the whole "golden dataset + regression suite" concept (§3.2, §3.9) in 15 lines — each JSONL row is one versioned test case, pytest's parametrize gives per-case pass/fail, and task completion is asserted <b>separately</b> from tool-call accuracy because they fail independently (trap #11).</p>
+  </div>
+
+  <div class="card blue">
+    <h4><span class="icon">⚖️</span>2 · LLM-as-a-judge on a NIM endpoint <span class="pill b">pairwise + position swap</span></h4>
+    <pre class="code-block"><code>import os
+from openai import OpenAI  # NIM endpoints are OpenAI-API compatible
+
+client = OpenAI(base_url="https://integrate.api.nvidia.com/v1",  # or http://localhost:8000/v1 for a local NIM
+                api_key=os.environ["NVIDIA_API_KEY"])
+RUBRIC = ("You judge two answers to a question. Prefer factual accuracy and instruction-following; "
+          "do NOT reward length. Reply with exactly one character: A or B.")
+
+def judge_once(q, first, second):
+    r = client.chat.completions.create(
+        model="meta/llama-3.3-70b-instruct", temperature=0,
+        messages=[{"role": "system", "content": RUBRIC},
+                  {"role": "user", "content": f"Question: {q}\n\nAnswer A:\n{first}\n\nAnswer B:\n{second}"}])
+    return r.choices[0].message.content.strip()[0]
+
+def judge_pairwise(q, ans_a, ans_b):
+    v1 = judge_once(q, ans_a, ans_b)   # ans_a in slot A
+    v2 = judge_once(q, ans_b, ans_a)   # swapped — defeats position bias
+    if v1 == "A" and v2 == "B": return "A"      # consistent under swap
+    if v1 == "B" and v2 == "A": return "B"
+    return "tie"  # verdict flipped with position → position-biased, count as tie</code></pre>
+    <p><b>What to notice:</b> the only NVIDIA-specific part is <code>base_url</code> — everything else is the standard OpenAI client, which is exactly how NIM positions itself. The double call with swapped slots and "only count consistent verdicts" is the canonical position-bias mitigation (§3.3, trap #2); the rubric line about length addresses verbosity bias.</p>
+  </div>
+
+  <div class="card cyan">
+    <h4><span class="icon">📐</span>3 · RAGAS triad on a small dataset <span class="pill b">NIM judge + NV-EmbedQA embeddings</span></h4>
+    <pre class="code-block"><code>from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings  # reads NVIDIA_API_KEY
+from ragas import evaluate, EvaluationDataset
+from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.metrics import Faithfulness, ResponseRelevancy, LLMContextPrecisionWithReference
+
+rows = [{  # column names are fixed by ragas v0.2+
+    "user_input": "What does the NV-RerankQA NIM do?",
+    "retrieved_contexts": ["NV-RerankQA-Mistral4B-v3 is a cross-encoder reranking model ..."],
+    "response": "It reranks retrieved passages so the most relevant chunks reach the LLM.",
+    "reference": "It is NVIDIA's reranking NIM that re-scores candidate passages for relevance.",
+}]
+result = evaluate(
+    EvaluationDataset.from_list(rows),
+    metrics=[Faithfulness(), ResponseRelevancy(), LLMContextPrecisionWithReference()],
+    llm=LangchainLLMWrapper(ChatNVIDIA(model="meta/llama-3.3-70b-instruct")),
+    embeddings=LangchainEmbeddingsWrapper(NVIDIAEmbeddings(model="nvidia/nv-embedqa-e5-v5")),
+)
+print(result)  # e.g. {'faithfulness': 1.0, 'answer_relevancy': 0.97, 'llm_context_precision_with_reference': 1.0}</code></pre>
+    <p><b>What to notice:</b> the three metrics are the three triangle edges from §3.6 — answer↔context, answer↔question, context↔question. <code>ResponseRelevancy</code> needs the <code>embeddings</code> argument (it embeds judge-generated questions and cosine-compares them to the original question). Older form was lowercase singleton instances <code>from ragas.metrics import faithfulness, answer_relevancy, context_precision</code> passed with an HF <code>Dataset</code>; ragas v0.2+ uses metric classes and <code>EvaluationDataset.from_list</code>.</p>
+  </div>
+
+  <div class="card purple">
+    <h4><span class="icon">🗺️</span>4 · LangGraph agent trajectory <span class="pill p">score tool-call accuracy programmatically</span></h4>
+    <pre class="code-block"><code>from langchain.agents import create_agent  # LangChain 1.x; older form was langgraph.prebuilt.create_react_agent
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from my_tools import lookup_order, cancel_order
+
+agent = create_agent(ChatNVIDIA(model="meta/llama-3.3-70b-instruct"), tools=[lookup_order, cancel_order])
+state = agent.invoke({"messages": [{"role": "user", "content": "Cancel order #1234"}]})
+
+# Trajectory = the full message history; tool calls live on AIMessage.tool_calls
+actual = [tc["name"] for m in state["messages"]
+          if getattr(m, "tool_calls", None) for tc in m.tool_calls]
+args_ok = all("1234" in str(tc["args"]) for m in state["messages"]
+              if getattr(m, "tool_calls", None) for tc in m.tool_calls)  # parameter correctness
+expected = ["lookup_order", "cancel_order"]
+in_order = [t for t in actual if t in expected] == expected          # in-order trajectory match
+selection_precision = sum(t in expected for t in actual) / max(len(actual), 1)
+step_efficiency = len(expected) / max(len(actual), 1)                # 1.0 = optimal path
+print(actual, in_order, args_ok, round(selection_precision, 2), round(step_efficiency, 2))</code></pre>
+    <p><b>What to notice:</b> no extra tracing infrastructure needed — LangGraph's returned state <b>is</b> the trajectory, and the numbers computed here map one-to-one onto the §3.5 metrics table (tool selection, parameter correctness, step efficiency). This same messages list is what NAT's <code>trajectory</code> evaluator and LangSmith trajectory evals consume.</p>
+  </div>
+
+  <div class="card green">
+    <h4><span class="icon">🛠️</span>5 · NeMo Agent Toolkit eval config <span class="pill g">nat eval · ragas + trajectory evaluators</span></h4>
+    <pre class="code-block"><code># eval_config.yml — run: nat eval --config_file eval_config.yml   (pip install "nvidia-nat[eval]")
+llms:
+  judge_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+
+eval:
+  general:
+    output_dir: ./.tmp/nat/eval_output
+    dataset:
+      _type: json
+      file_path: data/golden_dataset.json   # also supports jsonl, csv, xlsx, parquet
+  evaluators:
+    rag_accuracy:
+      _type: ragas
+      metric: AnswerAccuracy        # also: ContextRelevance, ResponseGroundedness
+      llm_name: judge_llm
+    traj_accuracy:
+      _type: trajectory             # judges the LangChain/LangGraph tool-call trajectory
+      llm_name: judge_llm</code></pre>
+    <p><b>What to notice:</b> this single YAML drives dataset → workflow → evaluators, the exact <code>nat eval</code> flow from §4 — the <code>ragas</code> evaluator scores answer quality while <code>trajectory</code> has the judge LLM score the intermediate tool-call path, covering both halves of trap #11. Add <code>profiler:</code> under <code>general</code> and the same run also emits per-step latency/token bottleneck artifacts.</p>
+  </div>
+
+  <div class="card amber">
+    <h4><span class="icon">🚦</span>6 · CI eval gate <span class="pill a">fail the PR when scores drop below threshold</span></h4>
+    <pre class="code-block"><code># .github/workflows/eval-gate.yml
+name: eval-gate
+on: [pull_request]
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}   # judge + agent both hit build.nvidia.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: pytest tests/evals -q          # snippet 1 harness; writes eval_scores.json
+      - name: Threshold gate (merge-blocking)
+        run: |
+          python -c "
+          import json, sys; s = json.load(open('eval_scores.json'))
+          ok = s['task_success'] &gt;= 0.85 and s['faithfulness'] &gt;= 0.80
+          print(s); sys.exit(0 if ok else 1)"</code></pre>
+    <p><b>What to notice:</b> a CI eval gate is just "run the golden suite, exit non-zero under threshold" — the exit code is what blocks the merge (§3.9). The thresholds (TSR ≥ 0.85, faithfulness ≥ 0.80) are the rule-of-thumb numbers from §3.5; pin <code>temperature=0</code> and/or average multiple runs inside the harness so non-determinism doesn't flake the gate.</p>
+  </div>
+
+  <div class="card purple">
+    <h4><span class="icon">🪛</span>7 · LoRA fine-tune skeleton <span class="pill p">HF peft — and when to call NeMo Customizer instead</span></h4>
+    <pre class="code-block"><code>from peft import LoraConfig, get_peft_model, TaskType
+
+cfg = LoraConfig(task_type=TaskType.CAUSAL_LM,
+                 r=16, lora_alpha=32, lora_dropout=0.05,          # rank + scaling: the knobs that matter
+                 target_modules=["q_proj", "k_proj", "v_proj", "o_proj"])  # attention projections
+model = get_peft_model(base_model, cfg)   # base stays frozen; only adapters train
+model.print_trainable_parameters()        # e.g. "trainable params: 0.26%" — the whole point of PEFT</code></pre>
+    <p>Call <b>NeMo Customizer</b> instead when you want managed, API-first tuning inside the NeMo platform (dataset in Data Store, output deployable as a NIM, paired with Evaluator in the flywheel) rather than owning your own GPU training loop:</p>
+    <pre class="code-block"><code>curl -X POST "$CUSTOMIZER_URL/v1/customization/jobs" -H "Content-Type: application/json" -d '{
+  "config": "meta/llama-3.2-1b-instruct@v1.0.0+A100",
+  "dataset": {"name": "citation-format-v3"},
+  "hyperparameters": {
+    "training_type": "sft", "finetuning_type": "lora",
+    "epochs": 10, "batch_size": 16, "learning_rate": 0.0001,
+    "lora": {"adapter_dim": 8, "adapter_dropout": 0.1}
+  }}'</code></pre>
+    <p><b>What to notice:</b> peft's <code>r</code> and Customizer's <code>lora.adapter_dim</code> are the same concept (adapter rank); <code>finetuning_type: "lora"</code> vs <code>"all_weights"</code> is the Customizer-side LoRA-vs-full-SFT switch from §4, and <code>training_type</code> flips to <code>"dpo"</code> for preference alignment. Newer NeMo platform releases also expose an SDK form (<code>sdk.customization.jobs.create(...)</code> with a <code>training.peft.type="lora"</code> spec) layered on top of this REST shape.</p>
+  </div>
+</section>
+
+<!-- ============ ENGINEER TAKES ============ -->
+<section id="voices">
+  <div class="kicker">Section 9 · Field notes</div>
+  <h2>What top engineers are saying (2025–26)</h2>
+  <p class="lede">The practitioners who shaped the modern eval discourse — error analysis first, binary judgments over Likert scales, judges that themselves need evaluation, and evals as the unit-test suite of AI products.</p>
+
+  <div class="grid c2">
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Hamel Husain <span class="pill g">hamel.dev</span></h4>
+      <p><b>"Your AI Product Needs Evals"</b> — Across consulting engagements he found unsuccessful AI products almost always share one root cause: no systematic evaluation system; he prescribes three levels (assertion-style unit tests, human + model eval on logged traces, A/B tests) and insists teams build trace-viewing tools and <b>look at their data</b>.</p>
+      <p><b>Why it matters:</b> the founding text of the modern eval discourse — it maps directly onto this domain's offline/online split and CI-gate material.</p>
+      <p><a href="https://hamel.dev/blog/posts/evals/" target="_blank" rel="noopener">hamel.dev/blog/posts/evals/</a></p>
+    </div>
+    <div class="card blue">
+      <h4><span class="icon">🗣️</span>Hamel Husain &amp; Shreya Shankar <span class="pill b">LLM Evals FAQ · AI Evals course (hamel.dev, Maven)</span></h4>
+      <p>Their most repeated take: do <b>error analysis first</b> (read traces, open-code failures, categorize and <b>count</b> them) before writing any automated metric, and prefer <b>binary pass/fail judgments over Likert scales</b> — 1-5 ratings produce inconsistent annotators, middle-value dodging, and bigger sample-size requirements.</p>
+      <p><b>Why it matters:</b> this sharpens the exam's LLM-as-judge material — a binary, rubric-anchored judge is far easier to calibrate against humans than an absolute 1-5 scorer (§3.3's "low calibration on absolute scales").</p>
+      <p><a href="https://hamel.dev/blog/posts/evals-faq/" target="_blank" rel="noopener">hamel.dev/blog/posts/evals-faq/</a></p>
+    </div>
+    <div class="card purple">
+      <h4><span class="icon">🗣️</span>Shreya Shankar <span class="pill p">"Who Validates the Validators?" (EvalGen paper) + course discourse</span></h4>
+      <p>Her research formalized <b>criteria drift</b>: your evaluation criteria change <b>as you grade outputs</b>, so a judge rubric can't be fully specified up front — it must be iteratively refined against human labels, and after labeling a batch you should redo open coding because your own standards shifted.</p>
+      <p><b>Why it matters:</b> the academic backbone for §8's "treat your LLM judge as a model that itself needs eval."</p>
+      <p><a href="https://arxiv.org/abs/2404.12272" target="_blank" rel="noopener">arxiv.org/abs/2404.12272</a> · <a href="https://www.aakashg.com/hamel-shreya-ai-evals-step-by-step/" target="_blank" rel="noopener">course distillation</a></p>
+    </div>
+    <div class="card amber">
+      <h4><span class="icon">🗣️</span>Eugene Yan <span class="pill a">"An LLM-as-Judge Won't Save The Product — Fixing Your Process Will" (eugeneyan.com)</span></h4>
+      <p>The judge is not a shortcut around process: teams need a disciplined loop of sampling data → annotating → aligning the judge, and the realistic bar is a judge with <b>higher recall and consistency than human annotators</b> — its true benefit is scalability (hundreds of samples in minutes, 24/7), not superhuman accuracy.</p>
+      <p><b>Why it matters:</b> strong framing for judge-human agreement questions — calibrate on human labels, then let the judge scale (§3.4).</p>
+      <p><a href="https://eugeneyan.com/writing/eval-process/" target="_blank" rel="noopener">eugeneyan.com/writing/eval-process/</a></p>
+    </div>
+    <div class="card cyan">
+      <h4><span class="icon">🗣️</span>Eugene Yan <span class="pill b">"Product Evals in Three Simple Steps" (eugeneyan.com)</span></h4>
+      <p>Eval-driven development compressed to three steps: label some data, align an LLM-evaluator to those labels, then run the eval harness on <b>every change</b> — making evals the unit-test suite of AI products.</p>
+      <p><b>Why it matters:</b> this is exactly the EDD + regression-gate loop in §3.9, stated by the practitioner who popularized the framing.</p>
+      <p><a href="https://eugeneyan.com/writing/product-evals/" target="_blank" rel="noopener">eugeneyan.com/writing/product-evals/</a></p>
+    </div>
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Anthropic Engineering <span class="pill g">"Demystifying evals for AI agents" (Jan 2026)</span></h4>
+      <p>Field-tested agent-eval guidance: start with just 20-50 tasks harvested from real failures (early changes have large effect sizes, so small n suffices); combine three grader types (code-based, model-based, human); layer automated CI evals + production monitoring + A/B tests + transcript review because "no single evaluation layer catches every issue"; and distinguish <b>pass@k</b> (≥1 success in k tries) from <b>pass^k</b> (all k succeed — the reliability metric for production agents).</p>
+      <p><b>Why it matters:</b> "You won't know if your graders are working well unless you read the transcripts" is the current strongest statement of trajectory-reading discipline.</p>
+      <p><a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents" target="_blank" rel="noopener">anthropic.com/engineering/demystifying-evals-for-ai-agents</a></p>
+    </div>
+    <div class="card red">
+      <h4><span class="icon">🗣️</span>Anthropic <span class="pill r">Bloom — open-source automated behavioral evals (Dec 2025)</span></h4>
+      <p>Bloom turns a single behavior specification into a complete evaluation suite via an understanding → ideation → rollout → judgment agentic pipeline — a signal of where the field is heading: agents generating and grading evals for agents, with humans auditing.</p>
+      <p><b>Why it matters:</b> useful context for "design for evaluability" and the scaling limits of hand-built golden sets.</p>
+      <p><a href="https://alignment.anthropic.com/2025/bloom-auto-evals/" target="_blank" rel="noopener">alignment.anthropic.com/2025/bloom-auto-evals/</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>NeMo Evaluator concepts &amp; types — <a href="https://docs.nvidia.com/nemo/microservices/latest/about/core-concepts/evaluation.html">docs.nvidia.com/nemo/microservices/…/evaluation</a> · <a href="https://docs.nvidia.com/nemo/microservices/25.4.0/evaluate/evaluation-types.html">evaluation-types</a></li>
+    <li>NeMo Evaluator LLM-as-a-Judge — <a href="https://docs.nvidia.com/nemo/microservices/latest/evaluate/flows/llm-as-a-judge.html">docs.nvidia.com/…/llm-as-a-judge</a></li>
+    <li>NVIDIA blog — AI Agent Evaluation — <a href="https://developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation/">developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation</a></li>
+    <li>NeMo Agent Toolkit eval &amp; profiler — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html">docs.nvidia.com/nemo/agent-toolkit/…/evaluate</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a></li>
+    <li>NeMo Customizer — <a href="https://developer.nvidia.com/nemo-customizer">developer.nvidia.com/nemo-customizer</a> · <a href="https://docs.nvidia.com/nemo/microservices/latest/fine-tune/tutorials/index.html">fine-tune tutorials</a></li>
+    <li>NVIDIA blog — chunking strategy study — <a href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/">finding-the-best-chunking-strategy</a></li>
+    <li>NVIDIA blog — reranking for RAG — <a href="https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/">enhancing-rag-pipelines-with-re-ranking</a> · <a href="https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/">reranking microservice accuracy &amp; costs</a></li>
+    <li>RAGAS paper &amp; docs — <a href="https://arxiv.org/pdf/2309.15217">arxiv.org/pdf/2309.15217</a> · <a href="https://docs.ragas.io/en/v0.1.21/concepts/metrics/">docs.ragas.io metrics</a></li>
+    <li>LLM-judge biases — <a href="https://www.evidentlyai.com/llm-guide/llm-as-a-judge">evidentlyai.com</a> · <a href="https://arxiv.org/html/2410.21819v2">self-preference (arXiv)</a> · <a href="https://arxiv.org/html/2406.07791v5">position bias (arXiv)</a> · <a href="https://cameronrwolfe.substack.com/p/llm-as-a-judge">cameronrwolfe.substack.com</a></li>
+    <li>Retrieval metrics — <a href="https://weaviate.io/blog/retrieval-evaluation-metrics">weaviate.io</a> · <a href="https://towardsdatascience.com/how-to-evaluate-retrieval-quality-in-rag-pipelines-part-3-dcgk-and-ndcgk/">towardsdatascience.com NDCG</a></li>
+    <li>Agent metrics guides — <a href="https://www.confident-ai.com/blog/llm-agent-evaluation-complete-guide">confident-ai.com</a> · <a href="https://www.braintrust.dev/articles/ai-agent-evaluation-framework">braintrust.dev</a></li>
+    <li>HELM — <a href="https://crfm.stanford.edu/helm/">crfm.stanford.edu/helm</a> · <a href="https://arxiv.org/abs/2211.09110">arXiv 2211.09110</a> · <a href="https://crfm.stanford.edu/2024/05/01/helm-mmlu.html">HELM-MMLU</a></li>
+    <li>EDD &amp; CI gates — <a href="https://www.braintrust.dev/articles/eval-driven-development">braintrust.dev EDD</a> · <a href="https://www.kinde.com/learn/ai-for-software-engineering/ai-devops/ci-cd-for-evals-running-prompt-and-agent-regression-tests-in-github-actions/">kinde.com CI/CD for evals</a></li>
+    <li>Fine-tuning / LoRA / QLoRA / DPO — <a href="https://www.gauraw.com/fine-tuning-llm-lora-dpo-guide-2026/">gauraw.com</a> · <a href="https://letsdatascience.com/blog/fine-tuning-llms-with-lora-and-qlora-complete-guide">letsdatascience.com</a></li>
+    <li>NCP-AAI exam framing — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">nvidia.com certification</a> · <a href="https://preporato.com/blog/nvidia-ncp-aai-cheat-sheet-2026">preporato.com</a> · <a href="https://flashgenius.net/certification/ncp-aai">flashgenius.net</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 3: Evaluation and Tuning (13%) · Built from personal study notes. All facts sourced from the notes above.</p>
+</footer>
+
+<!-- ============ THREE.JS SCENE ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 60, 130);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
+camera.position.set(2, 16, 34);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(2, 4, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 10;
+controls.maxDistance = 90;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.4);
+key.position.set(12, 26, 14);
+scene.add(key);
+const greenFill = new THREE.PointLight(0x76b900, 60, 60);
+greenFill.position.set(-8, 10, 6);
+scene.add(greenFill);
+const purpleFill = new THREE.PointLight(0xb07cff, 50, 60);
+purpleFill.position.set(22, 14, 4);
+scene.add(purpleFill);
+
+// ---------- ground ----------
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(220, 220),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2.0;
+scene.add(ground);
+const grid = new THREE.GridHelper(220, 110, 0x1b2840, 0x121a2a);
+grid.position.y = -1.98;
+scene.add(grid);
+
+// ---------- text sprite helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.strokeStyle = border;
+  g.lineWidth = 4;
+  const r = 18;
+  g.beginPath();
+  g.roundRect(3, 3, w - 6, h - 6, r);
+  g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  const k = 0.012 * scale;
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+// ---------- conveyor ----------
+const CONV_Y = 0.0, CONV_X0 = -30, CONV_X1 = 8;
+const belt = new THREE.Mesh(
+  new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.5, 4),
+  new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.7, metalness: 0.4 })
+);
+belt.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.3, 0);
+scene.add(belt);
+// belt edge glow strips
+for (const dz of [-2.05, 2.05]) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.12, 0.12),
+    new THREE.MeshBasicMaterial({ color: 0x2c4a78 })
+  );
+  strip.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.05, dz);
+  scene.add(strip);
+}
+// moving chevrons on belt (motion cue)
+const chevrons = [];
+const chevMat = new THREE.MeshBasicMaterial({ color: 0x24364f });
+for (let i = 0; i < 14; i++) {
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 3.4), chevMat);
+  ch.position.set(CONV_X0 + i * 2.8, CONV_Y - 0.02, 0);
+  scene.add(ch);
+  chevrons.push(ch);
+}
+
+const pipelineTitle = makeLabel('OFFLINE EVAL PIPELINE — golden test cases', { border: '#3fd2c7', color: '#3fd2c7', scale: 1.25 });
+pipelineTitle.position.set(-11, 10.6, 0);
+scene.add(pipelineTitle);
+
+// ---------- judge stations ----------
+const stations = [];
+const stationDefs = [
+  { x: -18, name: 'EXACT-MATCH', color: 0x3fd2c7, desc: 'Deterministic checks vs golden ground truth — similarity metrics like F1 / ROUGE. Cheap, repeatable, runs in CI.' },
+  { x: -9,  name: 'LLM-JUDGE',  color: 0x4da3ff, desc: 'A strong, DIFFERENT model scores against a rubric (pointwise, pairwise, reference-based). Watch position, verbosity and self-preference biases.' },
+  { x: 0,   name: 'HUMAN',      color: 0xe8a33d, desc: 'Gold standard: calibrates and validates the LLM judge. Slow and expensive, so humans label a small set and audit samples.' },
+];
+for (const def of stationDefs) {
+  const g = new THREE.Group();
+  // posts
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x223149, roughness: 0.5, metalness: 0.6 });
+  for (const dz of [-2.6, 2.6]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.5), postMat);
+    post.position.set(0, 2.4, dz);
+    g.add(post);
+  }
+  // crossbar
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 5.7), new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.35, roughness: 0.4 }));
+  bar.position.set(0, 5.1, 0);
+  g.add(bar);
+  // stamp head
+  const stamp = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55, 0.75, 1.1, 16),
+    new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.5 })
+  );
+  stamp.position.set(0, 3.6, 0);
+  g.add(stamp);
+  // verdict lamp
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), new THREE.MeshBasicMaterial({ color: 0x44587a }));
+  lamp.position.set(0, 6.05, 0);
+  g.add(lamp);
+  // label
+  const lbl = makeLabel(def.name, { border: '#' + def.color.toString(16).padStart(6, '0'), scale: 1.0 });
+  lbl.position.set(0, 7.4, 0);
+  g.add(lbl);
+  g.position.set(def.x, 0, 0);
+  scene.add(g);
+  // hover target
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(3.2, 7.5, 6), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(def.x, 3.5, 0);
+  hit.userData = { title: def.name + ' judge station', desc: def.desc };
+  scene.add(hit);
+  stations.push({ ...def, group: g, stamp, lamp, stampT: -1, hit });
+}
+
+// ---------- pass / fail bins ----------
+const passBin = new THREE.Mesh(new THREE.BoxGeometry(3, 1.6, 3), new THREE.MeshStandardMaterial({ color: 0x1d3a07, emissive: 0x76b900, emissiveIntensity: 0.25 }));
+passBin.position.set(7.2, -0.9, -4.4);
+scene.add(passBin);
+const passLbl = makeLabel('PASS → ship', { border: '#76b900', color: '#a4e040', scale: 0.85 });
+passLbl.position.set(7.2, 1.2, -4.4);
+scene.add(passLbl);
+
+const failBin = new THREE.Mesh(new THREE.BoxGeometry(3, 1.6, 3), new THREE.MeshStandardMaterial({ color: 0x3a1018, emissive: 0xe0455a, emissiveIntensity: 0.25 }));
+failBin.position.set(7.2, -0.9, 4.4);
+scene.add(failBin);
+const failLbl = makeLabel('FAIL → tuning ladder', { border: '#e0455a', color: '#ff8fa0', scale: 0.85 });
+failLbl.position.set(7.2, 1.2, 4.4);
+scene.add(failLbl);
+
+passBin.userData = { title: 'PASS bin', desc: 'Cases that clear all judges. Enough green = thresholds met = the CI eval gate lets the change deploy.' };
+failBin.userData = { title: 'FAIL bin', desc: 'Failures are diagnosed by layer, then fixed on the cheapest rung of the tuning ladder — and become new golden test cases.' };
+
+// ---------- scoreboard ----------
+const scoreCanvas = document.createElement('canvas');
+scoreCanvas.width = 640; scoreCanvas.height = 320;
+const scoreCtx = scoreCanvas.getContext('2d');
+const scoreTex = new THREE.CanvasTexture(scoreCanvas);
+const scoreboard = new THREE.Mesh(
+  new THREE.PlaneGeometry(9.6, 4.8),
+  new THREE.MeshBasicMaterial({ map: scoreTex, transparent: true, side: THREE.DoubleSide })
+);
+scoreboard.position.set(-9, 9.3, -7.5);
+scene.add(scoreboard);
+scoreboard.userData = { title: 'Floating scoreboard', desc: 'Live task-success rate accumulating from judged cases. CI eval gates use thresholds like "TSR ≥ 85%, faithfulness ≥ 0.8" to block bad deploys.' };
+
+let passCount = 0, failCount = 0;
+function drawScoreboard() {
+  const g = scoreCtx, W = 640, H = 320;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = 'rgba(10,15,24,0.92)';
+  g.strokeStyle = '#76b900'; g.lineWidth = 6;
+  g.beginPath(); g.roundRect(4, 4, W - 8, H - 8, 26); g.fill(); g.stroke();
+  g.fillStyle = '#76b900';
+  g.font = '700 34px Segoe UI, Arial';
+  g.textAlign = 'center';
+  g.fillText('EVAL SCOREBOARD', W / 2, 56);
+  const total = passCount + failCount;
+  const rate = total ? Math.round(100 * passCount / total) : 0;
+  g.font = '800 92px Segoe UI, Arial';
+  g.fillStyle = rate >= 85 ? '#76b900' : '#e8a33d';
+  g.fillText(rate + '%', W / 2, 165);
+  g.font = '600 26px Segoe UI, Arial';
+  g.fillStyle = '#8fa0b8';
+  g.fillText('task completion (gate: ≥ 85%)', W / 2, 205);
+  g.font = '700 30px Segoe UI, Arial';
+  g.fillStyle = '#9cd63a'; g.textAlign = 'left';
+  g.fillText('PASS  ' + passCount, 90, 268);
+  g.fillStyle = '#ff8fa0'; g.textAlign = 'right';
+  g.fillText('FAIL  ' + failCount, W - 90, 268);
+  scoreTex.needsUpdate = true;
+}
+drawScoreboard();
+
+// ---------- data cubes ----------
+const cubes = [];
+const cubeGeo = new THREE.BoxGeometry(1.1, 1.1, 1.1);
+function spawnCube() {
+  const willPass = Math.random() < 0.78;
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3fd2c7, emissive: 0x3fd2c7, emissiveIntensity: 0.55, roughness: 0.3 });
+  const m = new THREE.Mesh(cubeGeo, mat);
+  m.position.set(CONV_X0 + 0.5, CONV_Y + 0.55, 0);
+  m.userData = { title: 'Test case (golden dataset)', desc: 'One input → expected-output / expected-trajectory pair. Quality > quantity; every production bug becomes a new case.' };
+  scene.add(m);
+  cubes.push({ mesh: m, willPass, stamped: [false, false, false], done: false, t: 0, vy: 0 });
+}
+
+// ---------- TUNING LADDER ----------
+const ladderGroup = new THREE.Group();
+ladderGroup.position.set(15, 0, 0);
+scene.add(ladderGroup);
+
+const rungDefs = [
+  { name: 'PROMPTING', color: 0x76b900, cost: 0.15, desc: 'Rung 1 — instructions, few-shot, output schemas. ~Free, minutes, no data needed. Try this first.' },
+  { name: 'RAG', color: 0x3fd2c7, cost: 0.3, desc: 'Rung 2 — chunking, embedding model, reranker, hybrid search, top-k. Fixes FACTS / fresh & private knowledge.' },
+  { name: 'LoRA', color: 0xb07cff, cost: 0.5, desc: 'Rung 3 — PEFT adapters (~0.1–1% of params), 100s–10k examples. QLoRA: 4-bit base, 7–8B on 8–12 GB GPU.' },
+  { name: 'SFT', color: 0xe8a33d, cost: 0.75, desc: 'Rung 4 — full fine-tune of all weights. Most data + GPU memory; best quality ceiling.' },
+  { name: 'DPO / RLHF', color: 0xe0455a, cost: 1.0, desc: 'Rung 5 — preference alignment. DPO: no reward model, no RL loop (the default). RLHF: reward model + PPO, frontier-scale.' },
+];
+const rungMeshes = [];
+rungDefs.forEach((r, i) => {
+  const y = 0.4 + i * 1.7;
+  const x = i * 4.0;
+  const plat = new THREE.Mesh(
+    new THREE.BoxGeometry(3.4, 0.6, 5),
+    new THREE.MeshStandardMaterial({ color: r.color, emissive: r.color, emissiveIntensity: 0.3, roughness: 0.4, metalness: 0.2 })
+  );
+  plat.position.set(x, y, 0);
+  plat.userData = { title: 'Tuning rung ' + (i + 1) + ': ' + r.name, desc: r.desc, baseY: y, emBase: 0.3 };
+  ladderGroup.add(plat);
+  rungMeshes.push(plat);
+  // label
+  const lbl = makeLabel(r.name, { border: '#' + r.color.toString(16).padStart(6, '0'), scale: 0.9 });
+  lbl.position.set(x, y + 1.5, 0);
+  ladderGroup.add(lbl);
+  // cost / data bar beside step
+  const barH = 0.5 + r.cost * 7.5;
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, barH, 0.8),
+    new THREE.MeshStandardMaterial({ color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.35, transparent: true, opacity: 0.85 })
+  );
+  bar.position.set(x, barH / 2 - 1.0, 3.6);
+  bar.userData = { title: r.name + ' — cost & data bar', desc: 'Each rung is ~10x the cost of the previous. Most production issues die on the first two rungs.', isBar: true };
+  ladderGroup.add(bar);
+});
+const ladderTitle = makeLabel('TUNING LADDER — climb, never jump', { border: '#b07cff', color: '#b07cff', scale: 1.2 });
+ladderTitle.position.set(23, 12.4, 0);
+scene.add(ladderTitle);
+const costLbl = makeLabel('cost & data ↑ ~10x per rung', { border: '#e8a33d', color: '#e8a33d', scale: 0.8 });
+costLbl.position.set(23, 9.4, 4.4);
+scene.add(costLbl);
+
+// climber sphere — a failed case climbing the ladder
+const climber = new THREE.Mesh(
+  new THREE.SphereGeometry(0.55, 20, 20),
+  new THREE.MeshStandardMaterial({ color: 0xe0455a, emissive: 0xe0455a, emissiveIntensity: 0.7 })
+);
+scene.add(climber);
+climber.userData = { title: 'A failing case being fixed', desc: 'Diagnosed failures climb only as high as needed: prompt → RAG → LoRA → SFT → DPO. Re-run the full eval suite after every rung.' };
+
+// arc from fail bin to ladder for context
+const arcPts = [];
+for (let i = 0; i <= 40; i++) {
+  const t = i / 40;
+  arcPts.push(new THREE.Vector3(
+    7.2 + (15 - 7.2) * t,
+    1.0 + Math.sin(t * Math.PI) * 3.2 - 0.6 * t,
+    4.4 * (1 - t)
+  ));
+}
+const arc = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(arcPts),
+  new THREE.LineDashedMaterial({ color: 0xe0455a, dashSize: 0.5, gapSize: 0.35, transparent: true, opacity: 0.7 })
+);
+arc.computeLineDistances();
+scene.add(arc);
+
+// feedback loop: ladder top back to pipeline start (re-evaluate)
+const loopPts = [];
+for (let i = 0; i <= 60; i++) {
+  const t = i / 60;
+  loopPts.push(new THREE.Vector3(
+    31 + (CONV_X0 - 31) * t,
+    8.5 + Math.sin(t * Math.PI) * 7,
+    -6 - Math.sin(t * Math.PI) * 4
+  ));
+}
+const loop = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(loopPts),
+  new THREE.LineDashedMaterial({ color: 0x76b900, dashSize: 0.6, gapSize: 0.4, transparent: true, opacity: 0.55 })
+);
+loop.computeLineDistances();
+scene.add(loop);
+const loopLbl = makeLabel('re-evaluate → regression gate → deploy → monitor', { border: '#76b900', color: '#a4e040', scale: 0.85 });
+loopLbl.position.set(0, 16.2, -9.5);
+scene.add(loopLbl);
+
+// particles flowing along the feedback loop
+const N_P = 90;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(N_P * 3);
+const pT = new Float32Array(N_P);
+for (let i = 0; i < N_P; i++) pT[i] = Math.random();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x9cd63a, size: 0.28, transparent: true, opacity: 0.9 }));
+scene.add(points);
+const loopCurve = new THREE.CatmullRomCurve3(loopPts);
+
+// ambient star dust
+{
+  const n = 400, g = new THREE.BufferGeometry(), a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = (Math.random() - 0.5) * 160;
+    a[i * 3 + 1] = Math.random() * 45;
+    a[i * 3 + 2] = (Math.random() - 0.5) * 160;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+const hoverables = [...stations.map(s => s.hit), scoreboard, passBin, failBin, climber, ...rungMeshes, ...ladderGroup.children.filter(o => o.userData && o.userData.isBar), ];
+let hovered = null;
+
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+let spawnTimer = 0;
+const SPEED = 4.2;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // belt chevrons
+  for (const ch of chevrons) {
+    ch.position.x += SPEED * dt;
+    if (ch.position.x > CONV_X1) ch.position.x -= (CONV_X1 - CONV_X0);
+  }
+
+  // spawn cubes
+  spawnTimer -= dt;
+  if (spawnTimer <= 0 && cubes.length < 14) { spawnCube(); spawnTimer = 1.6; }
+
+  // move cubes
+  for (let i = cubes.length - 1; i >= 0; i--) {
+    const c = cubes[i];
+    const m = c.mesh;
+    if (!c.done) {
+      m.position.x += SPEED * dt;
+      m.rotation.y += dt * 0.8;
+      // station stamping
+      stations.forEach((s, si) => {
+        if (!c.stamped[si] && m.position.x >= s.x) {
+          c.stamped[si] = true;
+          s.stampT = 0; // trigger stamp animation
+          const verdictColor = c.willPass ? 0x76b900 : 0xe0455a;
+          s.lamp.material.color.setHex(verdictColor);
+          if (si === 2) {
+            // final verdict colors the cube
+            m.material.color.setHex(verdictColor);
+            m.material.emissive.setHex(verdictColor);
+          }
+        }
+      });
+      if (m.position.x >= CONV_X1 - 1) {
+        c.done = true;
+        c.vy = 2.2;
+        if (c.willPass) passCount++; else failCount++;
+        drawScoreboard();
+      }
+    } else {
+      // arc into bin
+      const targetZ = c.willPass ? -4.4 : 4.4;
+      m.position.z += (targetZ - m.position.z) * dt * 3.2;
+      m.position.x += dt * 1.2;
+      c.vy -= 9 * dt;
+      m.position.y += c.vy * dt;
+      m.scale.multiplyScalar(1 - dt * 0.7);
+      if (m.position.y < -1.4 || m.scale.x < 0.1) {
+        scene.remove(m);
+        m.material.dispose();
+        cubes.splice(i, 1);
+      }
+    }
+  }
+
+  // stamp animations + lamp decay
+  for (const s of stations) {
+    if (s.stampT >= 0) {
+      s.stampT += dt * 5;
+      const p = Math.min(s.stampT, 1);
+      const dip = Math.sin(p * Math.PI) * 1.6;
+      s.stamp.position.y = 3.6 - dip;
+      if (s.stampT > 1.6) { s.stampT = -1; s.stamp.position.y = 3.6; s.lamp.material.color.setHex(0x44587a); }
+    }
+  }
+
+  // scoreboard gentle float, face camera
+  scoreboard.position.y = 9.3 + Math.sin(t * 0.8) * 0.25;
+  scoreboard.lookAt(camera.position);
+
+  // climber hops up the ladder, then resets
+  {
+    const cycle = (t % 12) / 12; // 0..1
+    const total = rungDefs.length;
+    const idx = Math.min(Math.floor(cycle * total), total - 1);
+    const frac = cycle * total - idx;
+    const x0 = 15 + idx * 4.0, y0 = 0.4 + idx * 1.7 + 1.0;
+    const x1 = 15 + Math.min(idx + 1, total - 1) * 4.0, y1 = 0.4 + Math.min(idx + 1, total - 1) * 1.7 + 1.0;
+    climber.position.set(
+      x0 + (x1 - x0) * frac,
+      y0 + (y1 - y0) * frac + Math.abs(Math.sin(frac * Math.PI)) * 1.2,
+      0
+    );
+    // color shifts greener as it gets "fixed"
+    const fixed = cycle;
+    climber.material.color.setRGB(0.88 - 0.42 * fixed, 0.27 + 0.46 * fixed, 0.35 - 0.35 * fixed);
+    climber.material.emissive.copy(climber.material.color);
+  }
+
+  // rung pulse
+  rungMeshes.forEach((r, i) => {
+    r.material.emissiveIntensity = r.userData.emBase + 0.18 * Math.sin(t * 2 + i * 0.9);
+  });
+
+  // particles along feedback loop
+  const pos = points.geometry.attributes.position.array;
+  for (let i = 0; i < N_P; i++) {
+    pT[i] = (pT[i] + dt * 0.05) % 1;
+    const v = loopCurve.getPoint(pT[i]);
+    pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+  }
+  points.geometry.attributes.position.needsUpdate = true;
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// resize
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

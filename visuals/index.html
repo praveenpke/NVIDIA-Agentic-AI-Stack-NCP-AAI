@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Visual Study Hub</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --bg2: #111827;
+    --card: #161e2e;
+    --green: #76b900;
+    --green-dim: #4d7a00;
+    --text: #e5e9f0;
+    --muted: #8b95a7;
+    --border: #243049;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .hero {
+    text-align: center;
+    padding: 64px 24px 40px;
+    background: radial-gradient(ellipse at 50% -20%, var(--green-glow), transparent 60%);
+  }
+  .hero .eyebrow {
+    color: var(--green);
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+  .hero h1 { font-size: clamp(28px, 7vw, 42px); margin: 12px 0 10px; }
+  .hero p { color: var(--muted); max-width: 640px; margin: 0 auto; font-size: 17px; line-height: 1.6; }
+  .weight-bar {
+    display: flex;
+    max-width: 860px;
+    margin: 36px auto 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    height: 38px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .weight-bar a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #20150a;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: filter .15s;
+  }
+  .weight-bar a:hover { filter: brightness(1.2); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr));
+    gap: 20px;
+    max-width: 1100px;
+    margin: 48px auto;
+    padding: 0 24px 64px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px;
+    text-decoration: none;
+    color: var(--text);
+    display: block;
+    transition: transform .15s, border-color .15s, box-shadow .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--green);
+    box-shadow: 0 12px 32px var(--green-glow);
+  }
+  .card .badge {
+    display: inline-block;
+    background: var(--green-glow);
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .card h2 { font-size: 20px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .card .go {
+    margin-top: 16px;
+    color: var(--green);
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 24px;
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+  .footer a { color: var(--green); }
+  @media (max-width: 640px) {
+    .weight-bar { flex-wrap: wrap; height: auto; }
+    .weight-bar a { flex: 1 1 30% !important; padding: 10px 0; }
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+  <div class="hero">
+    <div class="eyebrow">NVIDIA Certified Professional · Agentic AI</div>
+    <h1>NCP-AAI Visual Study Hub</h1>
+    <p>Interactive 3D + infographic deep-dives into the six exam domains. Together these cover <strong style="color:var(--green)">48%</strong> of the exam. Each page pairs with a full notes file in <code>../notes/</code> and now includes a runnable <strong style="color:var(--green)">Code Companion</strong> plus current practitioner takes (2025-26).</p>
+    <div class="weight-bar" title="Relative exam weight of these six domains">
+      <a href="domain-03-evaluation-tuning.html"        style="flex:13; background:#d98c2e;">D3 · 13%</a>
+      <a href="domain-04-deployment-scaling.html"       style="flex:13; background:#e69b3e;">D4 · 13%</a>
+      <a href="domain-07-nvidia-platform.html"          style="flex:7;  background:#c77d24;">D7 · 7%</a>
+      <a href="domain-08-run-monitor-maintain.html"     style="flex:5;  background:#eeb060;">D8 · 5%</a>
+      <a href="domain-09-safety-ethics-compliance.html" style="flex:5;  background:#f3c281;">D9 · 5%</a>
+      <a href="domain-10-human-ai-interaction.html"     style="flex:5;  background:#f8d6a4;">D10 · 5%</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="domain-00-builders-pulse.html" style="border-color: var(--green-dim);">
+      <span class="badge">Domain 0 · Field Pulse</span>
+      <h2>Builder's Pulse (2025-26)</h2>
+      <p>The 10 conversations the agent-building world is having right now — context engineering, the evals debate, 12-factor agents, MCP/A2A, multi-agent skepticism — mapped to the exam domains, with a full reading list.</p>
+      <div class="go">Open field briefing →</div>
+    </a>
+    <a class="card" href="domain-03-evaluation-tuning.html">
+      <span class="badge">Domain 3 · 13%</span>
+      <h2>Evaluation and Tuning</h2>
+      <p>LLM-as-a-judge, the RAGAS triad, agent trajectory metrics, and the tuning ladder: prompting → RAG → LoRA → SFT → DPO/RLHF. Watch test cases flow through 3D judge stations.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-04-deployment-scaling.html">
+      <span class="badge">Domain 4 · 13%</span>
+      <h2>Deployment and Scaling</h2>
+      <p>NIM microservices, Triton dynamic batching, TensorRT-LLM quantization and in-flight batching, autoscaling on Kubernetes. Fly through a 3D GPU datacenter under live load.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-07-nvidia-platform.html">
+      <span class="badge">Domain 7 · 7%</span>
+      <h2>NVIDIA Platform Implementation</h2>
+      <p>The full stack as an exploded 3D layer cake: CUDA → TensorRT-LLM → Triton → NIM → NeMo services → Blueprints, with Nemotron models and the NeMo Agent Toolkit orbiting.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-08-run-monitor-maintain.html">
+      <span class="badge">Domain 8 · 5%</span>
+      <h2>Run, Monitor, and Maintain</h2>
+      <p>Traces, metrics, and logs streaming into an observability tower in a 3D city at night — plus drift storms, alert beacons, SLOs, and rollback patterns.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-09-safety-ethics-compliance.html">
+      <span class="badge">Domain 9 · 5%</span>
+      <h2>Safety, Ethics, and Compliance</h2>
+      <p>NeMo Guardrails as a 3D fortress: input/dialog/output rails shattering prompt-injection and jailbreak attacks, with the OWASP LLM Top 10 and an audit-trail obelisk.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-10-human-ai-interaction.html">
+      <span class="badge">Domain 10 · 5%</span>
+      <h2>Human-AI Interaction and Oversight</h2>
+      <p>HITL approval gates, interrupt-and-resume, confidence-based deferral, and kill switches — animated on a 3D agent workflow graph with a human approval desk.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+  </div>
+
+  <div class="footer">
+    Built for praveenkumar199324 · Study guide: <a href="../NCP-AAI-Study-Guide.md">NCP-AAI-Study-Guide.md</a> · Notes: <code>../notes/</code>
+  </div>
+</body>
+</html>

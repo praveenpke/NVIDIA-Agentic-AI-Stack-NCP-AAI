@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 0 — Builder's Pulse</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{position:relative;overflow:hidden;padding:72px 24px 56px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  header.hero::before{content:"";position:absolute;inset:-40% -20%;background:
+    radial-gradient(ellipse 30% 35% at 30% 40%,color-mix(in srgb, var(--green) 10%, transparent),transparent 70%),
+    radial-gradient(ellipse 25% 30% at 70% 60%,color-mix(in srgb, var(--cyan) 7%, transparent),transparent 70%);
+    animation:heroGlow 14s ease-in-out infinite alternate;pointer-events:none}
+  @keyframes heroGlow{
+    0%{transform:translate3d(-3%,2%,0) scale(1);opacity:.7}
+    50%{transform:translate3d(3%,-2%,0) scale(1.06);opacity:1}
+    100%{transform:translate3d(-2%,-3%,0) scale(1.02);opacity:.8}
+  }
+  .hero .dots{position:absolute;inset:0;pointer-events:none}
+  .hero .dot{position:absolute;border-radius:50%;background:var(--green);opacity:.35;animation:floatDot 9s ease-in-out infinite}
+  .hero .dot.b{background:var(--blue)}
+  .hero .dot.c{background:var(--cyan)}
+  @keyframes floatDot{
+    0%,100%{transform:translateY(0) scale(1);opacity:.18}
+    50%{transform:translateY(-26px) scale(1.25);opacity:.5}
+  }
+  .hero-inner{position:relative;z-index:1}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+  a.inline{color:var(--blue);text-decoration:none}
+  a.inline:hover{text-decoration:underline}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:var(--green-dim)}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card ol{margin:8px 0 0 20px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  .card a{color:var(--blue);text-decoration:none}
+  .card a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em;margin-bottom:8px}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td a{color:var(--blue);text-decoration:none}
+  .tbl td a:hover{text-decoration:underline}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* EXAM CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout a{color:var(--blue);text-decoration:none}
+  .callout a:hover{text-decoration:underline}
+  .callout .exam-chip{display:inline-block;background:var(--green);color:var(--on-accent);border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 11px;margin-right:10px;vertical-align:1px}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  /* READING LIST */
+  .reading-group{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:14px 0}
+  .reading-group h4{color:var(--green);font-size:.95rem;margin-bottom:10px}
+  .reading-group ul{list-style:none}
+  .reading-group li{margin:8px 0;font-size:.86rem;color:var(--muted);padding-left:18px;position:relative}
+  .reading-group li::before{content:"→";position:absolute;left:0;color:var(--green-dim)}
+  .reading-group a{color:var(--blue);text-decoration:none;font-weight:600}
+  .reading-group a:hover{text-decoration:underline}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a class="brand" href="index.html">← Hub</a>
+  <a href="#t1-context">1 Context Eng.</a>
+  <a href="#t2-effective-agents">2 Workflows vs Agents</a>
+  <a href="#t3-12-factor">3 12-Factor</a>
+  <a href="#t4-evals">4 Evals</a>
+  <a href="#t5-deep-agents">5 Deep Agents</a>
+  <a href="#t6-mcp-a2a">6 MCP · A2A</a>
+  <a href="#t7-multi-agent">7 Multi-Agent</a>
+  <a href="#t8-economics">8 Economics · SLMs</a>
+  <a href="#t9-memory">9 Memory</a>
+  <a href="#t10-observability">10 Observability</a>
+  <a href="#map">Domain Map</a>
+  <a href="#reading">Reading List</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="dots" aria-hidden="true">
+    <span class="dot"   style="width:6px;height:6px;left:8%;top:30%;animation-delay:0s"></span>
+    <span class="dot b" style="width:4px;height:4px;left:18%;top:62%;animation-delay:1.4s"></span>
+    <span class="dot c" style="width:5px;height:5px;left:30%;top:22%;animation-delay:2.6s"></span>
+    <span class="dot"   style="width:4px;height:4px;left:44%;top:74%;animation-delay:.8s"></span>
+    <span class="dot b" style="width:6px;height:6px;left:58%;top:28%;animation-delay:3.4s"></span>
+    <span class="dot"   style="width:5px;height:5px;left:70%;top:60%;animation-delay:1.9s"></span>
+    <span class="dot c" style="width:4px;height:4px;left:82%;top:34%;animation-delay:4.2s"></span>
+    <span class="dot"   style="width:6px;height:6px;left:92%;top:66%;animation-delay:2.2s"></span>
+  </div>
+  <div class="hero-inner">
+    <div class="domain-chip">Domain 0 <span class="pct">Field Pulse</span></div>
+    <h1>Builder's <span class="accent">Pulse</span></h1>
+    <p class="hook">What the field is saying, <b>2025–26</b>: the ten live arguments practitioners are actually having — context engineering, evals, deep agents, MCP/A2A, multi-agent, token economics, memory, observability — mapped onto the <b>NCP-AAI exam domains</b>, so you know not just the definition but <b>why the industry cares and who pushed it there</b>.</p>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ THREAD 1 ============ -->
+<section id="t1-context">
+  <div class="kicker">Thread 1 · The meta-thread</div>
+  <h2>Context engineering: the term that ate prompt engineering</h2>
+  <p class="lede"><b>What the debate is.</b> Mid-2025, the field renamed its core craft. The argument: "prompt engineering" had been captured by a conception of the work — clever phrasing of a single instruction — that no longer matched what production agent systems require, where the prompt is a small fraction of a context window otherwise filled with history, tool outputs, retrieved docs, and state.</p>
+
+  <h3>The voices</h3>
+  <div class="grid c3">
+    <div class="card green"><span class="pill g">Coined it</span><h4><span class="icon">🗣️</span><a href="https://x.com/tobi/status/1935533422589399127" target="_blank">Tobi Lütke</a></h4><p>Shopify CEO, June 18, 2025 — supplied the canonical definition: <b>"the art of providing all the context for the task to be plausibly solvable by the LLM."</b></p></div>
+    <div class="card green"><span class="pill g">Endorsed it</span><h4><span class="icon">🗣️</span><a href="https://x.com/karpathy/status/1937902205765607626" target="_blank">Andrej Karpathy</a></h4><p>Six days later: "+1 for 'context engineering' over 'prompt engineering'... <b>the delicate art and science of filling the context window with just the right information for the next step</b>."</p></div>
+    <div class="card blue"><span class="pill b">Tracked it</span><h4><span class="icon">📝</span><a href="https://simonwillison.net/2025/Jun/27/context-engineering/" target="_blank">Simon Willison</a></h4><p>Tracked the shift and framed prompt engineering as now a <b>subset</b> of context engineering.</p></div>
+  </div>
+
+  <h3>The technical anchor <span class="tag">Context Rot</span></h3>
+  <div class="grid c2">
+    <div class="card red"><h4><span class="icon">📉</span>Chroma's <a href="https://research.trychroma.com/context-rot" target="_blank">Context Rot report</a></h4><p>Kelly Hong, Anton Troynikov, Jeff Huber — July 2025.</p>
+      <ul>
+        <li>Tested <b>18 models</b> (GPT-4.1, Claude 4, Gemini 2.5, Qwen3...) on tasks of controlled input length.</li>
+        <li>Finding: models do <b>not</b> process context uniformly — the 10,000th token is not handled as reliably as the 100th, and performance grows increasingly unreliable as input grows, even on simple tasks.</li>
+        <li>Practical consequence: the naive "just use the 1M window" instinct died; <b>effective context budgets are far below advertised limits</b>.</li>
+      </ul></div>
+    <div class="card green"><h4><span class="icon">🧠</span>Anthropic's <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank">Effective context engineering for AI agents</a></h4><p>Sept 2025 — made it canon: attention is a <b>finite budget</b> (every token attends to every other — n² relationships), so treat context as a scarce resource. Three long-horizon techniques:</p>
+      <ul>
+        <li><b>Compaction</b> — summarize a near-full window with high fidelity, reinitiate a fresh window with the summary.</li>
+        <li><b>Structured note-taking</b> — persistent memory written to files (NOTES.md, TODO.txt) <b>outside</b> the window, reloaded when needed.</li>
+        <li><b>Sub-agent architectures</b> — specialists explore deeply in clean windows and return compact summaries to a coordinating parent.</li>
+      </ul></div>
+  </div>
+
+  <h3>Where it lands</h3>
+  <p class="lede">Context curation is now considered <b>the</b> core agent-engineering skill — more leverage than model choice for most failures. The default playbook: keep the window lean and curate tool outputs instead of dumping them raw; externalize durable state (plans, findings, intermediate artifacts) to files or a store; isolate exploration in sub-agents that return summaries, not transcripts; compact at thresholds rather than waiting for hard window limits.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>"Agent degrades on long multi-step tasks" → <b>context rot</b>; remedies are compaction / external memory / sub-agent isolation. Maps to failure diagnosis in run/monitor/maintain (<a href="domain-08-run-monitor-maintain.html">domain 08</a>) and to KV-cache/context budgeting in deployment (<a href="domain-04-deployment-scaling.html">domain 04</a>).</div>
+</section>
+
+<!-- ============ THREAD 2 ============ -->
+<section id="t2-effective-agents">
+  <div class="kicker">Thread 2 · The design ur-text</div>
+  <h2>Anthropic's "Building Effective Agents" lineage: workflows vs agents, simple harnesses</h2>
+  <p class="lede"><b>What the debate is.</b> How much autonomy should you actually give the model, and how much scaffolding belongs in code? Anthropic's <a class="inline" href="https://www.anthropic.com/research/building-effective-agents" target="_blank">Building Effective Agents</a> (Dec 2024) is the most-cited agent design doc of the era.</p>
+
+  <div class="grid c2">
+    <div class="card blue"><span class="pill b">Predefined paths</span><h4><span class="icon">🧱</span>Workflows</h4><p>LLM calls and tools orchestrated through <b>predefined code paths</b>: prompt chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer.</p></div>
+    <div class="card purple"><span class="pill p">Runtime autonomy</span><h4><span class="icon">🤖</span>Agents</h4><p>The LLM <b>dynamically directs its own process and tool use</b>, deciding the path at runtime.</p></div>
+  </div>
+
+  <h3>The escalation ladder <span class="tag">"simple, composable patterns over complex frameworks"</span></h3>
+  <div class="card green">
+    <ol>
+      <li><b>Single augmented LLM call</b> (+ retrieval, tools) — try this first.</li>
+      <li><b>Workflow patterns</b> when the task decomposes predictably (chaining, routing, parallelization, orchestrator-workers, evaluator-optimizer).</li>
+      <li><b>A true agent loop</b> only when the task genuinely needs open-ended autonomy — and accept the cost/latency/error tradeoff knowingly.</li>
+    </ol>
+  </div>
+
+  <h3>The harness turn</h3>
+  <p class="lede">Through 2025 the discourse shifted from "which framework" to <b>"what's in your harness."</b> A harness, in current usage, is everything wrapped around the model: the agent loop itself (reasoning → tool call → observation, repeated), the tool surface (which tools, how described, how results are truncated/curated), context management (compaction triggers, memory, sub-agent spawning), and stop conditions, budgets, and error handling. Claude Code's design (a simple while-loop + tools + filesystem) became the reference implementation people reverse-engineered, and <b>"harness engineering" is now treated as a first-class systems discipline</b> rather than a thin wrapper. Anthropic's context-engineering post (thread #1) is effectively part two of the same lineage: as models improve, the harness — not the prompt — is where engineering effort concentrates.</p>
+
+  <h3>Where it lands</h3>
+  <p class="lede">Practitioner consensus: most production "agents" should be workflows; reserve autonomy for where it pays for its unpredictability; keep the harness simple enough to debug.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>The workflow-pattern taxonomy (chaining, routing, parallelization, orchestrator-worker, evaluator-optimizer) shows up in architecture questions. Note <b>"evaluator-optimizer" is literally an eval loop</b> (<a href="domain-03-evaluation-tuning.html">domain 03</a>), and "use the simplest pattern that works" is the standing answer to over-engineering scenarios.</div>
+</section>
+
+<!-- ============ THREAD 3 ============ -->
+<section id="t3-12-factor">
+  <div class="kicker">Thread 3 · The production checklist</div>
+  <h2>12-Factor Agents (Dex Horthy / HumanLayer)</h2>
+  <p class="lede"><b>What the debate is.</b> Dex Horthy's <a class="inline" href="https://github.com/humanlayer/12-factor-agents" target="_blank">12-factor-agents</a> (April 2025; a top-trending GitHub repo, plus AI Engineer and <a class="inline" href="https://home.mlops.community/public/videos/12-factor-agents-patterns-of-reliable-llm-applications-dexter-horthy-agents-in-production-2025-2025-08-06" target="_blank">MLOps Community</a> talks) adapted Heroku's 12-Factor App methodology to LLM software. The thesis: most products billing themselves as "AI agents" aren't very agentic — the ones that work are <b>mostly deterministic code with LLM decisions sprinkled in at exactly the right points</b>. Greenfield "framework does everything" agents stall at ~70–80% quality; owning the moving parts gets you to production.</p>
+
+  <h3>The factors</h3>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">🔢</span>1–4</h4><ul>
+      <li><b>1.</b> Natural language → tool calls</li>
+      <li><b>2.</b> Own your prompts</li>
+      <li><b>3.</b> Own your context window</li>
+      <li><b>4.</b> Tools are just structured outputs</li></ul></div>
+    <div class="card green"><h4><span class="icon">🔢</span>5–8</h4><ul>
+      <li><b>5.</b> Unify execution state and business state</li>
+      <li><b>6.</b> Launch/Pause/Resume with simple APIs</li>
+      <li><b>7.</b> Contact humans with tool calls</li>
+      <li><b>8.</b> Own your control flow</li></ul></div>
+    <div class="card green"><h4><span class="icon">🔢</span>9–13</h4><ul>
+      <li><b>9.</b> Compact errors into context window</li>
+      <li><b>10.</b> Small, focused agents</li>
+      <li><b>11.</b> Trigger from anywhere, meet users where they are</li>
+      <li><b>12.</b> Make your agent a stateless reducer</li>
+      <li><b>13.</b> <i>(appendix)</i> Pre-fetch all the context you might need</li></ul></div>
+  </div>
+
+  <h3>Mapping to the six domains</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Factors</th><th>Why</th><th>Notes file</th></tr>
+    <tr><td><b>2, 3, 12</b></td><td>Owned prompts/context + stateless reducer → reproducible, testable, version-controlled</td><td><a href="domain-03-evaluation-tuning.html">03 evaluation/tuning</a></td></tr>
+    <tr><td><b>6, 11, 12</b></td><td>Pause/resume APIs, trigger anywhere, statelessness → horizontal scaling, durable execution</td><td><a href="domain-04-deployment-scaling.html">04 deployment/scaling</a></td></tr>
+    <tr><td><b>10</b></td><td>Small focused agents → model-per-task routing, SLM/NIM microservices</td><td><a href="domain-07-nvidia-platform.html">07 NVIDIA platform</a></td></tr>
+    <tr><td><b>5, 9</b></td><td>Unified state → debuggable traces; error compaction → bounded self-healing retry loops</td><td><a href="domain-08-run-monitor-maintain.html">08 run/monitor/maintain</a></td></tr>
+    <tr><td><b>4, 8</b></td><td>Structured outputs + owned control flow → deterministic gates before side effects</td><td><a href="domain-09-safety-ethics-compliance.html">09 safety/compliance</a></td></tr>
+    <tr><td><b>7</b></td><td>Human contact as a first-class tool call, not an afterthought UI</td><td><a href="domain-10-human-ai-interaction.html">10 human-AI interaction</a></td></tr>
+  </table></div>
+
+  <h3>Where it lands</h3>
+  <p class="lede">The closest thing the field has to a shared production checklist — and notably <b>framework-agnostic</b>: the factors critique frameworks that hide prompts, control flow, or context assembly behind abstractions you can't inspect. (LangGraph fares well by this standard precisely because it exposes state and control flow.) Horthy's <b>"dumb zone"</b> framing — quality degrades well before the window is physically full, so keep utilization low — independently reinforced thread #1.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>The 12 factors touch <b>all six</b> of your domains (see table above) — own prompts, context, and control flow; <b>agents are mostly software</b>.</div>
+</section>
+
+<!-- ============ THREAD 4 ============ -->
+<section id="t4-evals">
+  <div class="kicker">Thread 4 · Measurement wars</div>
+  <h2>The evals movement — and its backlash</h2>
+  <p class="lede"><b>What the debate is.</b> Whether systematic evaluation is the discipline that separates shipping teams from demo teams, or process theater that slows fast iterators down.</p>
+
+  <h3>The movement <span class="tag">pro side</span></h3>
+  <div class="grid c2">
+    <div class="card green"><span class="pill g">The methodology</span><h4><span class="icon">📊</span><a href="https://hamel.dev/blog/posts/evals/" target="_blank">Hamel Husain</a> &amp; <a href="https://www.sh-reya.com/" target="_blank">Shreya Shankar</a></h4><p>Built the dominant methodology ("Your AI Product Needs Evals"), taught to thousands via their <a href="https://maven.com/parlance-labs/evals" target="_blank">AI Evals course</a> and distilled in Hamel's <a href="https://hamel.dev/blog/posts/evals-faq/" target="_blank">Evals FAQ</a>.</p>
+      <ul>
+        <li><b>Tenet 1 — error analysis over scores:</b> read your actual traces, open-code failures, cluster them into a failure taxonomy <b>before</b> writing a single metric. "Look at your data" is the mantra; generic metric dashboards without a failure taxonomy are the anti-pattern.</li>
+        <li><b>Tenet 2 — binary pass/fail over 1–5 Likert scales:</b> humans and LLM judges are far more consistent on yes/no with a written critique than on numeric scales whose midpoints mean nothing.</li>
+        <li><b>Tenet 3 — validate the judge against human labels</b> before trusting it; report judge↔human agreement, not just judge scores.</li>
+      </ul></div>
+    <div class="card green"><span class="pill g">The research backbone</span><h4><span class="icon">🔬</span>Shankar &amp; Eugene Yan</h4>
+      <ul>
+        <li>Shankar's <a href="https://arxiv.org/abs/2404.12272" target="_blank">Who Validates the Validators?</a> (UIST 2024): LLM judges inherit the flaws of the models they judge, and graders exhibit <b>criteria drift</b> — you need criteria to grade outputs, but grading outputs changes your criteria, so alignment is iterative, never one-shot.</li>
+        <li><a href="https://eugeneyan.com/writing/llm-evaluators/" target="_blank">Eugene Yan</a> covers judge reliability and built <a href="https://eugeneyan.com/writing/aligneval/" target="_blank">AlignEval</a> around the loop: label data → align evaluator → build the harness.</li>
+        <li>The bull case hardened into <b>"evals are your moat"</b>: your labeled failure data and regression suite are the asset competitors can't copy, even when everyone has the same base models.</li>
+      </ul></div>
+  </div>
+
+  <h3>The backlash <span class="tag">anti side</span></h3>
+  <div class="card red"><p>September 2025 brought a wave of "evals are overrated" posts across X and Substack. The recurring arguments:</p>
+    <ul>
+      <li>Top labs ship on <b>taste, dogfooding, and fast feedback loops</b> rather than formal harnesses.</li>
+      <li>Eval suites <b>ossify around stale failure modes</b> while the product and models move on.</li>
+      <li>Maintaining judges and golden sets is <b>overhead</b> a fast-moving product can't afford.</li>
+      <li>Vibe-checking by people with good judgment outperforms a brittle proxy metric.</li>
+    </ul></div>
+
+  <h3>The responses</h3>
+  <div class="grid c2">
+    <div class="card blue"><h4><span class="icon">🛡️</span>Shankar, <a href="https://www.sh-reya.com/blog/in-defense-ai-evals/" target="_blank">In Defense of AI Evals, for Everyone</a></h4><p>Sept 2025: defines evals as <b>systematic measurement of application quality</b> — rigor dials up or down with stakes; the strawman being attacked (mandatory giant benchmarks for every prototype) is not what anyone teaches.</p></div>
+    <div class="card blue"><h4><span class="icon">🎙️</span>Hamel on <a href="https://hugobowne.substack.com/p/episode-60-10-things-i-hate-about-e83" target="_blank">Vanishing Gradients ep. 60</a></h4><p>Everyone relies on evals — some just consume them upstream (model providers ran them for you); and not every problem needs one (an obvious formatting bug just gets fixed).</p></div>
+  </div>
+
+  <h3>Where it lands</h3>
+  <p class="lede">Synthesis position: <b>error analysis is non-negotiable</b>, formal harnesses are proportional to risk, and the production loop — novel failure → labeled example → regression gate — is how teams actually improve.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>This is <a href="domain-03-evaluation-tuning.html">domain 03</a>'s worldview verbatim — golden datasets that grow from production bugs, LLM-as-judge validated against humans, offline gates + online monitoring as complements. If a question offers "ship and watch dashboards" vs "build a regression suite from observed failures," <b>pick the latter</b>.</div>
+</section>
+
+<!-- ============ THREAD 5 ============ -->
+<section id="t5-deep-agents">
+  <div class="kicker">Thread 5 · Long horizons</div>
+  <h2>Deep agents / long-horizon agents</h2>
+  <p class="lede"><b>What the debate is.</b> How to get agents past ~15-minute tasks without quality collapse. LangChain's <a class="inline" href="https://blog.langchain.com/deep-agents/" target="_blank">Deep Agents post</a> (mid-2025) named the answer by reverse-engineering Claude Code, Deep Research, and Manus: "shallow" tool-loop agents fail on long horizons; deep agents add four things.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">🗒️</span>A planning tool</h4><p>write_todos-style task lists the agent maintains and re-reads.</p></div>
+    <div class="card cyan"><h4><span class="icon">📁</span>A filesystem</h4><p>Shared workspace, scratch notes, artifacts — context that survives the window.</p></div>
+    <div class="card purple"><h4><span class="icon">🧬</span>Sub-agents</h4><p>Spawned for deep exploration, returning summaries — <b>context quarantine</b>.</p></div>
+    <div class="card amber"><h4><span class="icon">📜</span>A detailed system prompt</h4><p>Claude Code's prompt is famously long and example-dense.</p></div>
+  </div>
+  <p class="lede" style="margin-top:18px">The <a class="inline" href="https://github.com/langchain-ai/deepagents" target="_blank">deepagents library</a> ships this as a batteries-included harness on the LangGraph runtime — pitched as Claude Code's architecture decoupled from Claude, usable with any tool-calling model.</p>
+
+  <h3>Shallow vs deep, at a glance</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th></th><th>Shallow agent</th><th>Deep agent</th></tr>
+    <tr><td><b>Loop</b></td><td>LLM + tools in a while-loop</td><td class="good">Same loop + planning, filesystem, sub-agents</td></tr>
+    <tr><td><b>Horizon</b></td><td>Single-session, minutes</td><td class="good">Hours/days, resumable</td></tr>
+    <tr><td><b>State</b></td><td>All in the context window</td><td class="good">Externalized to files/store; window stays lean</td></tr>
+    <tr><td><b>Failure mode</b></td><td class="bad">Context rot, lost goals</td><td class="mid">Coordination overhead, sub-agent context loss</td></tr>
+  </table></div>
+
+  <h3>Connecting the threads</h3>
+  <p class="lede">The point of this thread is that the pattern <b>converged independently</b>: Anthropic's compaction/note-taking/sub-agents (thread #1), Manus's filesystem-as-context and todo recitation (thread #8), and deepagents' four pillars are the same design discovered at least three times. Read the components functionally: <b>planning = attention manipulation</b> (reciting goals keeps them out of the rotted middle of the context); <b>filesystem = unlimited, persistent, agent-operated memory</b>; <b>sub-agents = context isolation</b>, not anthropomorphic role-play.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>Long-horizon task questions resolve to this pattern. It also underlies NVIDIA's agent blueprints — orchestrator + specialized workers + externalized state is the same shape (<a href="domain-07-nvidia-platform.html">domain 07</a>).</div>
+</section>
+
+<!-- ============ THREAD 6 ============ -->
+<section id="t6-mcp-a2a">
+  <div class="kicker">Thread 6 · Protocols &amp; the attack surface</div>
+  <h2>MCP ecosystem explosion + A2A goes to the Linux Foundation</h2>
+  <p class="lede"><b>What happened.</b> Rare full-industry convergence on open agent protocols — and a security counter-current that grew with it.</p>
+
+  <h3>The timeline</h3>
+  <div class="card blue">
+    <ul>
+      <li>Anthropic launched <b>MCP</b> (Nov 2024) as the "USB-C for AI tools" — one open protocol replacing N×M custom integrations between models and data sources.</li>
+      <li>OpenAI adopted it in March 2025 (Agents SDK, Responses API, ChatGPT desktop); Google/Gemini, Microsoft Copilot, Cursor, and VS Code followed — rare full-industry convergence on a competitor's standard.</li>
+      <li>The official registry hit <b>~2,000 entries by Nov 2025</b> — 407% growth from its September launch batch (<a href="https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/" target="_blank">one-year retrospective</a>) — with 10,000+ active public servers in the wild.</li>
+      <li>Dec 2025: <a href="https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation" target="_blank">Anthropic donated MCP to the Agentic AI Foundation</a> under the Linux Foundation, with OpenAI and Block as co-founders.</li>
+      <li>Google's <b>A2A (Agent2Agent)</b> protocol launched April 2025 with 50+ partners and was <a href="https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents" target="_blank">donated to the Linux Foundation in June 2025</a>; it <a href="https://www.linuxfoundation.org/press/a2a-protocol-surpasses-150-organizations-lands-in-major-cloud-platforms-and-sees-enterprise-production-use-in-first-year" target="_blank">passed 150 member organizations within a year</a> (AWS, Microsoft, Salesforce, SAP, ServiceNow...).</li>
+      <li>Division of labor: <b>MCP = agent ↔ tools/data. A2A = agent ↔ agent</b> (JSON-RPC 2.0 + SSE transport, Agent Cards for capability discovery). Complementary, not competing.</li>
+    </ul>
+  </div>
+
+  <h3>The security counter-current</h3>
+  <div class="grid c3">
+    <div class="card red"><span class="pill r">Warning shot</span><h4><span class="icon">🚨</span><a href="https://simonwillison.net/2025/Apr/9/mcp-prompt-injection/" target="_blank">MCP's prompt-injection problem</a></h4><p>Simon Willison flagged it in April 2025.</p></div>
+    <div class="card red"><span class="pill r">Named the pattern</span><h4><span class="icon">☠️</span><a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/" target="_blank">The lethal trifecta</a></h4><p>June 2025: an agent combining <b>private data access + exposure to untrusted content + an external communication channel</b> is exploitable by a single poisoned document — no code vulnerability required.</p></div>
+    <div class="card red"><span class="pill r">New attack class</span><h4><span class="icon">🧪</span>Tool poisoning</h4><p>Malicious instructions hidden in tool descriptions, visible to the model but not normally shown to users. Benchmarks like <b>MCPTox</b> (45 real MCP servers, 353 tools) showed <b>&gt;70% attack success</b> on some models.</p></div>
+  </div>
+  <p class="lede" style="margin-top:18px">The composability that makes MCP attractive is exactly what assembles the trifecta by accident: mix community servers and you've granted all three legs without noticing.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>Know <b>MCP vs A2A roles cold</b>. The mitigation for the trifecta is <b>removing one leg</b> — sandbox egress, allowlist tools, isolate untrusted content from privileged context. That's <a href="domain-09-safety-ethics-compliance.html">domain 09</a> (safety/compliance) plus approval gates on tool use (<a href="domain-10-human-ai-interaction.html">domain 10</a>).</div>
+</section>
+
+<!-- ============ THREAD 7 ============ -->
+<section id="t7-multi-agent">
+  <div class="kicker">Thread 7 · The sharpest disagreement</div>
+  <h2>Multi-agent: skeptics vs advocates</h2>
+  <p class="lede"><b>What the debate is.</b> June 2025, dueling posts days apart — the field's sharpest public disagreement.</p>
+
+  <div class="grid c2">
+    <div class="card red"><span class="pill r">Skeptic</span><h4><span class="icon">🙅</span>Cognition's Walden Yan — <a href="https://cognition.ai/blog/dont-build-multi-agents" target="_blank">Don't Build Multi-Agents</a></h4><p>Parallel sub-agents make conflicting decisions based on implicit assumptions they can't share; stitching their outputs produces incoherent results. Two principles: <b>share full context</b> (every agent sees the full trace, not a summary) and <b>actions carry implicit decisions</b> (parallel actors inevitably contradict each other). For deep, stateful work like coding — Devin's domain — use one agent, one continuous context. His line: <b>"At the core of reliability is Context Engineering."</b></p></div>
+    <div class="card green"><span class="pill g">Advocate</span><h4><span class="icon">🙌</span>Anthropic — <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system" target="_blank">How we built our multi-agent research system</a></h4><p>An orchestrator (Opus 4) spawning parallel search sub-agents (Sonnet 4) beat single-agent Opus 4 by <b>90.2%</b> on internal research evals — at roughly <b>15× the tokens</b> of a chat interaction. Token spend explained most of the performance variance; parallelization compresses wall-clock time for breadth-first work.</p></div>
+  </div>
+
+  <h3>Engineering lessons practitioners quote constantly</h3>
+  <div class="card amber"><ul>
+    <li>The orchestrator must give sub-agents <b>explicit objectives, output formats, and effort budgets</b> — vague delegation produces duplicated or divergent work.</li>
+    <li><b>Effort should scale with task complexity</b> (simple fact-check = 1 agent with 3–10 tool calls; complex research = many agents with divided responsibilities).</li>
+    <li>Debugging multi-agent systems requires <b>full production tracing</b> — non-deterministic failures can't be reproduced locally (ties directly to thread #10).</li>
+  </ul></div>
+
+  <h3>Where it lands <span class="tag">a task taxonomy, not a contradiction</span></h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🔀</span>Multi-agent wins</h4><p>On <b>wide, parallelizable, read-heavy</b> work (research, gathering, evaluation) where sub-tasks are independent and results merge cleanly.</p></div>
+    <div class="card blue"><h4><span class="icon">🎯</span>Single-agent wins</h4><p>On <b>deep, sequential, write-heavy</b> work (codebases, long documents) where every action depends on shared context.</p></div>
+  </div>
+  <p class="lede" style="margin-top:18px">Both sides agree the bottleneck is <b>context flow between agents</b> — which is why thread #1 is the meta-thread.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>"When do you split into multiple agents?" → when sub-tasks are independent and the token cost is justified. "Why did the multi-agent system produce inconsistent output?" → <b>context fragmentation / conflicting implicit decisions</b>. Maps to architecture choices in <a href="domain-04-deployment-scaling.html">domain 04</a> and <a href="domain-08-run-monitor-maintain.html">domain 08</a>.</div>
+</section>
+
+<!-- ============ THREAD 8 ============ -->
+<section id="t8-economics">
+  <div class="kicker">Thread 8 · Production reality</div>
+  <h2>Production war stories: reliability, token economics, and small models</h2>
+  <p class="lede"><b>The sobering math practitioners repeat.</b></p>
+
+  <div class="grid c3">
+    <div class="card red"><h4><span class="icon">📉</span>Errors compound</h4><p><b>95% per-step accuracy over a 10-step task is ~60% task success</b> (0.95^10). This single fact drives most harness design — checkpoints, validation gates, bounded retries, and the preference for shorter chains.</p></div>
+    <div class="card amber"><h4><span class="icon">💸</span>Costs scale superlinearly</h4><p>Agents re-read their whole growing context every step, so cost grows roughly <b>quadratically with trajectory length</b> unless caching is engineered.</p></div>
+    <div class="card red"><h4><span class="icon">🔁</span>Loop detection matters</h4><p>Runaway agent conversations have produced <b>five-figure surprise bills</b>; budget caps and step limits are guardrails, not paranoia.</p></div>
+  </div>
+
+  <h3>The flagship field report <span class="tag">Manus, after four complete framework rebuilds</span></h3>
+  <div class="card cyan"><h4><span class="icon">🛠️</span><a href="https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus" target="_blank">Context Engineering for AI Agents: Lessons from Building Manus</a></h4><p>Yichao "Peak" Ji, July 2025:</p>
+    <ul>
+      <li><b>KV-cache hit rate is the single most important production metric.</b> Agent input:output token ratio runs ~100:1, so stable prompt prefixes and append-only context dominate both cost and latency. (Cached input tokens are billed at roughly an order of magnitude less than uncached across major providers.)</li>
+      <li><b>Mask tools, don't remove them</b> mid-task — preserves the cache prefix and avoids confusing the model with a shifting action space.</li>
+      <li><b>Use the filesystem as context</b> — unlimited, persistent, restorable; compress by dropping content but keeping paths/URLs.</li>
+      <li><b>Recite the todo list</b> — rewriting objectives at the end of context fights lost-in-the-middle.</li>
+      <li><b>Keep errors in context</b> — failed actions and stack traces teach the model within the episode; scrubbing them invites repetition.</li>
+      <li><b>Avoid few-shot ruts</b> — uniform action histories make agents overgeneralize a rhythm; inject controlled variation in serialization and phrasing.</li>
+    </ul></div>
+
+  <h3>The small-model thread <span class="tag">NVIDIA's own thesis</span></h3>
+  <div class="card green"><h4><span class="icon">🐜</span>NVIDIA Research — <a href="https://arxiv.org/abs/2506.02153" target="_blank">Small Language Models are the Future of Agentic AI</a></h4><p>Belcak et al., June 2025; <a href="https://research.nvidia.com/labs/lpr/slm-agents/" target="_blank">project page</a>:</p>
+    <ul>
+      <li><b>Claim:</b> most agent invocations are narrow, repetitive, and format-constrained, so SLMs (&lt;10B params, by their 2025 definition) are "sufficiently powerful, inherently more suitable, and necessarily more economical."</li>
+      <li><b>Economics:</b> serving a ~7B SLM is <b>10–30× cheaper</b> (latency, energy, FLOPs) than a 70–175B LLM.</li>
+      <li>The future they sketch is <b>heterogeneous</b>: SLMs handle routine steps, LLMs are escalation paths for genuinely hard reasoning, and logged agent traces feed an LLM→SLM fine-tuning/distillation flywheel.</li>
+      <li>The paper explicitly invited public rebuttals (published on the project page) and got real debate — counterpoints include orchestration/routing complexity, and the generalist premium when task distributions drift.</li>
+    </ul></div>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>KV-cache/prefix stability and route-to-cheaper-models are <a href="domain-04-deployment-scaling.html">domain 04</a> staples; cost-per-task tracking and loop guards are <a href="domain-08-run-monitor-maintain.html">domain 08</a>; the SLM paper is <b>NVIDIA's own thesis</b> — expect sympathy for "right-size the model, one NIM microservice per role" answers (<a href="domain-07-nvidia-platform.html">domain 07</a>).</div>
+</section>
+
+<!-- ============ THREAD 9 ============ -->
+<section id="t9-memory">
+  <div class="kicker">Thread 9 · Learning across sessions</div>
+  <h2>Memory for agents</h2>
+  <p class="lede"><b>What the debate is.</b> Can agents learn across sessions, not just within one window — and do you need a dedicated memory product for that?</p>
+
+  <h3>The lineage and the landscape</h3>
+  <div class="grid c2">
+    <div class="card purple"><h4><span class="icon">🖥️</span>MemGPT → Letta</h4><p><a href="https://arxiv.org/abs/2310.08560" target="_blank">arXiv 2310.08560</a> (Oct 2023) framed it durably: treat the LLM like an <b>OS managing memory tiers</b> — in-context "RAM" vs external "disk," with the agent paging data via tools. It became <b>Letta</b>, which added research on "sleep-time compute" — background memory consolidation between sessions.</p></div>
+    <div class="card purple"><h4><span class="icon">📦</span>Mem0</h4><p><a href="https://arxiv.org/abs/2504.19413" target="_blank">arXiv 2504.19413</a> — extraction-based drop-in memory layer (vector + graph + key-value); the community favorite by GitHub stars.</p></div>
+    <div class="card purple"><h4><span class="icon">🕸️</span>Zep / Graphiti</h4><p><a href="https://arxiv.org/abs/2501.13956" target="_blank">arXiv 2501.13956</a> (Jan 2025) — temporal knowledge graph memory; every edge carries both event time (when the fact was true) and ingestion time (when the agent learned it), enabling <b>"what did we know when"</b> reasoning.</p></div>
+    <div class="card purple"><h4><span class="icon">🧩</span>LangMem</h4><p>LangChain's memory SDK (early 2025), riding LangGraph's persistent store.</p></div>
+  </div>
+
+  <div class="callout warn" style="margin-top:20px"><b>The taxonomy the field converged on</b> (from cognitive science): <b>episodic</b> (what happened) · <b>semantic</b> (facts and preferences) · <b>procedural</b> (how to behave — including agents editing their own instructions).</div>
+
+  <h3>The skeptical take &amp; practical resolution</h3>
+  <div class="grid c2">
+    <div class="card red"><span class="pill r">Skeptics</span><h4><span class="icon">🤨</span>Files are enough</h4><p>A vocal camp holds that a files-and-notes filesystem plus good retrieval (thread #5) covers most real needs, and a dedicated memory layer adds an extraction pipeline that can <b>hallucinate facts or go stale</b>.</p></div>
+    <div class="card green"><span class="pill g">Resolution circulating</span><h4><span class="icon">⚖️</span>Default vs reach</h4><ul>
+      <li>Default to <b>filesystem + retrieval</b> for single-agent, project-scoped work.</li>
+      <li>Reach for a memory product when you need <b>cross-session personalization, multi-user fact stores, or temporal reasoning</b> ("what did we believe last Tuesday") at scale.</li>
+      <li>Whatever the store, the <b>write policy</b> (what gets remembered, when, by whom) is the design decision that matters — not the vector database underneath.</li></ul></div>
+  </div>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>Know the <b>three memory types</b> and the in-context vs external-store distinction; memory read/write appears in agent-architecture questions and ties to state management in <a href="domain-04-deployment-scaling.html">domain 04</a> and <a href="domain-08-run-monitor-maintain.html">domain 08</a>.</div>
+</section>
+
+<!-- ============ THREAD 10 ============ -->
+<section id="t10-observability">
+  <div class="kicker">Thread 10 · Traces as the substrate</div>
+  <h2>Observability and eval-in-prod tooling consolidation</h2>
+  <p class="lede"><b>What happened.</b> The trace-everything market matured and consolidated around a handful of platforms.</p>
+
+  <div class="grid c3">
+    <div class="card blue"><h4><span class="icon">🧪</span>LangSmith</h4><p>Deepest LangChain/LangGraph integration: node-level state diffs, full execution graphs, trajectory replay against new model versions.</p></div>
+    <div class="card green"><h4><span class="icon">🔓</span>Langfuse</h4><p>The open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached ~6M SDK installs/month, and was <b>acquired by ClickHouse in January 2026</b>.</p></div>
+    <div class="card cyan"><h4><span class="icon">🔥</span>Arize Phoenix</h4><p>Open-source, OpenTelemetry-native via the OpenInference conventions; strongest for notebook- and eval-heavy workflows.</p></div>
+    <div class="card purple"><h4><span class="icon">🧠</span>Braintrust</h4><p>Closed-source, eval-first (regression harness as the center of gravity) with tracing attached.</p></div>
+    <div class="card amber"><h4><span class="icon">🏢</span>Datadog &amp; Honeycomb</h4><p>Pulled LLM traces into general-purpose observability for teams that want infra correlation.</p></div>
+    <div class="card green"><h4><span class="icon">🔗</span>The unifying trend</h4><p><b>OpenTelemetry GenAI semantic conventions</b> as the neutral instrumentation layer — instrument once, ship spans to any backend, switch vendors later. Portability of traces became a purchasing criterion, and most backends (Langfuse, Phoenix, LangSmith) now ingest OTel-format spans regardless of which SDK produced them.</p></div>
+  </div>
+
+  <h3>What "eval-in-prod" concretely means in these platforms</h3>
+  <div class="card blue"><ul>
+    <li><b>LLM-as-judge evaluators</b> sampling a percentage of live traces against rubrics.</li>
+    <li><b>Annotation queues</b> routing flagged traces to human reviewers (the domain-10 connection).</li>
+    <li><b>Dataset builders</b> that promote interesting production traces into offline regression sets with one click.</li>
+    <li><b>Experiment/replay:</b> re-run a captured trajectory against a new prompt or model version and diff outcomes.</li>
+  </ul></div>
+
+  <h3>Where it lands</h3>
+  <p class="lede">The conceptual convergence matters more than vendor choice: <b>traces are the shared substrate for both debugging and evaluation</b>. Online monitoring feeds novel failures into offline golden datasets (closing thread #4's loop), and "eval-in-prod" — LLM-as-judge sampling live traffic, human annotation queues — is now table stakes in every platform.</p>
+
+  <div class="callout"><span class="exam-chip">For your exam</span>This is <a href="domain-08-run-monitor-maintain.html">domain 08</a> (run/monitor/maintain) — tracing, spans, drift detection, feedback loops — plus the offline/online eval complementarity from <a href="domain-03-evaluation-tuning.html">domain 03</a>. If asked about portable instrumentation, the answer is <b>OpenTelemetry-based</b>.</div>
+</section>
+
+<!-- ============ THREAD → DOMAIN MAP ============ -->
+<section id="map">
+  <div class="kicker">Revision index</div>
+  <h2>Thread → domain quick map</h2>
+  <p class="lede">Use this as a revision index: when reviewing a domain file, skim the threads listed for it here to recall the <b>"why"</b> behind the concepts.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>#</th><th>Thread</th><th>Primary domains</th><th>The one idea to retain</th></tr>
+    <tr><td><b>1</b></td><td><a href="#t1-context">Context engineering</a></td><td><a href="domain-04-deployment-scaling.html">04</a>, <a href="domain-08-run-monitor-maintain.html">08</a></td><td>Attention is a finite budget; compaction / notes / sub-agents are the long-horizon toolkit</td></tr>
+    <tr><td><b>2</b></td><td><a href="#t2-effective-agents">Building Effective Agents</a></td><td><a href="domain-03-evaluation-tuning.html">03</a>, architecture</td><td>Workflows before agents; simplest composable pattern that works</td></tr>
+    <tr><td><b>3</b></td><td><a href="#t3-12-factor">12-Factor Agents</a></td><td>all six — <a href="domain-03-evaluation-tuning.html">03</a> · <a href="domain-04-deployment-scaling.html">04</a> · <a href="domain-07-nvidia-platform.html">07</a> · <a href="domain-08-run-monitor-maintain.html">08</a> · <a href="domain-09-safety-ethics-compliance.html">09</a> · <a href="domain-10-human-ai-interaction.html">10</a></td><td>Own prompts, context, and control flow; agents are mostly software</td></tr>
+    <tr><td><b>4</b></td><td><a href="#t4-evals">Evals movement + backlash</a></td><td><a href="domain-03-evaluation-tuning.html">03</a></td><td>Error analysis first; binary judgments; rigor proportional to risk</td></tr>
+    <tr><td><b>5</b></td><td><a href="#t5-deep-agents">Deep agents</a></td><td><a href="domain-07-nvidia-platform.html">07</a>, architecture</td><td>Planning + filesystem + sub-agents + detailed prompt — converged on three times</td></tr>
+    <tr><td><b>6</b></td><td><a href="#t6-mcp-a2a">MCP + A2A</a></td><td><a href="domain-09-safety-ethics-compliance.html">09</a>, <a href="domain-10-human-ai-interaction.html">10</a></td><td>MCP = agent↔tools, A2A = agent↔agents; break one leg of the lethal trifecta</td></tr>
+    <tr><td><b>7</b></td><td><a href="#t7-multi-agent">Multi-agent debate</a></td><td><a href="domain-04-deployment-scaling.html">04</a>, <a href="domain-08-run-monitor-maintain.html">08</a></td><td>Parallel for wide/read-heavy, single for deep/write-heavy; context flow is the bottleneck</td></tr>
+    <tr><td><b>8</b></td><td><a href="#t8-economics">War stories + SLMs</a></td><td><a href="domain-04-deployment-scaling.html">04</a>, <a href="domain-07-nvidia-platform.html">07</a>, <a href="domain-08-run-monitor-maintain.html">08</a></td><td>Errors compound; KV-cache hit rate; right-size the model</td></tr>
+    <tr><td><b>9</b></td><td><a href="#t9-memory">Memory</a></td><td><a href="domain-04-deployment-scaling.html">04</a>, <a href="domain-08-run-monitor-maintain.html">08</a></td><td>Episodic / semantic / procedural; in-context vs external store</td></tr>
+    <tr><td><b>10</b></td><td><a href="#t10-observability">Observability consolidation</a></td><td><a href="domain-03-evaluation-tuning.html">03</a>, <a href="domain-08-run-monitor-maintain.html">08</a></td><td>Traces feed both debugging and evals; OpenTelemetry for portability</td></tr>
+  </table></div>
+
+  <h3>Five meta-takeaways <span class="tag">if you remember nothing else</span></h3>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">🎯</span>1 · Everything converges on context</h4><p>Context engineering is the meta-thread: it is the resolution of the multi-agent debate (#7), the substance of harness design (#2), the mechanism behind deep agents (#5), and the top production cost lever (#8). When in doubt on an architecture question, <b>the answer that manages context deliberately is usually right</b>.</p></div>
+    <div class="card green"><h4><span class="icon">🧰</span>2 · Agents are mostly software engineering</h4><p>The 12-factor framing, the workflows-first advice, and the war stories all say the same thing: deterministic code with LLM decision points beats maximal autonomy in production. <b>Exam scenarios reward the boring, controllable option.</b></p></div>
+    <div class="card green"><h4><span class="icon">🔄</span>3 · Measurement is a loop, not a gate</h4><p>Look at data → taxonomize failures → binary judges aligned to humans → regression suite → production traces feed new failures back in. Threads #4 and #10 are two halves of one loop.</p></div>
+    <div class="card green"><h4><span class="icon">🛡️</span>4 · Composability is also the attack surface</h4><p>The same open-protocol explosion that made MCP/A2A useful (#6) created tool poisoning and the lethal trifecta. Capability and exposure grow together; <b>mitigations subtract capability legs</b>.</p></div>
+    <div class="card green"><h4><span class="icon">💰</span>5 · Token economics shape architecture</h4><p>Multi-agent at 15× tokens, 100:1 input:output ratios, cache-hit-rate engineering, SLM routing — <b>cost is not an afterthought, it is a design input</b> (#7, #8).</p></div>
+  </div>
+</section>
+
+<!-- ============ READING LIST ============ -->
+<section id="reading">
+  <div class="kicker">Sources, annotated</div>
+  <h2>Reading list</h2>
+  <p class="lede">The primary sources behind every thread above, grouped by author/outlet. All links open in a new tab.</p>
+
+  <div class="reading-group">
+    <h4>Anthropic (engineering blog)</h4>
+    <ul>
+      <li><a href="https://www.anthropic.com/research/building-effective-agents" target="_blank">Building Effective Agents</a> — the Dec 2024 ur-text: workflows vs agents, five composable patterns, "keep it simple."</li>
+      <li><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank">Effective context engineering for AI agents</a> — attention as a finite budget; compaction, note-taking, sub-agents.</li>
+      <li><a href="https://www.anthropic.com/engineering/built-multi-agent-research-system" target="_blank">How we built our multi-agent research system</a> — orchestrator-workers at ~15× token cost, +90.2% on research evals.</li>
+      <li><a href="https://www.anthropic.com/news/donating-the-model-context-protocol-and-establishing-of-the-agentic-ai-foundation" target="_blank">Donating MCP / the Agentic AI Foundation</a> — MCP becomes vendor-neutral under the Linux Foundation (Dec 2025).</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Hamel Husain / Shreya Shankar / Eugene Yan (the evals school)</h4>
+    <ul>
+      <li><a href="https://hamel.dev/blog/posts/evals/" target="_blank">Your AI Product Needs Evals</a> — Hamel's foundational post: unit tests, LLM-judge, error analysis as the kernel.</li>
+      <li><a href="https://hamel.dev/blog/posts/evals-faq/" target="_blank">LLM Evals FAQ</a> — Hamel's living answers file: binary judgments, sample sizes, when to dial rigor down.</li>
+      <li><a href="https://www.sh-reya.com/blog/in-defense-ai-evals/" target="_blank">In Defense of AI Evals, for Everyone</a> — Shankar's reply to the Sept 2025 anti-evals wave.</li>
+      <li><a href="https://arxiv.org/abs/2404.12272" target="_blank">Who Validates the Validators?</a> — Shankar et al., UIST 2024: criteria drift; aligning LLM judges with human grades.</li>
+      <li><a href="https://eugeneyan.com/writing/llm-evaluators/" target="_blank">Evaluating LLM-Evaluators</a> — Eugene Yan's survey of judge reliability and biases.</li>
+      <li><a href="https://eugeneyan.com/writing/aligneval/" target="_blank">AlignEval</a> — Yan's label → align → harness loop, built as a working app.</li>
+      <li><a href="https://maven.com/parlance-labs/evals" target="_blank">AI Evals for Engineers &amp; PMs</a> — the Husain/Shankar course that institutionalized the methodology.</li>
+      <li><a href="https://hugobowne.substack.com/p/episode-60-10-things-i-hate-about-e83" target="_blank">Vanishing Gradients ep. 60 with Hamel</a> — the backlash discussed head-on.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Dex Horthy / HumanLayer</h4>
+    <ul>
+      <li><a href="https://github.com/humanlayer/12-factor-agents" target="_blank">12-factor-agents (GitHub)</a> — all twelve factors plus factor 13; the production-agents checklist.</li>
+      <li><a href="https://home.mlops.community/public/videos/12-factor-agents-patterns-of-reliable-llm-applications-dexter-horthy-agents-in-production-2025-2025-08-06" target="_blank">12-Factor Agents talk, Agents in Production 2025</a> — the talk version with the "dumb zone" framing.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Simon Willison (simonwillison.net)</h4>
+    <ul>
+      <li><a href="https://simonwillison.net/2025/Apr/9/mcp-prompt-injection/" target="_blank">MCP has prompt injection security problems</a> — the early warning shot (April 2025).</li>
+      <li><a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/" target="_blank">The lethal trifecta</a> — private data + untrusted content + exfiltration channel = exploitable agent.</li>
+      <li><a href="https://simonwillison.net/2025/Jun/27/context-engineering/" target="_blank">Context engineering</a> — tracking the term's takeover in real time.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>LangChain</h4>
+    <ul>
+      <li><a href="https://blog.langchain.com/deep-agents/" target="_blank">Deep Agents</a> — planning + filesystem + sub-agents + detailed prompt, named and packaged.</li>
+      <li><a href="https://github.com/langchain-ai/deepagents" target="_blank">deepagents (GitHub)</a> — the harness as a pip-installable library on the LangGraph runtime.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Cognition</h4>
+    <ul>
+      <li><a href="https://cognition.ai/blog/dont-build-multi-agents" target="_blank">Don't Build Multi-Agents</a> — Walden Yan: share full context; actions carry implicit decisions.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Manus</h4>
+    <ul>
+      <li><a href="https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus" target="_blank">Context Engineering for AI Agents: Lessons from Building Manus</a> — KV-cache hit rate as <i>the</i> metric; mask-don't-remove; keep errors in context.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>NVIDIA Research</h4>
+    <ul>
+      <li><a href="https://arxiv.org/abs/2506.02153" target="_blank">Small Language Models are the Future of Agentic AI</a> — Belcak et al.: SLMs for routine agent steps, LLM escalation, distillation flywheel (<a href="https://research.nvidia.com/labs/lpr/slm-agents/" target="_blank">project page with rebuttals</a>).</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Chroma</h4>
+    <ul>
+      <li><a href="https://research.trychroma.com/context-rot" target="_blank">Context Rot: How Increasing Input Tokens Impacts LLM Performance</a> — 18 models; performance degrades non-uniformly with input length.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>X (the canonical posts)</h4>
+    <ul>
+      <li><a href="https://x.com/karpathy/status/1937902205765607626" target="_blank">Karpathy on context engineering</a> — the endorsement that mainstreamed the term (June 2025).</li>
+      <li><a href="https://x.com/tobi/status/1935533422589399127" target="_blank">Tobi Lütke's definition</a> — "all the context for the task to be plausibly solvable by the LLM."</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Protocols and ecosystem</h4>
+    <ul>
+      <li><a href="https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents" target="_blank">Linux Foundation launches the A2A project</a> — Google's donation, June 2025.</li>
+      <li><a href="https://www.linuxfoundation.org/press/a2a-protocol-surpasses-150-organizations-lands-in-major-cloud-platforms-and-sees-enterprise-production-use-in-first-year" target="_blank">A2A surpasses 150 organizations</a> — one-year adoption report.</li>
+      <li><a href="https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/" target="_blank">One Year of MCP</a> — registry growth, spec evolution, adoption stats.</li>
+      <li><a href="https://a2a-protocol.org/latest/" target="_blank">A2A Protocol site</a> — spec, Agent Cards, transport details.</li>
+    </ul>
+  </div>
+
+  <div class="reading-group">
+    <h4>Memory papers</h4>
+    <ul>
+      <li><a href="https://arxiv.org/abs/2310.08560" target="_blank">MemGPT: Towards LLMs as Operating Systems</a> — OS-style memory tiers; became Letta.</li>
+      <li><a href="https://arxiv.org/abs/2504.19413" target="_blank">Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory</a> — extraction-based hybrid memory layer.</li>
+      <li><a href="https://arxiv.org/abs/2501.13956" target="_blank">Zep: A Temporal Knowledge Graph Architecture for Agent Memory</a> — Graphiti's bitemporal edges.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <h3>About this page</h3>
+  <ul>
+    <li>Back to the hub — <a href="index.html">NCP-AAI Visual Study Hub</a></li>
+    <li>Source notes — <a href="../notes/domain-00-builders-pulse.md">notes/domain-00-builders-pulse.md</a></li>
+    <li>Sibling deep-dives — <a href="domain-03-evaluation-tuning.html">D3 Evaluation &amp; Tuning</a> · <a href="domain-04-deployment-scaling.html">D4 Deployment &amp; Scaling</a> · <a href="domain-07-nvidia-platform.html">D7 NVIDIA Platform</a> · <a href="domain-08-run-monitor-maintain.html">D8 Run/Monitor/Maintain</a> · <a href="domain-09-safety-ethics-compliance.html">D9 Safety/Ethics/Compliance</a> · <a href="domain-10-human-ai-interaction.html">D10 Human-AI Interaction</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 0: Builder's Pulse — the 2025–26 practitioner discourse mapped to the exam domains · Built from personal study notes; all attributions and links sourced from the notes above.</p>
+</footer>
+
+</body>
+</html>

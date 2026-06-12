@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 8 — Run, Monitor &amp; Maintain</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a29; --panel:#141d2e; --panel2:#18233a;
+    --line:#22304a; --txt:#dbe4f0; --dim:#8fa1b8; --faint:#5d6f88;
+    --nv:#76b900; --nv-dark:#4e7a00; --blue:#4da3ff; --yellow:#ffd24d; --red:#ff5c5c;
+    --orange:#ff9f43; --purple:#b07cff; --cyan:#3fd8d2;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.6; overflow-x:hidden;
+  }
+  ::selection{background:var(--green); color:var(--on-accent);}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
+    display:flex; gap:2px; overflow-x:auto; padding:0 14px; white-space:nowrap;
+  }
+  nav a{
+    color:var(--muted); text-decoration:none; font-size:.78rem; font-weight:600;
+    padding:12px 11px; letter-spacing:.04em; text-transform:uppercase;
+    border-bottom:2px solid transparent; transition:color .2s,border-color .2s;
+  }
+  nav a:hover{color:var(--green); border-bottom-color:var(--green);}
+
+  /* ---------- hero ---------- */
+  header.hero{
+    padding:64px 24px 44px; text-align:center;
+    background:radial-gradient(ellipse 80% 60% at 50% -10%, var(--green-glow), transparent 60%), var(--bg);
+  }
+  .hero .kicker{
+    display:inline-block; font-size:.8rem; font-weight:700; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--green); border:1px solid var(--green-dim);
+    padding:6px 16px; border-radius:999px; margin-bottom:18px; background:var(--green-glow);
+  }
+  .hero h1{font-size:clamp(1.8rem,4.5vw,3.1rem); font-weight:800; letter-spacing:-.02em;}
+  .hero h1 span{color:var(--green);}
+  .hero .weight{color:var(--muted); font-size:1rem; margin-top:10px;}
+  .hero .weight b{color:var(--amber);}
+  .hero .hook{
+    max-width:780px; margin:18px auto 0; color:var(--muted); font-size:1.05rem;
+  }
+  .hero .hook em{color:var(--text); font-style:normal; font-weight:600;}
+
+  /* ---------- 3D scene ---------- */
+  #scene-wrap{position:relative; width:100%; height:70vh; min-height:520px; background:#070b12; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  #scene-wrap canvas{display:block;}
+  .overlay-card{
+    position:absolute; background:rgba(10,14,22,.88); border:1px solid #3a4a66;
+    border-radius:10px; padding:12px 14px; font-size:.78rem; color:#8fa0b8;
+    backdrop-filter:blur(6px); pointer-events:none;
+  }
+  #legend{left:14px; bottom:14px; pointer-events:auto; max-width:300px;}
+  #legend h4{color:#dfe7f3; font-size:.8rem; margin-bottom:7px; letter-spacing:.05em; text-transform:uppercase;}
+  #legend .row{display:flex; align-items:center; gap:8px; margin:3px 0;}
+  .dot{width:10px; height:10px; border-radius:50%; flex:none;}
+  #scene-tip{
+    display:none; top:14px; right:14px; max-width:300px; border-color:#4e7a00;
+  }
+  #scene-tip h4{color:#76b900; font-size:.85rem; margin-bottom:4px;}
+  #scene-hint{
+    top:14px; left:14px; font-size:.72rem; letter-spacing:.04em;
+  }
+
+  /* ---------- layout ---------- */
+  main{max-width:1180px; margin:0 auto; padding:0 22px 80px;}
+  section{padding:58px 0 8px;}
+  h2.sec{
+    font-size:1.7rem; font-weight:800; letter-spacing:-.01em; margin-bottom:6px;
+    display:flex; align-items:center; gap:12px;
+  }
+  h2.sec .num{
+    color:var(--green); font-size:.95rem; font-weight:700; border:1px solid var(--green-dim);
+    border-radius:8px; padding:2px 10px; background:var(--green-glow); flex:none;
+  }
+  .sub{color:var(--muted); margin-bottom:26px; max-width:840px;}
+  h3.block{font-size:1.12rem; font-weight:700; color:var(--green); margin:34px 0 14px;}
+
+  /* cards */
+  .grid{display:grid; gap:14px;}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(310px,1fr));}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 18px;
+  }
+  .card h4{font-size:.95rem; margin-bottom:8px; color:var(--text);}
+  .card h4 .tag{font-size:.68rem; padding:2px 8px; border-radius:999px; margin-left:6px; vertical-align:middle; font-weight:700;}
+  .card p, .card li{font-size:.86rem; color:var(--muted);}
+  .card ul{padding-left:18px;}
+  .card b{color:var(--text);}
+  .card code, td code, li code, p code{
+    background:var(--bg2); border:1px solid var(--line); border-radius:5px; padding:1px 6px;
+    font-family:Consolas,Menlo,monospace; font-size:.8em; color:var(--cyan);
+  }
+  .accent-top{border-top:3px solid var(--green);}
+
+  /* tables */
+  .twrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; margin:14px 0;}
+  table{border-collapse:collapse; width:100%; font-size:.85rem; min-width:560px;}
+  th{
+    background:var(--bg3); color:var(--green); text-align:left; padding:10px 14px;
+    font-size:.74rem; letter-spacing:.07em; text-transform:uppercase; border-bottom:1px solid var(--line);
+  }
+  td{padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  td b{color:var(--text);}
+  .cell-good{background:var(--green-glow); color:var(--green);}
+  .cell-warn{background:color-mix(in srgb, var(--amber) 9%, transparent); color:var(--amber);}
+  .cell-bad{background:color-mix(in srgb, var(--red) 10%, transparent); color:var(--red);}
+  .cell-info{background:color-mix(in srgb, var(--blue) 10%, transparent); color:var(--blue);}
+
+  /* SVG diagrams */
+  .diagram{
+    background:var(--bg2); border:1px solid var(--line); border-radius:14px;
+    padding:18px; margin:16px 0; overflow-x:auto;
+  }
+  .diagram svg{display:block; margin:0 auto; max-width:100%; height:auto;}
+  .dia-cap{text-align:center; color:var(--muted); font-size:.78rem; margin-top:8px;}
+
+  /* bars */
+  .bars{margin:10px 0;}
+  .bar-row{display:grid; grid-template-columns:190px 1fr 70px; align-items:center; gap:12px; margin:9px 0; font-size:.84rem;}
+  .bar-row .lbl{color:var(--text); text-align:right; font-weight:600;}
+  .bar-track{background:var(--bg2); border:1px solid var(--line); border-radius:7px; height:20px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:6px 0 0 6px;}
+  .bar-val{color:var(--muted); font-size:.78rem;}
+
+  /* callouts / traps */
+  .trap{
+    background:linear-gradient(135deg, color-mix(in srgb, var(--red) 7%, transparent), color-mix(in srgb, var(--amber) 5%, transparent));
+    border:1px solid color-mix(in srgb, var(--red) 35%, transparent); border-left:4px solid var(--red);
+    border-radius:12px; padding:15px 17px;
+  }
+  .trap h4{color:var(--red); font-size:.9rem; margin-bottom:6px;}
+  .trap p{font-size:.84rem; color:var(--muted);}
+  .trap p b{color:var(--text);}
+  .note{
+    background:color-mix(in srgb, var(--blue) 6%, transparent); border:1px solid color-mix(in srgb, var(--blue) 30%, transparent);
+    border-left:4px solid var(--blue); border-radius:12px; padding:14px 17px; margin:14px 0; font-size:.88rem; color:var(--muted);
+  }
+  .note b{color:var(--text);}
+  .key{
+    background:var(--green-glow); border:1px solid color-mix(in srgb, var(--green) 35%, transparent);
+    border-left:4px solid var(--green); border-radius:12px; padding:14px 17px; margin:14px 0; font-size:.9rem; color:var(--muted);
+  }
+  .key b{color:var(--green);}
+
+  /* quiz */
+  details.drill{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    margin:12px 0; overflow:hidden; transition:border-color .2s;
+  }
+  details.drill:hover{border-color:var(--green-dim);}
+  details.drill summary{
+    cursor:pointer; padding:17px 20px; font-size:.92rem; font-weight:600; color:var(--text);
+    list-style:none; display:flex; gap:13px; align-items:flex-start;
+  }
+  details.drill summary::-webkit-details-marker{display:none;}
+  details.drill summary .qn{
+    flex:none; width:28px; height:28px; border-radius:8px; background:var(--green-glow);
+    border:1px solid var(--green-dim); color:var(--green); font-weight:800; font-size:.85rem;
+    display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+  details.drill summary .hintword{margin-left:auto; flex:none; color:var(--muted); font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; align-self:center;}
+  details.drill[open] summary .hintword{color:var(--green);}
+  details.drill .ans{
+    border-top:1px dashed var(--line); padding:15px 20px 17px 61px; font-size:.88rem; color:var(--muted);
+    background:color-mix(in srgb, var(--green) 5%, transparent); animation:fadein .3s ease;
+  }
+  details.drill .ans b{color:var(--green);}
+  @keyframes fadein{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;}}
+
+  /* timeline / ladder */
+  .ladder{display:flex; flex-direction:column; gap:0; margin:14px 0;}
+  .rung{display:grid; grid-template-columns:46px 1fr; gap:14px; position:relative;}
+  .rung .node{
+    width:34px; height:34px; border-radius:50%; background:var(--bg3); border:2px solid var(--green);
+    color:var(--green); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:.85rem; z-index:1;
+  }
+  .rung:not(:last-child)::before{
+    content:""; position:absolute; left:16px; top:34px; bottom:-8px; width:2px; background:var(--line);
+  }
+  .rung .body{padding-bottom:22px;}
+  .rung .body h4{font-size:.92rem; color:var(--text);}
+  .rung .body p{font-size:.84rem; color:var(--muted);}
+
+  footer{
+    border-top:1px solid var(--line); padding:40px 22px 60px; background:var(--bg2);
+  }
+  footer .inner{max-width:1180px; margin:0 auto;}
+  footer h3{color:var(--green); font-size:1rem; margin-bottom:14px;}
+  footer ul{list-style:none; columns:2; column-gap:40px;}
+  footer li{margin:5px 0; font-size:.8rem; break-inside:avoid;}
+  footer a{color:var(--muted); text-decoration:none;}
+  footer a:hover{color:var(--green);}
+  @media(max-width:760px){footer ul{columns:1;} .bar-row{grid-template-columns:120px 1fr 56px;}}
+  .pill{display:inline-block; font-size:.7rem; font-weight:700; padding:2px 10px; border-radius:999px; letter-spacing:.04em;}
+  .p-blue{background:color-mix(in srgb, var(--blue) 14%, transparent); color:var(--blue); border:1px solid color-mix(in srgb, var(--blue) 40%, transparent);}
+  .p-green{background:var(--green-glow); color:var(--green); border:1px solid color-mix(in srgb, var(--green) 40%, transparent);}
+  .p-yellow{background:color-mix(in srgb, var(--amber) 12%, transparent); color:var(--amber); border:1px solid color-mix(in srgb, var(--amber) 40%, transparent);}
+  .p-red{background:color-mix(in srgb, var(--red) 13%, transparent); color:var(--red); border:1px solid color-mix(in srgb, var(--red) 40%, transparent);}
+  .p-purple{background:color-mix(in srgb, var(--purple) 13%, transparent); color:var(--purple); border:1px solid color-mix(in srgb, var(--purple) 40%, transparent);}
+  .p-cyan{background:color-mix(in srgb, var(--cyan) 12%, transparent); color:var(--cyan); border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent);}
+
+  /* multi-line code blocks */
+  pre.codeblock{
+    background:var(--bg2); border:1px solid var(--line); border-radius:10px;
+    padding:13px 15px; margin:10px 0 12px; overflow-x:auto;
+  }
+  pre.codeblock code, .card pre.codeblock code{
+    background:none; border:none; padding:0; display:block;
+    font-family:Consolas,Menlo,monospace; font-size:.78rem; line-height:1.55; color:var(--text);
+  }
+  .card a{color:var(--blue); text-decoration:none; border-bottom:1px dotted color-mix(in srgb, var(--blue) 50%, transparent);}
+  .card a:hover{color:var(--green); border-bottom-color:var(--green);}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a href="#scene-wrap">3D City</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#observe">Observe</a>
+  <a href="#metrics">Metrics</a>
+  <a href="#drift">Drift</a>
+  <a href="#slo">SLOs</a>
+  <a href="#maintain">Maintain</a>
+  <a href="#nvidia">NVIDIA Stack</a>
+  <a href="#decide">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#quiz">Drills</a>
+  <a href="#builder">Builder</a>
+  <a href="#code">Code</a>
+  <a href="#voices">Voices</a>
+</nav>
+
+<header class="hero">
+  <div class="kicker">NCP-AAI &middot; Domain 8 &middot; Exam Weight 5%</div>
+  <h1>Run, Monitor &amp; <span>Maintain</span></h1>
+  <div class="weight">&approx;3&ndash;4 of 60&ndash;70 questions &middot; scenario-style best-choice items &middot; <b>observe &rarr; detect &rarr; maintain</b></div>
+  <p class="hook">Agents fail differently from microservices: a request can return <em>HTTP 200 with low latency</em> while the agent silently loops, picks the wrong tool, burns 50&times; the expected tokens, or hallucinates. Day-2 operations means <em>semantic observability</em> layered on classic infra monitoring.</p>
+</header>
+
+<!-- ==================== 3D SCENE ==================== -->
+<div id="scene-wrap">
+  <div class="overlay-card" id="scene-hint">Drag to orbit &middot; scroll to zoom &middot; hover buildings, tower &amp; storm for info</div>
+  <div class="overlay-card" id="legend">
+    <h4>Observability City</h4>
+    <div class="row"><span class="dot" style="background:#4da3ff"></span>Blue particles = <b>&nbsp;traces</b>&nbsp;(span trees)</div>
+    <div class="row"><span class="dot" style="background:#76b900"></span>Green particles = <b>&nbsp;metrics</b>&nbsp;(Prometheus)</div>
+    <div class="row"><span class="dot" style="background:#ffd24d"></span>Yellow particles = <b>&nbsp;logs</b>&nbsp;(intermediate steps)</div>
+    <div class="row"><span class="dot" style="background:#ff5c5c"></span>Red stream = drift-degraded telemetry</div>
+    <div class="row"><span class="dot" style="background:#b07cff"></span>Storm cloud = drift (data/concept/behavior)</div>
+    <div class="row"><span class="dot" style="background:#e8f4ff"></span>Tower screens = latency / cost / error SLIs</div>
+    <div class="row"><span class="dot" style="background:#76b900;box-shadow:0 0 6px #76b900"></span>Green ring = rollback (label re-point)</div>
+  </div>
+  <div class="overlay-card" id="scene-tip"><h4 id="tip-title"></h4><div id="tip-body"></div></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 60, 160);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth/wrap.clientHeight, 0.1, 400);
+camera.position.set(34, 24, 44);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+wrap.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 7, 0);
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 18; controls.maxDistance = 120;
+
+// lights
+scene.add(new THREE.AmbientLight(0x4a5878, 0.7));
+const moon = new THREE.DirectionalLight(0x9db8ff, 0.8);
+moon.position.set(-30, 50, 20); scene.add(moon);
+const towerGlow = new THREE.PointLight(0x76b900, 25, 60);
+towerGlow.position.set(0, 16, 0); scene.add(towerGlow);
+
+// ground grid
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(220, 220),
+  new THREE.MeshStandardMaterial({color:0x0a0f1a, roughness:0.95})
+);
+ground.rotation.x = -Math.PI/2; scene.add(ground);
+const grid = new THREE.GridHelper(220, 70, 0x1c2840, 0x141d2e);
+grid.position.y = 0.02; scene.add(grid);
+
+// --- helpers ---
+function labelSprite(text, color='#dbe4f0', size=0.018, bg='rgba(10,14,22,0.78)'){
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = '600 44px "Segoe UI", Arial, sans-serif';
+  const w = Math.ceil(ctx.measureText(text).width) + 48;
+  c.width = w; c.height = 84;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.beginPath(); g.roundRect(0, 6, w, 72, 14); g.fill();
+  g.strokeStyle = 'rgba(118,185,0,0.45)'; g.lineWidth = 2; g.stroke();
+  g.font = '600 44px "Segoe UI", Arial, sans-serif';
+  g.fillStyle = color; g.textBaseline = 'middle';
+  g.fillText(text, 24, 44);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+  sp.scale.set(w*size, 84*size, 1);
+  return sp;
+}
+
+// --- buildings (agent services) ---
+const BUILDINGS = [
+  {name:'Agent Service A', sub:'LangGraph support agent', pos:new THREE.Vector3(-24, 0, -10), h:8,  color:0x1d2c47},
+  {name:'NIM LLM Service', sub:'vLLM-style /v1/metrics: queue depth, KV-cache %', pos:new THREE.Vector3(-16, 0, 16), h:11, color:0x203150},
+  {name:'Agent Service B', sub:'RAG pipeline + tools', pos:new THREE.Vector3(22, 0, -14), h:9,  color:0x1d2c47},
+  {name:'Triton Server', sub:'metrics on :8002 — nv_inference_queue_duration_us', pos:new THREE.Vector3(20, 0, 14), h:7,  color:0x203150},
+];
+const hoverables = [];
+const buildings = BUILDINGS.map(b=>{
+  const grp = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({color:b.color, roughness:0.6, metalness:0.3, emissive:0x0a1322, emissiveIntensity:0.8});
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, b.h, 6), mat);
+  mesh.position.y = b.h/2; grp.add(mesh);
+  // windows
+  const winMat = new THREE.MeshBasicMaterial({color:0x6f87ad});
+  for(let f=0; f<Math.floor(b.h/2); f++){
+    for(let wx=-1; wx<=1; wx++){
+      if(Math.random()<0.3) continue;
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.6), winMat);
+      win.position.set(wx*1.8, 1.4+f*2, 3.02); grp.add(win);
+      const win2 = win.clone(); win2.position.z = -3.02; win2.rotation.y = Math.PI; grp.add(win2);
+    }
+  }
+  const lbl = labelSprite(b.name);
+  lbl.position.y = b.h + 2.0; grp.add(lbl);
+  grp.position.copy(b.pos);
+  grp.userData = {kind:'building', title:b.name, body:b.sub + ' — emits traces (blue), metrics (green), logs (yellow) to the observability tower.'};
+  mesh.userData = grp.userData;
+  hoverables.push(mesh);
+  scene.add(grp);
+  return {cfg:b, grp, mesh, mat, baseEmissive:new THREE.Color(0x0a1322)};
+});
+
+// --- central observability tower ---
+const tower = new THREE.Group();
+const towerMat = new THREE.MeshStandardMaterial({color:0x16283c, roughness:0.4, metalness:0.5, emissive:0x09301a, emissiveIntensity:0.6});
+const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 22, 8), towerMat);
+towerMesh.position.y = 11; tower.add(towerMesh);
+towerMesh.userData = {kind:'tower', title:'Observability Tower',
+  body:'OTel Collector + Prometheus + Grafana + eval-in-production. Receives OTLP spans, scrapes /metrics (pull model), scores sampled answers with an LLM judge. Screens: latency, cost/request, error & judge-fail rate.'};
+hoverables.push(towerMesh);
+// antenna
+const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,6), new THREE.MeshBasicMaterial({color:0x76b900}));
+ant.position.y = 25; tower.add(ant);
+const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.45), new THREE.MeshBasicMaterial({color:0x76b900}));
+antTip.position.y = 28; tower.add(antTip);
+const towerLbl = labelSprite('Observability Tower  ·  OTel / Prometheus / Grafana / Evals', '#b9e07c', 0.016);
+towerLbl.position.y = 30.5; tower.add(towerLbl);
+scene.add(tower);
+
+// --- dashboard screens (animated canvases) on the tower ---
+function makeScreen(title, color, yPos, rotY, zOff){
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.2),
+    new THREE.MeshBasicMaterial({map:tex}));
+  mesh.position.set(0, yPos, 0); mesh.rotation.y = rotY;
+  mesh.translateZ(zOff);
+  tower.add(mesh);
+  return {c, ctx:c.getContext('2d'), tex, title, color, data:Array.from({length:40},()=>Math.random()*0.3+0.35)};
+}
+const screens = [
+  makeScreen('p95 LATENCY', '#76b900', 17, 0, 4.06),
+  makeScreen('COST / REQ',  '#ff9f43', 12, 0, 4.06),
+  makeScreen('ERROR + JUDGE-FAIL %', '#ff5c5c', 7, 0, 4.06),
+  makeScreen('p95 LATENCY', '#76b900', 17, Math.PI, 4.06),
+  makeScreen('COST / REQ',  '#ff9f43', 12, Math.PI, 4.06),
+  makeScreen('ERROR + JUDGE-FAIL %', '#ff5c5c', 7, Math.PI, 4.06),
+  makeScreen('QUEUE DEPTH', '#4da3ff', 17, Math.PI/2, 4.06),
+  makeScreen('KV-CACHE %', '#3fd8d2', 12, Math.PI/2, 4.06),
+  makeScreen('GPU UTIL (DCGM :9400)', '#b07cff', 7, Math.PI/2, 4.06),
+  makeScreen('TOKENS / REQ', '#ffd24d', 17, -Math.PI/2, 4.06),
+  makeScreen('TTFT', '#76b900', 12, -Math.PI/2, 4.06),
+  makeScreen('BURN RATE', '#ff5c5c', 7, -Math.PI/2, 4.06),
+];
+function drawScreen(s, alertLevel){
+  const {ctx, c} = s;
+  ctx.fillStyle = '#060a12'; ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle = 'rgba(118,185,0,0.35)'; ctx.lineWidth = 3; ctx.strokeRect(1,1,c.width-2,c.height-2);
+  ctx.fillStyle = '#8fa1b8'; ctx.font = '600 15px "Segoe UI", Arial';
+  ctx.fillText(s.title, 12, 24);
+  // shift data
+  s.data.shift();
+  let v = Math.random()*0.25 + 0.35;
+  const isErr = s.title.includes('ERROR') || s.title.includes('BURN');
+  if(alertLevel > 0 && isErr) v = Math.min(0.95, 0.5 + alertLevel*0.45 + Math.random()*0.1);
+  s.data.push(v);
+  const col = (alertLevel>0.4 && isErr) ? '#ff5c5c' : s.color;
+  ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath();
+  s.data.forEach((d,i)=>{
+    const x = 12 + i*(c.width-24)/39, y = c.height-14 - d*(c.height-56);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = col; ctx.font = '700 20px "Segoe UI", Arial';
+  ctx.fillText((s.data[39]*100).toFixed(0), c.width-48, 26);
+  s.tex.needsUpdate = true;
+}
+
+// --- telemetry particle streams (building -> tower) ---
+const STREAM_COLORS = [0x4da3ff, 0x76b900, 0xffd24d]; // traces, metrics, logs
+const streams = [];
+buildings.forEach((b, bi)=>{
+  STREAM_COLORS.forEach((col, si)=>{
+    const start = b.cfg.pos.clone().add(new THREE.Vector3((si-1)*1.6, b.cfg.h*0.85, (si-1)*0.8));
+    const end = new THREE.Vector3((si-1)*1.4, 13 + si*3.5, (si-1)*1.2);
+    const mid = start.clone().lerp(end, 0.5);
+    mid.y += 7 + si*1.5;
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    const N = 55;
+    const pos = new Float32Array(N*3);
+    const prog = new Float32Array(N);
+    for(let i=0;i<N;i++) prog[i] = Math.random();
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({color:col, size:0.42, transparent:true, opacity:0.95, sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false});
+    const pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+    streams.push({curve, prog, geo, mat, baseColor:new THREE.Color(col), buildingIdx:bi, speed:0.0035 + si*0.0009});
+  });
+});
+
+// --- drift storm cloud ---
+const cloud = new THREE.Group();
+const cloudMat = new THREE.MeshStandardMaterial({color:0x3a2d55, roughness:1, transparent:true, opacity:0.85, emissive:0x4b2a7a, emissiveIntensity:0.5});
+[[0,0,0,3.4],[2.8,0.5,1,2.6],[-2.8,0.4,-0.8,2.7],[1.2,1.4,-1.6,2.2],[-1.4,1.2,1.6,2.1]].forEach(([x,y,z,r])=>{
+  const blob = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), cloudMat);
+  blob.position.set(x,y,z); blob.scale.y = 0.62;
+  blob.userData = {kind:'cloud', title:'Drift Storm', body:'Data drift (inputs shift), concept drift (right answer changed), or behavior drift (your model/prompt/tool changed). No HTTP errors — only embedding-distance monitors and continuous evals catch it.'};
+  hoverables.push(blob);
+  cloud.add(blob);
+});
+const cloudLbl = labelSprite('DRIFT STORM — quality decays, no errors', '#d9c4ff', 0.015, 'rgba(35,20,60,0.85)');
+cloudLbl.position.y = 4.6; cloud.add(cloudLbl);
+scene.add(cloud);
+
+// rain particles under cloud
+const rainN = 90;
+const rainPos = new Float32Array(rainN*3);
+for(let i=0;i<rainN;i++){ rainPos[i*3]= (Math.random()-0.5)*7; rainPos[i*3+1]=-Math.random()*8; rainPos[i*3+2]=(Math.random()-0.5)*5; }
+const rainGeo = new THREE.BufferGeometry();
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos,3));
+const rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({color:0xb07cff, size:0.16, transparent:true, opacity:0.7}));
+cloud.add(rain);
+
+// --- alert beacon + rollback ring on victim building ---
+const victim = buildings[2]; // Agent Service B
+const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({color:0xff5c5c, transparent:true, opacity:0}));
+beacon.position.set(victim.cfg.pos.x, victim.cfg.h + 0.8, victim.cfg.pos.z);
+scene.add(beacon);
+const beaconLight = new THREE.PointLight(0xff5c5c, 0, 30);
+beaconLight.position.copy(beacon.position); scene.add(beaconLight);
+const alertLbl = labelSprite('ALERT: judge pass-rate SLO burn!', '#ffb3b3', 0.016, 'rgba(60,12,12,0.9)');
+alertLbl.position.set(victim.cfg.pos.x, victim.cfg.h + 4.6, victim.cfg.pos.z);
+alertLbl.material.opacity = 0; scene.add(alertLbl);
+const rbRing = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.16, 10, 48), new THREE.MeshBasicMaterial({color:0x76b900, transparent:true, opacity:0}));
+rbRing.rotation.x = Math.PI/2;
+rbRing.position.set(victim.cfg.pos.x, 0.4, victim.cfg.pos.z);
+scene.add(rbRing);
+const rbLbl = labelSprite("ROLLBACK: re-point 'production' label → prev version", '#b9e07c', 0.015, 'rgba(15,35,8,0.9)');
+rbLbl.position.set(victim.cfg.pos.x, victim.cfg.h + 4.6, victim.cfg.pos.z);
+rbLbl.material.opacity = 0; scene.add(rbLbl);
+
+// --- drift event state machine ---
+// phases: roam (cloud far) -> overhead (streams red, beacon) -> rollback (green ring, recover) -> roam
+const CYCLE = 30; // seconds
+function driftPhase(t){
+  const ct = t % CYCLE;
+  if(ct < 12) return {phase:'roam', k: ct/12};
+  if(ct < 21) return {phase:'storm', k:(ct-12)/9};
+  if(ct < 26) return {phase:'rollback', k:(ct-21)/5};
+  return {phase:'recover', k:(ct-26)/4};
+}
+
+// --- raycaster hover ---
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2,-2);
+const tip = document.getElementById('scene-tip');
+const tipT = document.getElementById('tip-title');
+const tipB = document.getElementById('tip-body');
+renderer.domElement.addEventListener('pointermove', e=>{
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX-r.left)/r.width)*2-1;
+  mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+});
+renderer.domElement.addEventListener('click', ()=>{ doRaycast(true); });
+let hovered = null;
+function doRaycast(){
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  if(hits.length){
+    const ud = hits[0].object.userData;
+    if(ud && ud.title){
+      tip.style.display='block'; tipT.textContent = ud.title; tipB.textContent = ud.body;
+      document.body.style.cursor='pointer'; hovered = ud; return;
+    }
+  }
+  tip.style.display='none'; document.body.style.cursor='default'; hovered=null;
+}
+
+// --- animation loop ---
+const clock = new THREE.Clock();
+let frame = 0;
+const cloudHome = new THREE.Vector3(-2, victim.cfg.h + 11, -34);
+const cloudTarget = new THREE.Vector3(victim.cfg.pos.x, victim.cfg.h + 9, victim.cfg.pos.z);
+
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  const {phase, k} = driftPhase(t);
+  frame++;
+
+  // cloud motion
+  if(phase==='roam'){
+    cloud.position.lerpVectors(cloudHome, cloudTarget, k*k);
+  } else if(phase==='storm' || phase==='rollback'){
+    cloud.position.copy(cloudTarget);
+    cloud.position.x += Math.sin(t*0.8)*0.6;
+  } else {
+    cloud.position.lerpVectors(cloudTarget, cloudHome, k);
+  }
+  cloud.rotation.y = t*0.08;
+  // rain fall
+  const rp = rainGeo.attributes.position.array;
+  for(let i=0;i<rainN;i++){
+    rp[i*3+1] -= 0.12;
+    if(rp[i*3+1] < -9) rp[i*3+1] = -1;
+  }
+  rainGeo.attributes.position.needsUpdate = true;
+  rain.material.opacity = (phase==='storm') ? 0.85 : 0.25;
+
+  // drift intensity 0..1
+  let alert = 0;
+  if(phase==='storm') alert = Math.min(1, k*2);
+  if(phase==='rollback') alert = 1-k;
+
+  // victim streams turn red; building emissive pulses
+  streams.forEach(s=>{
+    const isVictim = s.buildingIdx===2;
+    if(isVictim){
+      s.mat.color.copy(s.baseColor).lerp(new THREE.Color(0xff5c5c), alert);
+    }
+    const arr = s.geo.attributes.position.array;
+    const v = new THREE.Vector3();
+    for(let i=0;i<s.prog.length;i++){
+      s.prog[i] += s.speed * (isVictim && alert>0.5 ? 0.45 : 1); // degraded stream slows
+      if(s.prog[i] > 1) s.prog[i] -= 1;
+      s.curve.getPoint(s.prog[i], v);
+      arr[i*3]=v.x; arr[i*3+1]=v.y; arr[i*3+2]=v.z;
+    }
+    s.geo.attributes.position.needsUpdate = true;
+  });
+  victim.mat.emissive.copy(victim.baseEmissive).lerp(new THREE.Color(0x661111), alert*(0.6+0.4*Math.sin(t*8)));
+
+  // beacon flash
+  const flash = alert * (0.55 + 0.45*Math.sin(t*10));
+  beacon.material.opacity = flash;
+  beaconLight.intensity = flash*30;
+  alertLbl.material.opacity = (phase==='storm') ? Math.min(1,k*3) : 0;
+
+  // rollback ring animation
+  if(phase==='rollback'){
+    rbRing.material.opacity = 0.9*(1-k*0.3);
+    rbRing.scale.setScalar(0.4 + k*1.6);
+    rbRing.position.y = 0.4 + k*victim.cfg.h;
+    rbLbl.material.opacity = 1;
+  } else {
+    rbRing.material.opacity = 0; rbLbl.material.opacity = 0;
+  }
+
+  // tower glow pulse
+  towerGlow.intensity = 20 + Math.sin(t*2)*6;
+  antTip.scale.setScalar(1 + 0.25*Math.sin(t*4));
+
+  // screens: update a few per frame
+  if(frame % 6 === 0){
+    drawScreen(screens[(frame/6) % screens.length | 0], alert);
+  }
+
+  if(frame % 5 === 0) doRaycast();
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = wrap.clientWidth/wrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+});
+</script>
+
+<main>
+
+<!-- ==================== MENTAL MODEL ==================== -->
+<section id="mental">
+  <h2 class="sec"><span class="num">02</span>Mental Model — The Airline Operations Center</h2>
+  <p class="sub">Each agent run is a <b>flight</b>. Internalize the three layers — <b>observe → detect → maintain</b> — and every question in this domain becomes mechanical.</p>
+
+  <div class="grid g3">
+    <div class="card accent-top"><h4>✈ Trace = flight recorder</h4><p>Every leg is a <b>span</b>: LLM call, tool call, retrieval. Reconstructs <i>why</i> the agent did what it did.</p></div>
+    <div class="card accent-top"><h4>📡 Metrics = radar wall</h4><p>Latency = flight time, queue depth = planes circling, GPU utilization = runway usage, token cost = fuel burn.</p></div>
+    <div class="card accent-top"><h4>🔧 Drift &amp; canary evals = maintenance inspections</h4><p>The plane still flies (no errors!) but inspectors catch metal fatigue — quality degradation — before a crash.</p></div>
+    <div class="card accent-top"><h4>📜 SLOs = on-time-arrival contract</h4><p>Error budgets are the contract with passengers; burn rate is how fast you're breaking the promise.</p></div>
+    <div class="card accent-top"><h4>🚨 Incident response = emergency checklist</h4><p>Alert → dashboard → trace → rollback first, root-cause later.</p></div>
+    <div class="card accent-top"><h4>🛠 Maintenance = fleet overhaul</h4><p>Model/prompt rollouts, vector index refreshes — always one plane at a time (canary), never the whole fleet, always with a way to bring back the old plane (rollback).</p></div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 980 420" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--blue)"/></marker>
+        <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--amber)"/></marker>
+        <marker id="arrY" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--amber)"/></marker>
+      </defs>
+      <!-- RUN -->
+      <rect x="20" y="20" width="220" height="120" rx="12" fill="var(--panel)" stroke="var(--green)" stroke-width="1.5"/>
+      <text x="130" y="46" fill="var(--green)" font-size="14" font-weight="700" text-anchor="middle">RUN</text>
+      <text x="130" y="72" fill="var(--text)" font-size="12" text-anchor="middle">User request →</text>
+      <text x="130" y="92" fill="var(--muted)" font-size="11" text-anchor="middle">Agent loop: plan → LLM call →</text>
+      <text x="130" y="110" fill="var(--muted)" font-size="11" text-anchor="middle">tool call → … → answer</text>
+      <!-- OBSERVE -->
+      <rect x="320" y="20" width="300" height="180" rx="12" fill="var(--panel)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text x="470" y="46" fill="var(--blue)" font-size="14" font-weight="700" text-anchor="middle">OBSERVE</text>
+      <rect x="335" y="60" width="270" height="38" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="470" y="78" fill="var(--text)" font-size="11" text-anchor="middle">Traces: OTel spans per LLM/tool call →</text>
+      <text x="470" y="92" fill="var(--muted)" font-size="10" text-anchor="middle">LangSmith / Langfuse / Phoenix / OTel Collector</text>
+      <rect x="335" y="106" width="270" height="38" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="470" y="124" fill="var(--text)" font-size="11" text-anchor="middle">Prometheus: TTFT, ITL, e2e, tokens, errors,</text>
+      <text x="470" y="138" fill="var(--muted)" font-size="10" text-anchor="middle">queue depth + DCGM exporter :9400 (GPU)</text>
+      <rect x="335" y="152" width="270" height="34" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="470" y="173" fill="var(--text)" font-size="11" text-anchor="middle">Grafana dashboards</text>
+      <!-- DETECT -->
+      <rect x="700" y="20" width="260" height="180" rx="12" fill="var(--panel)" stroke="var(--amber)" stroke-width="1.5"/>
+      <text x="830" y="46" fill="var(--amber)" font-size="14" font-weight="700" text-anchor="middle">DETECT</text>
+      <rect x="715" y="60" width="230" height="38" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="830" y="78" fill="var(--text)" font-size="11" text-anchor="middle">Eval-in-production:</text>
+      <text x="830" y="92" fill="var(--muted)" font-size="10" text-anchor="middle">LLM-judge, sampled scoring</text>
+      <rect x="715" y="106" width="230" height="38" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="830" y="124" fill="var(--text)" font-size="11" text-anchor="middle">Alerting: SLO burn rate,</text>
+      <text x="830" y="138" fill="var(--muted)" font-size="10" text-anchor="middle">threshold alerts</text>
+      <rect x="715" y="152" width="230" height="34" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="830" y="173" fill="var(--text)" font-size="11" text-anchor="middle">Drift: data / concept / behavior</text>
+      <!-- MAINTAIN -->
+      <rect x="320" y="260" width="640" height="130" rx="12" fill="var(--panel)" stroke="var(--amber)" stroke-width="1.5"/>
+      <text x="640" y="286" fill="var(--amber)" font-size="14" font-weight="700" text-anchor="middle">MAINTAIN</text>
+      <rect x="345" y="300" width="280" height="70" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="485" y="324" fill="var(--text)" font-size="11" text-anchor="middle">Incident response:</text>
+      <text x="485" y="340" fill="var(--muted)" font-size="10" text-anchor="middle">triage via trace → rollback</text>
+      <text x="485" y="356" fill="var(--muted)" font-size="10" text-anchor="middle">(label/version) → root-cause later</text>
+      <rect x="650" y="300" width="290" height="70" rx="7" fill="var(--bg2)" stroke="var(--line)"/>
+      <text x="795" y="320" fill="var(--text)" font-size="11" text-anchor="middle">Maintenance: model/prompt rollout+rollback,</text>
+      <text x="795" y="336" fill="var(--muted)" font-size="10" text-anchor="middle">vector index refresh, dependency updates,</text>
+      <text x="795" y="352" fill="var(--muted)" font-size="10" text-anchor="middle">cost optimization — gated by canary evals</text>
+      <!-- arrows -->
+      <line x1="240" y1="80" x2="315" y2="80" stroke="var(--blue)" stroke-width="2" marker-end="url(#arrB)"/>
+      <line x1="620" y1="100" x2="695" y2="100" stroke="var(--amber)" stroke-width="2" marker-end="url(#arrY)"/>
+      <path d="M830 200 L830 240 L640 240 L640 256" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#arrR)"/>
+      <path d="M345 335 L130 335 L130 145" fill="none" stroke="var(--green)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arr)"/>
+      <text x="150" y="330" fill="var(--green)" font-size="10">canary eval gate / rollback → back into RUN</text>
+    </svg>
+    <div class="dia-cap">The Domain-8 loop: RUN → OBSERVE (traces + metrics) → DETECT (evals, alerts, drift) → MAINTAIN (rollback, versioned rollouts) → back to RUN.</div>
+  </div>
+</section>
+
+<!-- ==================== OBSERVE / TRACING ==================== -->
+<section id="observe">
+  <h2 class="sec"><span class="num">3.1</span>Observability for Agents — Tracing Trajectories</h2>
+  <p class="sub">A <b>trace</b> captures one full agent run (the trajectory): a tree of <b>spans</b>, each a timed operation — LLM call, tool/function call, retrieval, guardrail check, sub-agent invocation. Logs alone can't reconstruct <i>why</i> the agent chose tool B over tool A or where 40&nbsp;s of latency went; the span tree shows the causal path. Instrument the framework, emit spans with attributes, export via <b>OTLP</b> to a backend.</p>
+
+  <h3 class="block">OpenTelemetry GenAI semantic conventions — standard span attributes</h3>
+  <div class="twrap"><table>
+    <tr><th>Attribute</th><th>Meaning</th></tr>
+    <tr><td><code>gen_ai.operation.name</code></td><td>operation type, e.g. <code>chat</code>, <code>execute_tool</code>, <code>invoke_agent</code></td></tr>
+    <tr><td><code>gen_ai.request.model</code></td><td>requested model</td></tr>
+    <tr><td><code>gen_ai.usage.input_tokens</code> / <code>gen_ai.usage.output_tokens</code></td><td>token counts per call</td></tr>
+    <tr><td><code>gen_ai.response.finish_reasons</code></td><td>why generation stopped (stop, length, tool_calls)</td></tr>
+    <tr><td>Span name convention</td><td><code>{gen_ai.operation.name} {gen_ai.request.model}</code>, e.g. <code>chat gpt-oss-120b</code></td></tr>
+  </table></div>
+  <div class="note">Tool executions get their own <code>execute_tool</code> spans <b>nested under the agent span</b> — that's the blueprint's "spans for tool calls and LLM calls."</div>
+
+  <h3 class="block">The span waterfall that saves you (tiny example)</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 900 215">
+      <text x="20" y="26" fill="var(--text)" font-size="13" font-weight="700">Support agent answers in 12 s — who's slow?</text>
+      <!-- root -->
+      <rect x="160" y="44" width="700" height="26" rx="6" fill="var(--bg3)"/>
+      <text x="20" y="61" fill="var(--muted)" font-size="11">root span</text>
+      <text x="510" y="61" fill="var(--text)" font-size="11" text-anchor="middle">agent run — 12 s</text>
+      <!-- chat 1 -->
+      <rect x="160" y="80" width="70" height="24" rx="6" fill="var(--blue)"/>
+      <text x="20" y="96" fill="var(--muted)" font-size="11">LLM call</text>
+      <text x="240" y="96" fill="var(--blue)" font-size="11">chat llama-3.3-70b — 1.2 s</text>
+      <!-- tool -->
+      <rect x="236" y="114" width="548" height="24" rx="6" fill="var(--red)"/>
+      <text x="20" y="130" fill="var(--muted)" font-size="11">tool call</text>
+      <text x="510" y="130" fill="var(--on-accent)" font-size="11" font-weight="700" text-anchor="middle">execute_tool search_orders — 9.4 s ⬅ culprit</text>
+      <!-- chat 2 -->
+      <rect x="790" y="148" width="64" height="24" rx="6" fill="var(--blue)"/>
+      <text x="20" y="164" fill="var(--muted)" font-size="11">LLM call</text>
+      <text x="782" y="164" fill="var(--blue)" font-size="11" text-anchor="end">chat llama-3.3-70b — 1.1 s&nbsp;</text>
+      <text x="20" y="200" fill="var(--green)" font-size="12" font-weight="600">Verdict: the tool's downstream API is slow, not the LLM. Without spans you'd have blamed the model.</text>
+    </svg>
+  </div>
+
+  <h3 class="block">Tracing platforms — know the one-liners</h3>
+  <div class="twrap"><table>
+    <tr><th>Platform</th><th>Type</th><th>Notes</th></tr>
+    <tr><td><b>OpenTelemetry + OTel Collector</b></td><td class="cell-info">open standard</td><td>vendor-neutral pipeline; collector receives OTLP spans and fans out to any backend</td></tr>
+    <tr><td><b>LangSmith</b></td><td class="cell-warn">commercial (LangChain)</td><td>deepest LangChain/LangGraph integration; traces + datasets + evals + prompt hub</td></tr>
+    <tr><td><b>Langfuse</b></td><td class="cell-good">open source (self-hostable)</td><td>tracing + prompt management (versions/labels) + evals + cost tracking</td></tr>
+    <tr><td><b>Phoenix (Arize)</b></td><td class="cell-good">open source</td><td>OTel-native (OpenInference conventions); local-first debugging UI, default <code>localhost:6006</code>; Arize AX is the enterprise SaaS</td></tr>
+    <tr><td><b>W&amp;B Weave, Galileo, Dynatrace, Patronus</b></td><td>various</td><td>all supported as exporters by NVIDIA's NeMo Agent Toolkit</td></tr>
+  </table></div>
+
+  <div class="grid g2">
+    <div class="card"><h4>Logging intermediate steps <span class="pill p-green">NAT</span></h4>
+      <p>Beyond spans, log each intermediate step (thought/plan, chosen tool, tool input/output, retries) as structured events. NeMo Agent Toolkit's <b><code>IntermediateStepManager</code></b> publishes <code>IntermediateStep</code> events to a <b>reactive stream</b> that exporters subscribe to — observability is <b>event-driven and framework-agnostic</b>.</p></div>
+    <div class="card"><h4>Redaction <span class="pill p-red">always</span></h4>
+      <p>Always <b>redact PII/secrets before export</b> — NAT ships redaction processors for exactly this, alongside batching and span-tagging processors.</p></div>
+  </div>
+</section>
+
+<!-- ==================== METRICS ==================== -->
+<section id="metrics">
+  <h2 class="sec"><span class="num">3.2</span>Monitoring Metrics — The Numbers Wall</h2>
+  <p class="sub">LLM-specific latency metrics, token cost, layered error rates, GPU telemetry, and queue depth — and which one answers which question.</p>
+
+  <h3 class="block">Latency metrics (memorize these)</h3>
+  <div class="twrap"><table>
+    <tr><th>Metric</th><th>Definition</th><th>What it reflects</th></tr>
+    <tr><td><b>TTFT</b> (time to first token)</td><td>request sent → first output token</td><td class="cell-good">prefill phase; perceived responsiveness in streaming UIs</td></tr>
+    <tr><td><b>ITL / TPOT</b> (inter-token latency)</td><td>average gap between tokens after the first</td><td class="cell-info">decode phase; streaming smoothness</td></tr>
+    <tr><td><b>e2e request latency</b></td><td>request sent → last token</td><td class="cell-warn">total user wait; for agents = sum over all LLM + tool hops</td></tr>
+    <tr><td><b>TPS</b> (tokens/sec)</td><td>total tokens generated ÷ time</td><td>system throughput</td></tr>
+    <tr><td><b>RPS</b> (requests/sec)</td><td>completed requests per second</td><td>request throughput</td></tr>
+  </table></div>
+  <div class="key"><b>Approximation:</b> <code>e2e ≈ TTFT + ITL × (output_tokens − 1)</code>. &nbsp;NVIDIA <b>GenAI-Perf</b> (ships with Triton client tooling) benchmarks TTFT / ITL / TPS / RPS against any OpenAI-compatible endpoint (NIM, Triton, vLLM) — use it to establish latency baselines.</div>
+
+  <div class="grid g2">
+    <div class="card"><h4>Tokens &amp; cost <span class="pill p-yellow">leading indicator</span></h4>
+      <p>Track input/output tokens <b>per span</b>, aggregate per request/user/feature. Agents are <b>multiplied-cost systems</b>: one user request may trigger <b>5–20 LLM calls</b>. A runaway loop shows up as a <b>token-per-request spike</b> before it shows up anywhere else. Langfuse/LangSmith compute cost per trace from token counts × model price.</p></div>
+    <div class="card"><h4>Error rates are layered</h4>
+      <ul>
+        <li><b>Infra:</b> HTTP 5xx, timeouts</li>
+        <li><b>Agent layer:</b> tool-call failures, malformed tool args</li>
+        <li><b>Safety:</b> guardrail blocks / refusals</li>
+        <li><b>Semantic:</b> wrong answer — <b>only visible via evals</b></li>
+      </ul>
+      <p style="margin-top:6px">Track each separately — a 5xx-only SLI undercounts agent failures.</p></div>
+  </div>
+
+  <h3 class="block">GPU telemetry — the DCGM exporter stack (exam favorite)</h3>
+  <div class="grid g2">
+    <div class="card accent-top"><h4>The stack</h4>
+      <ul>
+        <li><b>DCGM</b> (Data Center GPU Manager) = NVIDIA's GPU monitoring/management toolkit</li>
+        <li><b>dcgm-exporter</b> = DCGM fields as Prometheus metrics on <b>port 9400</b> at <code>/metrics</code></li>
+        <li>Deployed as a Kubernetes <b>DaemonSet</b>, usually installed automatically by the <b>NVIDIA GPU Operator</b></li>
+        <li>Collected metrics configured via <b>CSV file</b> (<code>/etc/dcgm-exporter/default-counters.csv</code>, override with <code>-f</code>)</li>
+        <li><b>Prometheus</b> scrapes; <b>Grafana</b> visualizes — official dashboard ID <b>12239</b></li>
+      </ul></div>
+    <div class="card accent-top"><h4>Key metric names</h4>
+      <ul>
+        <li><code>DCGM_FI_DEV_GPU_UTIL</code> — GPU utilization %</li>
+        <li><code>DCGM_FI_DEV_FB_USED</code> / <code>FB_FREE</code> — framebuffer memory</li>
+        <li><code>DCGM_FI_DEV_POWER_USAGE</code>, <code>DCGM_FI_DEV_GPU_TEMP</code>, <code>DCGM_FI_DEV_SM_CLOCK</code></li>
+        <li><code>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</code> — tensor-core activity</li>
+        <li><code>DCGM_FI_DEV_XID_ERRORS</code> — hardware errors</li>
+      </ul>
+      <p style="margin-top:8px">⚠ <b>High <code>GPU_UTIL</code> ≠ efficient</b> — it means "some kernel was resident," not "tensor cores busy." For real efficiency use <code>DCGM_FI_PROF_*</code> metrics.</p></div>
+  </div>
+
+  <h3 class="block">Throughput &amp; queue depth — inference servers expose these natively</h3>
+  <div class="grid g2">
+    <div class="card"><h4>Triton Inference Server <span class="pill p-blue">:8002 /metrics</span></h4>
+      <p><code>nv_inference_request_success</code> / <code>_failure</code>, <code>nv_inference_count</code>, and <code>nv_inference_queue_duration_us</code> — time requests wait before batching: <b>the</b> signal for dynamic-batching tuning and saturation.</p></div>
+    <div class="card"><h4>NIM for LLMs <span class="pill p-green">/v1/metrics (vLLM-derived)</span></h4>
+      <p><code>num_requests_running</code> (in-flight concurrency), <code>num_requests_waiting</code> (<b>queue depth</b>), <code>gpu_cache_usage_perc</code> (<b>KV-cache utilization</b>), TTFT and e2e latency histograms, token counters.</p></div>
+  </div>
+  <div class="key"><b>Scaling rule:</b> rising queue depth with flat GPU util = capacity exhausted → scale out. <b>HPA/KEDA autoscaling for LLM services keys on queue depth or KV-cache usage via Prometheus Adapter — NOT CPU/memory</b> (CPU is meaningless for a GPU-bound service).</div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 960 250">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
+      <rect x="20" y="30" width="220" height="64" rx="10" fill="var(--panel)" stroke="var(--green)"/>
+      <text x="130" y="56" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">NIM / Triton pods</text>
+      <text x="130" y="76" fill="var(--muted)" font-size="10" text-anchor="middle">:8000 /v1/metrics or :8002 /metrics</text>
+      <rect x="20" y="140" width="220" height="64" rx="10" fill="var(--panel)" stroke="var(--purple)"/>
+      <text x="130" y="166" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">dcgm-exporter DaemonSet</text>
+      <text x="130" y="186" fill="var(--muted)" font-size="10" text-anchor="middle">:9400 — GPU util, mem, power, temp</text>
+      <rect x="340" y="85" width="170" height="64" rx="10" fill="var(--panel)" stroke="var(--amber)"/>
+      <text x="425" y="112" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Prometheus</text>
+      <text x="425" y="130" fill="var(--muted)" font-size="10" text-anchor="middle">(pull model — scrapes)</text>
+      <rect x="590" y="30" width="190" height="64" rx="10" fill="var(--panel)" stroke="var(--blue)"/>
+      <text x="685" y="56" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Prometheus Adapter</text>
+      <text x="685" y="76" fill="var(--muted)" font-size="10" text-anchor="middle">custom metrics API</text>
+      <rect x="590" y="140" width="190" height="64" rx="10" fill="var(--panel)" stroke="var(--cyan)"/>
+      <text x="685" y="166" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Grafana</text>
+      <text x="685" y="186" fill="var(--muted)" font-size="10" text-anchor="middle">dashboards + alert rules</text>
+      <rect x="830" y="30" width="115" height="64" rx="10" fill="var(--green-glow)" stroke="var(--green)"/>
+      <text x="887" y="52" fill="var(--green)" font-size="12" font-weight="700" text-anchor="middle">HPA</text>
+      <text x="887" y="68" fill="var(--muted)" font-size="9" text-anchor="middle">scale on num_requests</text>
+      <text x="887" y="81" fill="var(--muted)" font-size="9" text-anchor="middle">_waiting / gpu_cache %</text>
+      <rect x="830" y="140" width="115" height="64" rx="10" fill="color-mix(in srgb, var(--red) 12%, transparent)" stroke="var(--red)"/>
+      <text x="887" y="166" fill="var(--red)" font-size="12" font-weight="700" text-anchor="middle">Alertmanager</text>
+      <text x="887" y="184" fill="var(--muted)" font-size="10" text-anchor="middle">→ pager</text>
+      <line x1="240" y1="62" x2="336" y2="105" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="240" y1="172" x2="336" y2="130" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="510" y1="100" x2="585" y2="68" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="510" y1="135" x2="585" y2="166" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="780" y1="62" x2="825" y2="62" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="780" y1="172" x2="825" y2="172" stroke="var(--green)" stroke-width="2" marker-end="url(#arr2)"/>
+    </svg>
+    <div class="dia-cap">Autoscaling pipeline: NIM/Triton + dcgm-exporter → Prometheus → Prometheus Adapter → HPA on queue depth / KV-cache; Grafana → Alertmanager → pager.</div>
+  </div>
+</section>
+
+<!-- ==================== DRIFT ==================== -->
+<section id="drift">
+  <h2 class="sec"><span class="num">3.3</span>Drift — When Nothing Errors but Quality Decays</h2>
+  <p class="sub">The exam's key distinction: <b>data drift = inputs changed; concept drift = the right answer changed (inputs may look identical); behavior drift = your agent/model changed.</b> Embedding-distance monitoring catches the first; only output evals / feedback catch the second and third.</p>
+
+  <div class="twrap"><table>
+    <tr><th>Drift type</th><th>What changes</th><th>Example</th><th>How to detect</th></tr>
+    <tr>
+      <td class="cell-info"><b>Data drift</b><br>(input / covariate)</td>
+      <td>distribution of <b>inputs</b></td>
+      <td>new product launches → users ask about features the RAG corpus lacks; new language mix</td>
+      <td class="cell-good">statistical distance on <b>prompt-embedding distributions</b> (PSI/KL between reference and live windows); topic clustering of queries</td>
+    </tr>
+    <tr>
+      <td class="cell-warn"><b>Concept drift</b></td>
+      <td>relationship between input and <b>correct output</b></td>
+      <td>"current tax rules" change; correct answer last month is wrong now</td>
+      <td class="cell-bad">inputs look the same — embedding stats stay flat. Must monitor <b>output quality</b>: eval scores, user feedback, business KPIs</td>
+    </tr>
+    <tr>
+      <td class="cell-bad"><b>Behavior drift</b><br>(agent / model)</td>
+      <td>the <b>system</b> changes</td>
+      <td>upstream API model silently updated; prompt edit; tool API change; degradation over long multi-turn sessions</td>
+      <td class="cell-good">regression eval suite on a fixed golden dataset; tool-choice distribution &amp; trajectory-length monitoring; refusal/retry rates</td>
+    </tr>
+  </table></div>
+
+  <div class="grid g2">
+    <div class="card accent-top"><h4>Eval-in-production (online evaluation)</h4>
+      <p>No ground-truth labels live, so <b>sample real traffic and score it continuously</b>: LLM-as-judge on correctness/groundedness/tone, heuristics (format compliance, citation presence), and implicit/explicit user feedback (thumbs, edits, task completion). Run it as a <b>continuous control loop, not a one-off pre-launch snapshot</b>. Trend the scores; alert on regression.</p></div>
+    <div class="card accent-top"><h4>Canary evals / canary deployment</h4>
+      <ul>
+        <li><b>1.</b> Run the <b>offline regression eval</b> on a golden dataset as a gate</li>
+        <li><b>2.</b> Route a small slice of live traffic — commonly <b>1–5%</b>, as low as <b>0.1%</b> for high-stakes — to the candidate</li>
+        <li><b>3.</b> Compare canary vs. baseline: latency, cost, error rate, judge scores</li>
+        <li><b>4.</b> Progressively ramp or auto-rollback if metrics breach bounds</li>
+      </ul></div>
+  </div>
+
+  <h3 class="block">Canary ramp — progressive traffic shift</h3>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><span class="lbl">Stage 1</span><div class="bar-track"><div class="bar-fill" style="width:1%;background:var(--green)"></div></div><span class="bar-val">1%</span></div>
+      <div class="bar-row"><span class="lbl">Stage 2</span><div class="bar-track"><div class="bar-fill" style="width:5%;background:var(--green)"></div></div><span class="bar-val">5%</span></div>
+      <div class="bar-row"><span class="lbl">Stage 3</span><div class="bar-track"><div class="bar-fill" style="width:20%;background:var(--green)"></div></div><span class="bar-val">20%</span></div>
+      <div class="bar-row"><span class="lbl">Stage 4</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--green)"></div></div><span class="bar-val">50%</span></div>
+      <div class="bar-row"><span class="lbl">Full ramp</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green)"></div></div><span class="bar-val">100%</span></div>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted)">Each stage gated by metric comparison vs. baseline — any breach triggers auto-rollback.</p>
+  </div>
+
+  <div class="note"><b>Shadow mode</b> is the zero-risk variant: the candidate processes <b>copies</b> of real traffic but its answers are <b>never shown to users</b> — great for evaluation, but it <b>doubles inference cost</b> and gets <b>no user feedback</b>.</div>
+</section>
+
+<!-- ==================== SLO ==================== -->
+<section id="slo">
+  <h2 class="sec"><span class="num">3.4</span>Alerting, SLOs/SLIs, Dashboards, Incident Response</h2>
+  <p class="sub">Agents need <b>multiple parallel SLOs</b> — availability, latency, cost-per-request, <b>and a quality SLO</b>. Your latency budget can burn while your quality budget is healthy, and vice versa.</p>
+
+  <div class="grid g3">
+    <div class="card accent-top"><h4>SLI</h4><p>The measured indicator. E.g. fraction of requests with <b>TTFT &lt; 2 s</b>; fraction of non-5xx responses; fraction of judged-correct sampled answers.</p></div>
+    <div class="card accent-top"><h4>SLO</h4><p>Target for the SLI over a window. E.g. "<b>99.5%</b> of requests succeed over <b>28 days</b>"; "p95 e2e latency &lt; 15 s"; "≥ <b>92%</b> of sampled responses pass the LLM-judge."</p></div>
+    <div class="card accent-top"><h4>Error budget &amp; burn rate</h4><p>Budget = <code>100% − SLO</code> (99.5% → <b>0.5%</b> budget). <b>Burn rate</b> = how fast you consume it; burn rate 1 = budget exactly exhausted at window end.</p></div>
+  </div>
+
+  <div class="key"><b>Burn-rate alerting beats naive thresholds:</b> fast-burn <b>14.4×</b> over 1 h → <b>page</b>; slow-burn <b>6×</b> over 6 h → <b>ticket</b>. They alert on <i>user-impacting trends</i>, not single spikes — alerting on every p99 blip is the distractor answer.</div>
+  <div class="note"><b>Alert routing &amp; severity:</b> Prometheus alert rules fire into <b>Alertmanager</b>, which deduplicates, groups, silences, and routes by severity — <b>page</b> (fast-burn, user-impacting now) vs. <b>ticket</b> (slow-burn, fix this week). Every page must be <b>actionable with a linked runbook</b>; non-actionable alerts cause alert fatigue — the classic anti-pattern answer.</div>
+
+  <h3 class="block">Grafana dashboards — three layers</h3>
+  <div class="grid g3">
+    <div class="card"><h4><span class="pill p-purple">1 · Infra</span></h4><p>GPU util / memory / temp (DCGM), node health.</p></div>
+    <div class="card"><h4><span class="pill p-blue">2 · Serving</span></h4><p>TTFT / ITL / e2e percentiles, RPS, queue depth, KV-cache %, error rate.</p></div>
+    <div class="card"><h4><span class="pill p-green">3 · Agent / business</span></h4><p>Tokens &amp; cost per request, tool-failure rate, trajectory length, eval scores, feedback rate.</p></div>
+  </div>
+
+  <h3 class="block">Incident response flow for agents</h3>
+  <div class="ladder">
+    <div class="rung"><div class="node">1</div><div class="body"><h4>Alert fires</h4><p>Burn-rate or threshold alert from Grafana/Alertmanager.</p></div></div>
+    <div class="rung"><div class="node">2</div><div class="body"><h4>Check dashboard</h4><p>Which layer is unhealthy — infra, serving, or agent/business?</p></div></div>
+    <div class="rung"><div class="node">3</div><div class="body"><h4>Pull traces of failing requests</h4><p>Localize the span: LLM? tool? retrieval? Aggregate metrics can't attribute latency inside a trajectory.</p></div></div>
+    <div class="rung"><div class="node">4</div><div class="body"><h4>Mitigate fast — rollback</h4><p>Prompt label, model version, or deployment. <b>Mitigation-first beats debug-in-prod.</b></p></div></div>
+    <div class="rung"><div class="node">5</div><div class="body"><h4>Root-cause later, then turn the incident into an eval</h4><p>Add the failing cases to the regression eval set — the same incident becomes a permanent test. Close the loop with a <b>blameless postmortem</b> (trigger, detection gap, MTTD/MTTR) and update the <b>runbook</b>.</p></div></div>
+  </div>
+</section>
+
+<!-- ==================== MAINTAIN ==================== -->
+<section id="maintain">
+  <h2 class="sec"><span class="num">3.5</span>Maintenance — Keeping the Agent Healthy Over Time</h2>
+  <p class="sub"><b>Everything-is-versioned rule:</b> model, prompt, tools, RAG corpus/index, guardrails, agent code each have versions; a production "release" is a <i>pinned combination</i>, and any change goes through the same <b>eval-gate → canary → ramp → (rollback-ready)</b> pipeline.</p>
+
+  <div class="twrap"><table>
+    <tr><th>Maintenance task</th><th>What / how</th><th>Key practice</th></tr>
+    <tr><td><b>Model version updates</b></td><td>new NIM container tag / new checkpoint behind same API</td><td class="cell-good">pin versions; <b>never <code>latest</code> in prod</b>; gate with offline regression evals; blue-green or canary rollout; keep <b>N−1 warm</b> for instant rollback</td></tr>
+    <tr><td><b>Prompt rollouts / rollbacks</b></td><td>prompts managed <b>outside code</b> in a registry (e.g. Langfuse: immutable <b>versions</b> + movable <b>labels</b> like <code>production</code>)</td><td class="cell-good">deploy = move the <code>production</code> label to a new version; rollback = move it back (<b>no code redeploy</b>); SDK caching means a few stale traces right after a switch</td></tr>
+    <tr><td><b>Vector index refreshes</b></td><td>re-ingest changed docs, re-embed, rebuild/upsert index</td><td class="cell-warn">scheduled or event-driven incremental upserts; <b>changing the embedding model forces a full re-embed of the entire corpus</b> (old and new vectors aren't comparable); rebuild side-by-side, validate retrieval recall on a golden query set, then atomically swap the alias/collection</td></tr>
+    <tr><td><b>Dependency updates</b></td><td>framework libs, tool/MCP API schemas, guardrail configs, CUDA/driver stack</td><td class="cell-warn">treat <b>everything</b> the agent depends on as versioned config; run the eval suite on every dependency bump — a tool's API response-shape change is a classic silent agent-breaker</td></tr>
+    <tr><td><b>Cost optimization over time</b></td><td>track cost/request trend; cache (semantic cache, KV-cache reuse); trim context; route easy queries to small models; distill</td><td class="cell-good">NVIDIA's answer = <b>Data Flywheel Blueprint</b>: continuously fine-tune/distill smaller NIMs from logged production traffic, auto-evaluate vs. the production model, promote when accuracy holds — NVIDIA cites up to <b>~98% inference-cost reduction</b> in its example</td></tr>
+  </table></div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 960 130">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
+      <rect x="15" y="35" width="160" height="58" rx="10" fill="var(--panel)" stroke="var(--blue)"/>
+      <text x="95" y="60" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Any change</text>
+      <text x="95" y="78" fill="var(--muted)" font-size="9" text-anchor="middle">model · prompt · index · dep</text>
+      <rect x="225" y="35" width="160" height="58" rx="10" fill="var(--panel)" stroke="var(--amber)"/>
+      <text x="305" y="60" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Eval gate</text>
+      <text x="305" y="78" fill="var(--muted)" font-size="9" text-anchor="middle">offline regression, golden set</text>
+      <rect x="435" y="35" width="160" height="58" rx="10" fill="var(--panel)" stroke="var(--green)"/>
+      <text x="515" y="60" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Canary / shadow</text>
+      <text x="515" y="78" fill="var(--muted)" font-size="9" text-anchor="middle">1–5% traffic, judge + metrics</text>
+      <rect x="645" y="35" width="140" height="58" rx="10" fill="var(--panel)" stroke="var(--cyan)"/>
+      <text x="715" y="60" fill="var(--text)" font-size="12" font-weight="700" text-anchor="middle">Ramp</text>
+      <text x="715" y="78" fill="var(--muted)" font-size="9" text-anchor="middle">1→5→20→50→100%</text>
+      <rect x="835" y="35" width="110" height="58" rx="10" fill="var(--green-glow)" stroke="var(--green)"/>
+      <text x="890" y="60" fill="var(--green)" font-size="12" font-weight="700" text-anchor="middle">Rollback</text>
+      <text x="890" y="78" fill="var(--muted)" font-size="9" text-anchor="middle">always ready</text>
+      <line x1="175" y1="64" x2="220" y2="64" stroke="var(--green)" stroke-width="2" marker-end="url(#arr3)"/>
+      <line x1="385" y1="64" x2="430" y2="64" stroke="var(--green)" stroke-width="2" marker-end="url(#arr3)"/>
+      <line x1="595" y1="64" x2="640" y2="64" stroke="var(--green)" stroke-width="2" marker-end="url(#arr3)"/>
+      <line x1="785" y1="64" x2="830" y2="64" stroke="var(--green)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr3)"/>
+    </svg>
+    <div class="dia-cap">The universal change pipeline — every element of the pinned release combination goes through it.</div>
+  </div>
+</section>
+
+<!-- ==================== NVIDIA ==================== -->
+<section id="nvidia">
+  <h2 class="sec"><span class="num">04</span>NVIDIA-Specific Layer</h2>
+  <p class="sub">The products the exam expects you to map onto each operations job.</p>
+
+  <div class="grid g2">
+    <div class="card accent-top"><h4>NeMo Agent Toolkit (NAT / Agent Intelligence Toolkit) <span class="pill p-green">observability hub</span></h4>
+      <p>Config-driven telemetry in the workflow YAML under <code>general.telemetry</code>: <code>logging</code> (console/file, levels DEBUG…CRITICAL) and <code>tracing</code> subsections; <b>multiple exporters can run simultaneously</b>. Built-in exporters: <b>Phoenix, Langfuse, LangSmith, W&amp;B Weave, Galileo, Dynatrace, Patronus, Arize AX, OTel Collector (OTLP), file</b>, plus the Data Flywheel Blueprint. Event-driven <code>IntermediateStepManager</code> streams every LLM call, tool call, and intermediate step; processors handle batching, <b>redaction</b>, span tagging. Includes a <b>profiler</b> (latency &amp; token breakdown per tool/agent) and an <b>evaluation harness</b>. Framework-agnostic: LangChain/LangGraph, CrewAI, Llama Index, Semantic Kernel…</p></div>
+    <div class="card accent-top"><h4>DCGM + dcgm-exporter <span class="pill p-purple">GPU telemetry</span></h4>
+      <p>GPU telemetry → Prometheus: <b>:9400</b>, DaemonSet, installed by GPU Operator, CSV-configurable fields, Grafana dashboard <b>12239</b>. The exam's canonical answer for "how do I monitor GPU utilization in Kubernetes."</p></div>
+    <div class="card accent-top"><h4>NVIDIA GPU Operator</h4>
+      <p>Installs/manages the GPU software stack on K8s (drivers, container toolkit, <b>dcgm-exporter</b>, device plugin) — the recommended way to get GPU monitoring rather than deploying dcgm-exporter by hand.</p></div>
+    <div class="card accent-top"><h4>NIM (NVIDIA Inference Microservices)</h4>
+      <p>Each NIM exposes Prometheus metrics (vLLM-style: <code>num_requests_running</code>, <code>num_requests_waiting</code>, <code>gpu_cache_usage_perc</code>, TTFT/e2e histograms, token counters) and supports OTel via env vars: <code>NIM_ENABLE_OTEL=1</code>, <code>OTEL_TRACES_EXPORTER=otlp</code>, <code>OTEL_METRICS_EXPORTER=otlp</code>, <code>OTEL_EXPORTER_OTLP_ENDPOINT</code>, <code>OTEL_SERVICE_NAME</code>. <b>NIM Operator</b> adds ServiceMonitors and HPA on these custom metrics.</p></div>
+    <div class="card accent-top"><h4>Triton Inference Server</h4>
+      <p>Metrics on <b>:8002/metrics</b> — <code>nv_inference_count</code>, success/failure counters, <code>nv_inference_queue_duration_us</code> for queue/batching health. Choose <b>Triton metrics for non-LLM or multi-framework models; NIM metrics for packaged LLMs</b>.</p></div>
+    <div class="card accent-top"><h4>GenAI-Perf</h4>
+      <p>NVIDIA's load-testing/benchmark CLI for LLM endpoints; reports <b>TTFT, ITL, TPS, RPS</b>. Use it to establish the latency/throughput baselines your SLOs and capacity plans are built on.</p></div>
+    <div class="card accent-top"><h4>Data Flywheel Blueprint <span class="pill p-yellow">build.nvidia.com</span></h4>
+      <p>Production-traffic-driven continuous improvement: logs traffic (<b>Elasticsearch</b>), curates datasets, runs <b>NeMo Customizer</b> (LoRA fine-tune/distill) and <b>NeMo Evaluator</b> on candidate NIMs, surfaces cheaper models that match accuracy — NVIDIA's flagship answer to "cost optimization over time" and "eval-in-production." Up to <b>~98% inference-cost reduction</b> in NVIDIA's example.</p></div>
+    <div class="card accent-top"><h4>NeMo Evaluator + NeMo Guardrails</h4>
+      <p><b>NeMo Evaluator</b> (microservice): API-driven evaluation jobs (academic benchmarks + LLM-as-judge + custom datasets) — the gate for model/prompt rollouts in NVIDIA's stack. <b>NeMo Guardrails</b>: guardrail block/violation rates are a monitored production metric, and guardrail configs are versioned artifacts that roll out/back like prompts.</p></div>
+  </div>
+
+  <div class="note"><b>When NVIDIA vs. generic:</b> GPU-level monitoring → <b>always DCGM stack</b> (no generic alternative with that fidelity). Agent tracing → <b>NAT</b> for config-driven multi-exporter telemetry across frameworks; plain OTel SDK or LangSmith/Langfuse if committed to one framework/vendor. Continuous cost optimization with fine-tuning → <b>Data Flywheel</b>; for only prompt/routing tweaks, lighter generic tooling suffices.</div>
+</section>
+
+<!-- ==================== DECISION FRAMEWORKS ==================== -->
+<section id="decide">
+  <h2 class="sec"><span class="num">05</span>Decision Frameworks</h2>
+  <p class="sub">Four choosers the scenario questions are built from.</p>
+
+  <h3 class="block">Which observability tool?</h3>
+  <div class="twrap"><table>
+    <tr><th>Situation</th><th>Choose</th><th>Why</th></tr>
+    <tr><td>Vendor-neutral, multi-backend, future-proof tracing</td><td class="cell-info"><b>OpenTelemetry (+ Collector)</b></td><td>open standard, GenAI semconv, fan-out to any backend</td></tr>
+    <tr><td>Deep LangChain/LangGraph workflow, managed SaaS, datasets+evals together</td><td class="cell-warn"><b>LangSmith</b></td><td>first-party integration</td></tr>
+    <tr><td>Self-hosted/open-source tracing <b>plus prompt version management</b></td><td class="cell-good"><b>Langfuse</b></td><td>OSS, prompt labels for rollout/rollback</td></tr>
+    <tr><td>Local-first, free, OTel-native debugging of traces/embeddings</td><td class="cell-good"><b>Phoenix (Arize)</b></td><td>runs locally on :6006, OpenInference</td></tr>
+    <tr><td>NVIDIA-stack agent across mixed frameworks, one YAML for many exporters</td><td class="cell-good"><b>NeMo Agent Toolkit telemetry</b></td><td>config-driven, simultaneous exporters, profiler included</td></tr>
+  </table></div>
+
+  <h3 class="block">Which metric for which question?</h3>
+  <div class="twrap"><table>
+    <tr><th>Symptom / goal</th><th>Metric to look at</th></tr>
+    <tr><td>Streaming chat feels sluggish <b>to start</b></td><td class="cell-good"><b>TTFT</b> (prefill)</td></tr>
+    <tr><td>Tokens visibly <b>stutter mid-answer</b></td><td class="cell-good"><b>ITL</b> (decode)</td></tr>
+    <tr><td>Batch/offline pipeline cost-efficiency</td><td>TPS / total throughput, GPU util</td></tr>
+    <tr><td>Decide when to <b>scale out</b> an LLM service</td><td class="cell-info"><code>num_requests_waiting</code> (queue depth), <code>gpu_cache_usage_perc</code> — <b>NOT CPU/memory</b></td></tr>
+    <tr><td>Is the GPU the bottleneck?</td><td><code>DCGM_FI_DEV_GPU_UTIL</code> + <code>DCGM_FI_PROF_PIPE_TENSOR_ACTIVE</code> + FB memory</td></tr>
+    <tr><td>Runaway agent loops / cost spike</td><td class="cell-warn">tokens-per-request, LLM-calls-per-request from traces</td></tr>
+    <tr><td>Dynamic batching tuned right? (Triton)</td><td><code>nv_inference_queue_duration_us</code></td></tr>
+  </table></div>
+
+  <h3 class="block">Which detection method for which drift?</h3>
+  <div class="twrap"><table>
+    <tr><th>Signal</th><th>Method</th></tr>
+    <tr><td>Input topics/language changing</td><td class="cell-info">embedding-distribution distance on prompts (<b>data drift</b>)</td></tr>
+    <tr><td>Same inputs, answers now "wrong"</td><td class="cell-warn">online evals + user feedback + KPI trend (<b>concept drift</b>)</td></tr>
+    <tr><td>After any model/prompt/tool change</td><td class="cell-bad">golden-set regression evals + canary comparison (<b>behavior drift</b>)</td></tr>
+  </table></div>
+
+  <h3 class="block">Rollout strategy chooser</h3>
+  <div class="twrap"><table>
+    <tr><th>Constraint</th><th>Strategy</th><th>Tradeoff</th></tr>
+    <tr><td>Zero user exposure allowed during test</td><td class="cell-info"><b>Shadow / mirror mode</b></td><td class="cell-warn">costly: duplicate inference; no user feedback</td></tr>
+    <tr><td>Limit blast radius, learn from real users</td><td class="cell-good"><b>Canary</b> 1–5% with auto-rollback gates</td><td>small real risk, real feedback</td></tr>
+    <tr><td>Instant all-or-nothing switch + instant rollback</td><td class="cell-info"><b>Blue-green</b></td><td class="cell-warn">2× capacity needed during switch</td></tr>
+    <tr><td>Compare two variants on a business KPI</td><td><b>A/B test</b></td><td>needs stats horsepower + traffic</td></tr>
+    <tr><td>Prompt-only change</td><td class="cell-good">move prompt-registry <b>label</b></td><td class="cell-good">no redeploy at all</td></tr>
+  </table></div>
+
+  <h3 class="block">Rollout strategies — user exposure during test</h3>
+  <div class="card">
+    <div class="bars">
+      <div class="bar-row"><span class="lbl">Shadow</span><div class="bar-track"><div class="bar-fill" style="width:2%;background:var(--blue)"></div></div><span class="bar-val">0% users</span></div>
+      <div class="bar-row"><span class="lbl">Canary</span><div class="bar-track"><div class="bar-fill" style="width:5%;background:var(--green)"></div></div><span class="bar-val">1–5%</span></div>
+      <div class="bar-row"><span class="lbl">A/B test</span><div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--amber)"></div></div><span class="bar-val">split</span></div>
+      <div class="bar-row"><span class="lbl">Blue-green switch</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--amber)"></div></div><span class="bar-val">100%</span></div>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted)">Shadow = zero exposure, double cost, no feedback &middot; Canary = small exposure, real feedback &middot; Blue-green = instant full switch with instant rollback (2× capacity).</p>
+  </div>
+</section>
+
+<!-- ==================== TRAPS ==================== -->
+<section id="traps">
+  <h2 class="sec"><span class="num">06</span>⚠ Exam Traps &amp; Gotchas</h2>
+  <p class="sub">Twelve distractors the exam loves. Each card = a wrong answer you'll be offered.</p>
+
+  <div class="grid g2">
+    <div class="trap"><h4>⚠ 1 · GPU utilization ≠ efficiency</h4><p><code>DCGM_FI_DEV_GPU_UTIL</code> only says a kernel was resident; a memory-bound decode can show <b>95% "util" with idle tensor cores</b>. Profiling-class metrics (<code>DCGM_FI_PROF_*</code>) or throughput-per-GPU tell the real story.</p></div>
+    <div class="trap"><h4>⚠ 2 · Autoscaling LLM/NIM services on CPU or memory is wrong</h4><p>Inference is GPU-bound; the exam answer is <b>custom metrics via Prometheus Adapter</b> — queue depth (<code>num_requests_waiting</code>) or KV-cache (<code>gpu_cache_usage_perc</code>).</p></div>
+    <div class="trap"><h4>⚠ 3 · TTFT vs. ITL vs. e2e confusion</h4><p>TTFT = prefill/responsiveness; ITL = decode/streaming smoothness; e2e = total. "Users complain the answer takes long <b>to start</b>" → <b>TTFT</b>, not e2e or throughput.</p></div>
+    <div class="trap"><h4>⚠ 4 · Data drift vs. concept drift</h4><p>If prompt-embedding distributions are <b>unchanged</b> but quality fell, it's <b>concept (or behavior) drift</b> — input-distribution monitors will never catch it; you need output evals/feedback.</p></div>
+    <div class="trap"><h4>⚠ 5 · Metrics ≠ traces ≠ evals</h4><p>Latency/error dashboards can be all-green while the agent answers wrongly. "All metrics normal but answers are bad — what's missing?" → <b>eval-in-production / trace-level quality scoring</b>, not more Prometheus.</p></div>
+    <div class="trap"><h4>⚠ 6 · Prompt rollback does not require redeploying code</h4><p>With prompt management (Langfuse-style versions + labels), rollback = <b>repoint the <code>production</code> label</b>. "Rebuild and redeploy the container to restore the old prompt" is the distractor. Sub-trap: SDK prompt <b>caching</b> means a brief tail of old-version traces after switching.</p></div>
+    <div class="trap"><h4>⚠ 7 · Changing the embedding model silently breaks RAG</h4><p>New query embeddings vs. an index built with the old model = garbage similarity scores. Correct: <b>full re-embed + rebuild side-by-side, validate retrieval, atomic swap</b> — not "just refresh new documents."</p></div>
+    <div class="trap"><h4>⚠ 8 · Shadow deployment ≠ canary</h4><p>Shadow serves <b>no</b> users (zero risk, double cost, no user feedback); canary serves a <b>small %</b> of users (small real risk, real feedback). The exam swaps these definitions.</p></div>
+    <div class="trap"><h4>⚠ 9 · Port/endpoint trivia mix-ups</h4><p>dcgm-exporter = <b>9400</b>; Triton metrics = <b>8002</b>; NIM metrics at <code>/v1/metrics</code> on the service port; Phoenix UI defaults to <b>6006</b>. Also: Prometheus <b>scrapes</b> (pull model) — Triton/NIM never push metrics.</p></div>
+    <div class="trap"><h4>⚠ 10 · SLO math</h4><p>99.5% SLO ⇒ <b>0.5% error budget</b> over the window. Burn rate &gt; 1 = budget exhausted <b>early</b>. Burn-rate alerting (fast + slow windows) beats single static thresholds — alerting on every p99 blip is the distractor.</p></div>
+    <div class="trap"><h4>⚠ 11 · A retry / finish_reason: length / tool-error isn't always an HTTP error</h4><p>Error-rate SLIs based only on 5xx <b>undercount agent failures</b>; tool-call failure rate and refusal rate are separate SLIs.</p></div>
+    <div class="trap"><h4>⚠ 12 · "Eval once before launch" is never the right answer</h4><p>Production agents need <b>continuous</b> evals (sampled judge scoring, canary evals on every change) because models, data, and user behavior all drift.</p></div>
+  </div>
+</section>
+
+<!-- ==================== QUIZ ==================== -->
+<section id="quiz">
+  <h2 class="sec"><span class="num">07</span>Scenario Drills</h2>
+  <p class="sub">Exactly the style the exam uses. Read the scenario, decide your answer, then click to reveal.</p>
+
+  <details class="drill"><summary><span class="qn">1</span>A LangGraph customer-support agent's p95 latency jumped from 8 s to 40 s overnight. Dashboards show normal GPU util and error rates. What's the fastest way to find the cause?<span class="hintword">reveal</span></summary>
+    <div class="ans"><b>Pull distributed traces</b> (OTel/Langfuse/Phoenix) of slow requests and compare span durations — the span tree localizes whether an LLM call, a specific tool's downstream API, or extra loop iterations added the time. Aggregate metrics can't attribute latency inside a trajectory.</div></details>
+
+  <details class="drill"><summary><span class="qn">2</span>You must autoscale a NIM LLM microservice on Kubernetes. Which signal should drive the HPA?<span class="hintword">reveal</span></summary>
+    <div class="ans">A <b>custom Prometheus metric</b> like <code>num_requests_waiting</code> (queue depth) or <code>gpu_cache_usage_perc</code> exposed via <b>Prometheus Adapter</b> — CPU/memory HPA signals don't reflect GPU-bound inference load.</div></details>
+
+  <details class="drill"><summary><span class="qn">3</span>Three weeks after launch, embedding-distribution monitoring on incoming prompts shows no shift, yet the LLM-judge pass rate on sampled production answers fell from 93% to 81%. What's happening and what do you check?<span class="hintword">reveal</span></summary>
+    <div class="ans"><b>Concept/behavior drift, not data drift</b> — inputs are stable but correct outputs changed (or a dependency changed). Check recent model/prompt/tool/corpus versions and refresh the knowledge source, guided by failing eval cases.</div></details>
+
+  <details class="drill"><summary><span class="qn">4</span>A new system prompt looks better in offline evals. The safest production rollout?<span class="hintword">reveal</span></summary>
+    <div class="ans">Publish it as a <b>new immutable prompt version</b>, canary it on ~<b>1–5%</b> of traffic with automated comparison (judge scores, latency, cost, error rate) against baseline, ramp gradually, and keep one-click rollback by <b>re-pointing the <code>production</code> label</b>.</div></details>
+
+  <details class="drill"><summary><span class="qn">5</span>Finance reports agent inference cost doubled in a month with flat traffic. First diagnostic step? And NVIDIA's long-term lever?<span class="hintword">reveal</span></summary>
+    <div class="ans">Inspect <b>token-usage-per-request trends from traces</b> to find the regression (longer contexts, retry storms, looping after a prompt/tool change). Long-term: the <b>Data Flywheel Blueprint</b> — distill/fine-tune smaller NIMs on production traffic and promote ones that match accuracy at far lower cost.</div></details>
+
+  <details class="drill"><summary><span class="qn">6</span>You need GPU utilization, memory, and temperature for every GPU node of your agent cluster in Grafana. Which components?<span class="hintword">reveal</span></summary>
+    <div class="ans"><b>dcgm-exporter</b> (DaemonSet, port <b>9400</b>, typically installed by the <b>GPU Operator</b>) scraped by <b>Prometheus</b>, visualized with the NVIDIA DCGM Grafana dashboard (ID <b>12239</b>) — DCGM is the NVIDIA-native GPU telemetry path.</div></details>
+</section>
+
+<!-- ==================== BUILDER ==================== -->
+<section id="builder">
+  <h2 class="sec"><span class="num">08</span>Builder's Corner</h2>
+  <p class="sub">Five habits that compound.</p>
+  <div class="grid g2">
+    <div class="card accent-top"><h4>Instrument from day one, via the standard</h4><p>Emit OTel spans with GenAI semantic-convention attributes (or turn on NAT's <code>general.telemetry</code> YAML) <b>before launch</b> — retrofitting tracing during an incident is miserable, and OTLP keeps you backend-portable (Phoenix locally today, Langfuse/Arize in prod tomorrow).</p></div>
+    <div class="card accent-top"><h4>Put tokens-per-request and LLM-calls-per-request on your front dashboard</h4><p>They're the <b>earliest leading indicators</b> of loops, prompt regressions, and cost blowups — usually moving days before latency or error SLOs notice.</p></div>
+    <div class="card accent-top"><h4>Make rollback a label, not a deploy</h4><p>Externalize prompts (and model endpoint choices) into a versioned registry with environment labels; mean-time-to-mitigate drops from "CI pipeline" to <b>"seconds."</b> Pin every model/container version explicitly.</p></div>
+    <div class="card accent-top"><h4>Turn incidents into evals</h4><p>Every production failure trace gets distilled into a golden-dataset case; the regression suite then gates all future model/prompt/dependency changes. <b>This single habit compounds more than any tool choice.</b></p></div>
+    <div class="card accent-top"><h4>Budget for observability cost itself</h4><p>Tracing every token of every request at scale is expensive — <b>sample traces</b> (keep 100% of errors/slow requests, sample successes), batch span exports, and redact payloads for both privacy and storage.</p></div>
+  </div>
+</section>
+
+
+<!-- ==================== CODE COMPANION ==================== -->
+<section id="code">
+  <h2 class="sec"><span class="num">09</span>Code Companion</h2>
+  <p class="sub">Eight runnable fragments that turn this domain's doctrine into muscle memory — tracing hookups, OTel spans, PromQL alerts, burn-rate rules, drift checks, and the eval-in-production loop.</p>
+
+  <div class="grid">
+    <div class="card accent-top">
+      <h4>1 &middot; Langfuse tracing for a LangGraph agent — one callback handler, full span tree + cost per trace <span class="pill p-green">python</span></h4>
+      <pre class="codeblock"><code>import os
+from langfuse.langchain import CallbackHandler   # SDK v3 import (older form: from langfuse.callback import CallbackHandler)
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-..."
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-..."
+os.environ["LANGFUSE_BASE_URL"]  = "https://cloud.langfuse.com"  # or your self-hosted URL
+
+llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct",            # build.nvidia.com hosted...
+                 base_url="http://localhost:8000/v1")            # ...or a local NIM
+
+langfuse_handler = CallbackHandler()  # v3: creds come from env vars, no args needed
+
+# `graph` = any compiled LangGraph StateGraph; one invoke = one Langfuse trace
+result = graph.invoke(
+    {"messages": [("user", "Where is order 4711?")]},
+    config={"callbacks": [langfuse_handler]},
+)</code></pre>
+      <p><b>What to notice:</b> a single callback in <code>config</code> captures the <em>entire</em> trajectory — every LLM generation and tool call becomes a nested observation under one trace, and Langfuse multiplies the per-span token usage by model price to show <b>cost per trace</b> (the "runaway loop shows up in tokens first" metric from §3.2). No code change inside your nodes.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>2 &middot; Manual OTel span around a tool call — GenAI semconv attributes + OTLP export <span class="pill p-green">python</span></h4>
+      <pre class="codeblock"><code># pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")))  # OTel Collector / Phoenix
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("support-agent")
+
+with tracer.start_as_current_span("execute_tool search_orders") as span:  # name = "execute_tool {tool.name}"
+    span.set_attribute("gen_ai.operation.name", "execute_tool")
+    span.set_attribute("gen_ai.tool.name", "search_orders")
+    span.set_attribute("gen_ai.tool.call.id", "call_8f2a")
+    span.set_attribute("gen_ai.provider.name", "nvidia")  # older form was gen_ai.system (renamed in 2025 semconv)
+    out = search_orders(order_id="4711")
+    span.set_attribute("gen_ai.tool.call.result", str(out)[:512])  # truncate/redact payloads</code></pre>
+      <p><b>What to notice:</b> the span name convention (<code>execute_tool {gen_ai.tool.name}</code>; LLM calls use <code>{operation} {model}</code>) and the <code>gen_ai.*</code> attributes are exactly what the exam means by "spans for tool calls with standard semantic conventions" — any OTLP backend (Phoenix, Langfuse, Collector fan-out) understands them, which is the vendor-neutrality argument.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>3 &middot; LangSmith for LangGraph — tracing is literally environment variables <span class="pill p-yellow">bash</span></h4>
+      <pre class="codeblock"><code>export LANGSMITH_TRACING=true            # older form was LANGCHAIN_TRACING_V2=true
+export LANGSMITH_API_KEY="lsv2_pt_..."
+export LANGSMITH_PROJECT="support-agent-prod"   # optional; defaults to "default"
+# then run your LangGraph app unchanged — every graph.invoke() is traced
+python agent.py</code></pre>
+      <p><b>What to notice:</b> zero code change — LangGraph auto-instruments when the env vars are present, which is why LangSmith is the "deepest first-party integration" answer in the tool-chooser table (§5). Contrast with snippet 1 where Langfuse needs an explicit callback (or its OTel integration).</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>4 &middot; NeMo Agent Toolkit: one YAML, two exporters at once (Phoenix + Langfuse) <span class="pill p-purple">yaml</span></h4>
+      <pre class="codeblock"><code>general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+    tracing:
+      phoenix:                       # local debugging UI
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: support_agent
+      langfuse:                      # team backend, simultaneously
+        _type: langfuse
+        endpoint: https://cloud.langfuse.com/api/public/otel/v1/traces
+        public_key: ${LANGFUSE_PUBLIC_KEY}
+        secret_key: ${LANGFUSE_SECRET_KEY}</code></pre>
+      <p><b>What to notice:</b> multiple exporters under <code>tracing</code> run <b>simultaneously</b> — NAT's event-driven <code>IntermediateStepManager</code> publishes every LLM/tool step once and each exporter subscribes. This config-not-code approach is NVIDIA's flagship observability answer (§4), and it works regardless of whether the workflow underneath is LangGraph, CrewAI, or Llama Index.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>5 &middot; PromQL you would actually alert on (NIM <code>/v1/metrics</code> + DCGM :9400) <span class="pill p-blue">promql</span></h4>
+      <pre class="codeblock"><code># KV-cache nearly full -&gt; requests about to queue/preempt (NIM, vLLM-derived gauge 0-1)
+avg by (model_name) (gpu_cache_usage_perc) &gt; 0.90
+
+# Queue depth sustained -&gt; capacity exhausted, scale out (the HPA signal, NOT cpu/mem)
+sum(num_requests_waiting) &gt; 5            # with `for: 5m` in the alert rule
+
+# p90 TTFT from the histogram -&gt; user-perceived responsiveness regressing
+histogram_quantile(0.90,
+  sum by (le) (rate(time_to_first_token_seconds_bucket[5m]))) &gt; 2
+
+# Queue growing while GPUs idle -&gt; serving-layer bug, not capacity (pair NIM + DCGM)
+sum(num_requests_waiting) &gt; 5 and avg(DCGM_FI_DEV_GPU_UTIL) &lt; 30</code></pre>
+      <p><b>What to notice:</b> the first two are the canonical autoscaling signals from §3.2; <code>histogram_quantile</code> over <code>rate(..._bucket[5m])</code> is <em>the</em> PromQL idiom for latency percentiles; and the last query shows why you scrape NIM and dcgm-exporter into the same Prometheus — cross-layer queries localize the fault before you ever open a trace.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>6 &middot; Burn-rate alert + the rollback story: flip a Langfuse prompt label, no redeploy <span class="pill p-purple">yaml</span> <span class="pill p-green">python</span></h4>
+      <pre class="codeblock"><code># prometheus alert rule: fast-burn on a "TTFT &lt; 2s for 99.5% of requests" SLO
+groups:
+- name: agent-slo
+  rules:
+  - alert: TTFTSLOFastBurn          # 14.4x burn over 1h AND 5m = page now
+    expr: |
+      (1 - sum(rate(time_to_first_token_seconds_bucket{le="2"}[1h]))
+         / sum(rate(time_to_first_token_seconds_count[1h]))) &gt; 14.4 * 0.005
+      and
+      (1 - sum(rate(time_to_first_token_seconds_bucket{le="2"}[5m]))
+         / sum(rate(time_to_first_token_seconds_count[5m]))) &gt; 14.4 * 0.005
+    labels: { severity: page }
+    annotations: { runbook: "https://wiki/runbooks/agent-rollback" }</code></pre>
+      <pre class="codeblock"><code># the runbook's mitigation step — one API call, zero redeploys:
+from langfuse import get_client
+get_client().update_prompt(name="support-system-prompt", version=7,  # last known good
+                           new_labels=["production"])  # label moves; clients fetching by label pick it up</code></pre>
+      <p><b>What to notice:</b> the dual-window (1h + 5m) burn-rate condition pages only when the error budget is burning fast <em>right now</em> — the anti-pattern answer is alerting on a single p99 blip (§3.4). The mitigation is exam trap #6 verbatim: rollback = re-point the <code>production</code> label; expect a brief tail of old-version traces due to SDK prompt caching.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>7 &middot; Tiny data-drift check: daily centroid vs baseline cosine distance <span class="pill p-green">python</span></h4>
+      <pre class="codeblock"><code>import os, numpy as np
+from openai import OpenAI  # NVIDIA endpoints are OpenAI-compatible
+
+emb = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+
+def centroid(texts: list[str]) -&gt; np.ndarray:
+    r = emb.embeddings.create(model="nvidia/nv-embedqa-e5-v5", input=texts,
+                              extra_body={"input_type": "query", "truncate": "END"})
+    v = np.array([d.embedding for d in r.data])
+    v /= np.linalg.norm(v, axis=1, keepdims=True)          # normalize each vector
+    return v.mean(axis=0)
+
+baseline = np.load("baseline_centroid.npy")                 # built once from launch-week prompts
+today = centroid(sample_todays_user_prompts(n=200))         # daily sample of live inputs
+dist = 1 - float(baseline @ today) / (np.linalg.norm(baseline) * np.linalg.norm(today))
+if dist &gt; 0.15:                                             # threshold tuned on historical jitter
+    page_oncall(f"Input drift: centroid cosine distance {dist:.3f} vs baseline")</code></pre>
+      <p><b>What to notice:</b> this catches <b>data drift only</b> — inputs moving to topics your corpus doesn't cover. If this stays flat while judge scores fall, that's concept/behavior drift (exam trap #4) and no amount of embedding monitoring will see it. Note the NV-EmbedQA <code>input_type</code> requirement via <code>extra_body</code> — asymmetric retrieval models embed queries and passages differently.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>8 &middot; Eval-in-production: nightly cron samples traces, LLM-judges them, writes scores back <span class="pill p-green">python</span></h4>
+      <pre class="codeblock"><code># crontab: 0 6 * * *  python judge_sample.py   (sample N traces/day, score, push back)
+import os, datetime
+from langfuse import get_client
+from openai import OpenAI
+
+langfuse = get_client()                                     # reads LANGFUSE_* env vars
+judge = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+JUDGE = "Question:\n{q}\n\nAnswer:\n{a}\n\nIs the answer correct, grounded, and on-tone? Reply PASS or FAIL, then one reason."
+
+since = datetime.datetime.now() - datetime.timedelta(days=1)
+for t in langfuse.api.trace.list(from_timestamp=since, limit=50).data:   # N=50/day sample
+    verdict = judge.chat.completions.create(
+        model="meta/llama-3.3-70b-instruct", temperature=0,
+        messages=[{"role": "user", "content": JUDGE.format(q=t.input, a=t.output)}],
+    ).choices[0].message.content
+    langfuse.create_score(trace_id=t.id, name="llm_judge_pass",
+                          value=1.0 if verdict.startswith("PASS") else 0.0, comment=verdict)
+langfuse.flush()</code></pre>
+      <p><b>What to notice:</b> this is the continuous quality-SLO loop from §3.3/§3.4 — no ground truth in prod, so you sample, judge, and trend <code>llm_judge_pass</code> in the same UI as latency and cost; alert when the daily mean regresses. Scores attach to the <em>trace</em>, so a failing score links straight to the trajectory you need to debug, and failing cases feed the golden regression set.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== VOICES ==================== -->
+<section id="voices">
+  <h2 class="sec"><span class="num">10</span>What Top Engineers Are Saying (2025&ndash;26)</h2>
+  <p class="sub">Seven practitioner takes that map straight onto this domain's doctrine — evals as a flywheel, traces over dashboards, standards over lock-in, and observability cost as a first-class concern.</p>
+
+  <div class="grid g2">
+    <div class="card accent-top">
+      <h4>Shreya Shankar <span class="pill p-green">sh-reya.com</span></h4>
+      <p style="margin-bottom:8px"><b>"Data Flywheels for LLM Applications"</b> (+ the <em>AI Evals for Engineers &amp; PMs</em> course/book with Hamel Husain). Her core take: production LLM systems need an <em>ongoing</em> flywheel — sample real outputs, label them cheaply, align an LLM-judge against those human labels (her "Who Validates the Validators?" research line), and feed results back into prompts and regression sets — rather than a one-time pre-launch eval.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> this is exactly the exam's "eval-in-production as a continuous control loop, never eval-once" doctrine, and snippet 8 above is a minimal implementation of her loop.</p>
+      <p><a href="https://www.sh-reya.com/blog/ai-engineering-flywheel/" target="_blank" rel="noopener">sh-reya.com/blog/ai-engineering-flywheel</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>Hamel Husain <span class="pill p-green">hamel.dev</span></h4>
+      <p style="margin-bottom:8px"><b>"LLM Evals: Everything You Need to Know"</b> (evals FAQ). Take: "You must remove all friction from the process of looking at data" — error analysis on real traces beats generic dashboards and off-the-shelf metric suites; keep reading logs/traces until you stop learning new failure modes.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> for this domain it grounds why traces (not aggregate metrics) are the first stop in incident triage (scenario drill 1), and why every incident should mint new eval cases.</p>
+      <p><a href="https://hamel.dev/blog/posts/evals-faq/" target="_blank" rel="noopener">hamel.dev/blog/posts/evals-faq</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>Charity Majors &amp; Phillip Carter <span class="pill p-yellow">Honeycomb blog</span></h4>
+      <p style="margin-bottom:8px"><b>"The Role of AI Observability in 2025."</b> Take: you cannot understand or improve an LLM feature in isolation — RAG is a tracing problem, LLM-as-router is a high-cardinality problem, agents are high-dimensionality — so "you can't have great observability for AI unless you start with great observability for the rest of your software," and aggregates with random exemplars are not enough; you need outlier inspection over full event chains.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> maps directly to the layered dashboards + trace-first triage model in §3.4.</p>
+      <p><a href="https://www.honeycomb.io/blog/observability-age-of-ai" target="_blank" rel="noopener">honeycomb.io/blog/observability-age-of-ai</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>OpenTelemetry GenAI SIG <span class="pill p-blue">otel blog &middot; Mar 2025</span></h4>
+      <p style="margin-bottom:8px"><b>"AI Agent Observability: Evolving Standards and Best Practices."</b> Take: because GenAI observability tooling is fragmenting across vendors and frameworks, "it is important to establish standards around the shape of the telemetry generated by agent apps to avoid lock-in" — hence the <code>gen_ai.*</code> semconv push (including the 2025 <code>gen_ai.system</code> &rarr; <code>gen_ai.provider.name</code> rename) and agent-app conventions.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> this is the <em>why</em> behind OTel being the "vendor-neutral, future-proof" answer in the decision table, and why NIM/NAT both speak OTLP.</p>
+      <p><a href="https://opentelemetry.io/blog/2025/ai-agent-observability/" target="_blank" rel="noopener">opentelemetry.io/blog/2025/ai-agent-observability</a> &middot; follow-up deep dive: <a href="https://opentelemetry.io/blog/2026/genai-observability/" target="_blank" rel="noopener">opentelemetry.io/blog/2026/genai-observability</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>Greptime engineering blog <span class="pill p-purple">Dec 2025</span></h4>
+      <p style="margin-bottom:8px"><b>"Agent Observability: Can the Old Playbook Handle the New Game?"</b> Take: the classic three-pillars (metrics/logs/traces) playbook strains under agent workloads — trajectories are long, branching, high-cardinality and semantically judged — pushing the field toward wide events / "Observability 2.0" where one rich event per step carries everything needed for later slicing.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> useful framing for why agent platforms (Langfuse observations, NAT IntermediateStep events) all converge on structured per-step events rather than flat logs.</p>
+      <p><a href="https://www.greptime.com/blogs/2025-12-11-agent-observability" target="_blank" rel="noopener">greptime.com/blogs/2025-12-11-agent-observability</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>Softcery <span class="pill p-cyan">practitioner agency &middot; 2025</span></h4>
+      <p style="margin-bottom:8px"><b>"9 AI Observability Platforms Compared: Phoenix, LangSmith, Langfuse, Logfire..."</b> Take from the tooling-choice discourse: the decision is less about features (all do traces+evals now) and more about lock-in surface — LangSmith wins if you're committed to LangGraph, Langfuse if self-hosting/MIT-licensing and prompt management matter, Phoenix if you want OTel/OpenInference-native local-first debugging.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> mirrors the §5 chooser table almost line for line — which is reassuring signal that the exam's framing matches field practice.</p>
+      <p><a href="https://softcery.com/lab/top-8-observability-platforms-for-ai-agents-in-2025" target="_blank" rel="noopener">softcery.com/lab/top-8-observability-platforms-for-ai-agents-in-2025</a></p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>Laminar <span class="pill p-red">pricing economics &middot; 2026</span></h4>
+      <p style="margin-bottom:8px"><b>"Langfuse Alternatives 2026: 7 Top Picks for Agent Observability."</b> Take (representative of a 2026 discourse thread on observability <em>pricing economics</em>): unit-based pricing that counts traces + observations + scores "punishes" agentic workloads, because one agent run emits dozens of small spans — so observability cost itself becomes a production engineering concern, pushing teams to sample successes, keep 100% of errors, and batch exports.</p>
+      <p style="margin-bottom:8px"><b>Why it matters:</b> this validates the "budget for observability cost" point in Builder's corner §8 as a live practitioner debate, not a textbook footnote.</p>
+      <p><a href="https://laminar.sh/article/langfuse-alternatives-2026" target="_blank" rel="noopener">laminar.sh/article/langfuse-alternatives-2026</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="inner">
+    <h3>Sources</h3>
+    <ul>
+      <li><a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/observe/observe.html">NeMo Agent Toolkit — Observe Workflows</a></li>
+      <li><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/docs/source/run-workflows/observe/observe.md">NAT observe docs (GitHub, exporter list + YAML)</a></li>
+      <li><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">NVIDIA NeMo Agent Toolkit repo</a></li>
+      <li><a href="https://github.com/NVIDIA/dcgm-exporter">NVIDIA dcgm-exporter (port 9400, CSV config, GPU Operator)</a></li>
+      <li><a href="https://docs.nvidia.com/datacenter/dcgm/latest/gpu-telemetry/dcgm-exporter.html">DCGM-Exporter docs</a></li>
+      <li><a href="https://grafana.com/grafana/dashboards/12239-nvidia-dcgm-exporter-dashboard/">Grafana NVIDIA DCGM dashboard 12239</a></li>
+      <li><a href="https://developer.nvidia.com/blog/llm-benchmarking-fundamental-concepts/">NVIDIA blog — LLM Inference Benchmarking: Fundamental Concepts</a></li>
+      <li><a href="https://docs.nvidia.com/nim/benchmarking/llm/latest/metrics.html">NVIDIA NIM Benchmarking — Metrics</a></li>
+      <li><a href="https://docs.nvidia.com/nim/large-language-models/latest/observability.html">Observability for NVIDIA NIM for LLMs (OTel env vars, /v1/metrics)</a></li>
+      <li><a href="https://developer.nvidia.com/blog/horizontal-autoscaling-of-nvidia-nim-microservices-on-kubernetes/">NVIDIA blog — Horizontal Autoscaling of NIM Microservices on K8s</a></li>
+      <li><a href="https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/metrics.html">Triton Inference Server — Metrics (port 8002, queue duration)</a></li>
+      <li><a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/">OpenTelemetry GenAI semantic conventions (spans)</a></li>
+      <li><a href="https://opentelemetry.io/blog/2026/genai-observability/">OpenTelemetry blog — GenAI observability</a></li>
+      <li><a href="https://www.evidentlyai.com/ml-in-production/data-drift">Evidently — data drift</a> &middot; <a href="https://www.evidentlyai.com/ml-in-production/concept-drift">concept drift</a></li>
+      <li><a href="https://tianpan.co/blog/2026-04-09-llm-gradual-rollout-shadow-canary-ab-testing">Shadow/canary/A-B rollouts for LLMs</a></li>
+      <li><a href="https://langfuse.com/docs/prompt-management/features/prompt-version-control">Langfuse prompt version control (labels, rollback)</a></li>
+      <li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/introduction/">Grafana SLO docs (error budget, burn rate)</a></li>
+      <li><a href="https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard">NVIDIA Data Flywheel Blueprint</a> &middot; <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">GitHub</a></li>
+      <li><a href="https://developer.nvidia.com/blog/build-efficient-ai-agents-through-model-distillation-with-nvidias-data-flywheel-blueprint/">NVIDIA blog — Model distillation with Data Flywheel (~98% cost reduction)</a></li>
+      <li><a href="https://flashgenius.net/blog-article/your-comprehensive-guide-to-the-nvidia-agentic-ai-llm-professional-certification-ncp-aai">FlashGenius NCP-AAI exam guide (domain weight context)</a></li>
+    </ul>
+    <p style="margin-top:22px;color:var(--muted);font-size:.75rem">NCP-AAI Domain 8 study visual &middot; observe → detect → maintain &middot; built from notes/domain-08-run-monitor-maintain.md</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/visuals/", "permanent": false }
+  ]
+}

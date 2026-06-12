@@ -1,0 +1,465 @@
+# Domain 8: Run, Monitor, and Maintain (5%)
+
+## 1. Why this matters (exam + real agents)
+
+Agentic systems fail differently from normal microservices: a request can "succeed" (HTTP 200, low latency) while the agent silently loops, picks the wrong tool, burns 50x the expected tokens, or hallucinates — so Day-2 operations require *semantic* observability (traces of the agent's trajectory, eval-in-production, drift detection) layered on top of classic infra observability (Prometheus/Grafana, DCGM GPU metrics, SLOs, alerting). The exam gives this domain only ~5% (≈3–4 of 60–70 questions), but the questions are scenario-style best-choice questions: "agent quality dropped, what do you check first?", "which metric do you autoscale on?", "how do you roll back a prompt?". If you internalize the three layers — **observe (traces/metrics) → detect (drift/evals/alerts) → maintain (versioned rollouts/rollbacks/refreshes)** — every question in this domain becomes mechanical.
+
+## 2. Mental model
+
+**Analogy: an airline operations center.** Each agent run is a *flight*: the **trace** is the flight recorder (every leg = a span: LLM call, tool call, retrieval). **Metrics dashboards** are the radar wall (latency = flight time, queue depth = planes circling, GPU utilization = runway usage, token cost = fuel burn). **Drift detection and canary evals** are routine maintenance inspections — the plane still flies (no errors!), but inspectors catch metal fatigue (quality degradation) before a crash. **SLOs and error budgets** are the on-time-arrival contract with passengers; **incident response** is the emergency checklist; and **maintenance** (model/prompt version rollouts, vector index refreshes) is the scheduled fleet overhaul — always done one plane at a time (canary), never the entire fleet at once, and always with a way to bring back the old plane (rollback).
+
+```mermaid
+flowchart TD
+    subgraph RUN["RUN: Agent in production"]
+        A[User request] --> B[Agent loop: plan -> LLM call -> tool call -> ... -> answer]
+    end
+    subgraph OBSERVE["OBSERVE"]
+        B -->|OTel spans per LLM/tool call| C[Traces: LangSmith / Langfuse / Phoenix / OTel Collector]
+        B -->|/metrics scrape| D[Prometheus: TTFT, ITL, e2e latency, tokens, errors, queue depth]
+        E[DCGM Exporter :9400] -->|GPU util, mem, power, temp| D
+        D --> F[Grafana dashboards]
+    end
+    subgraph DETECT["DETECT"]
+        C --> G[Eval-in-production: LLM-judge, sampled scoring]
+        D --> H[Alerting: SLO burn rate, threshold alerts]
+        G --> I[Drift detection: data drift, concept/behavior drift]
+    end
+    subgraph MAINTAIN["MAINTAIN"]
+        H --> J[Incident response: triage via trace, rollback]
+        I --> K[Maintenance: model/prompt version rollout+rollback,<br/>vector index refresh, dependency updates, cost optimization]
+        K -->|canary eval gate| B
+        J -->|rollback label/version| B
+    end
+```
+
+## 3. Core concepts
+
+### 3.1 Observability for agents: tracing trajectories
+
+**What:** A *trace* captures one full agent run (the trajectory); it is a tree of *spans*, where each span is one timed operation — an LLM call, a tool/function call, a retrieval, a guardrail check, a sub-agent invocation. **Why:** logs alone can't reconstruct *why* an agent chose tool B over tool A or where 40 s of latency went; the span tree shows the causal path. **How:** instrument the agent framework (manually or via auto-instrumentation), emit spans with attributes (model name, prompt, tokens in/out, tool args, errors), export via OTLP to a backend.
+
+**OpenTelemetry (OTel)** is the vendor-neutral standard. Its **GenAI semantic conventions** define standard span attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `gen_ai.operation.name` | operation type, e.g. `chat`, `execute_tool`, `invoke_agent` |
+| `gen_ai.request.model` | requested model |
+| `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` | token counts per call |
+| `gen_ai.response.finish_reasons` | why generation stopped (stop, length, tool_calls) |
+| Span name convention | `{gen_ai.operation.name} {gen_ai.request.model}`, e.g. `chat gpt-oss-120b` |
+
+Tool executions get their own `execute_tool` spans nested under the agent span — this is exactly "spans for tool calls and LLM calls" from the blueprint.
+
+**Tracing platforms (know the one-liners):**
+
+| Platform | Type | Notes |
+|---|---|---|
+| **OpenTelemetry + OTel Collector** | open standard | vendor-neutral pipeline; collector receives OTLP spans and fans out to any backend |
+| **LangSmith** | commercial (LangChain) | deepest LangChain/LangGraph integration; traces + datasets + evals + prompt hub |
+| **Langfuse** | open source (self-hostable) | tracing + prompt management (versions/labels) + evals + cost tracking |
+| **Phoenix (Arize)** | open source | OTel-native (OpenInference conventions); local-first debugging UI, default `localhost:6006`; Arize AX is the enterprise SaaS |
+| **W&B Weave, Galileo, Dynatrace, Patronus** | various | all supported as exporters by NVIDIA's NeMo Agent Toolkit |
+
+**Logging intermediate steps:** beyond spans, agents should log each intermediate step (thought/plan, chosen tool, tool input/output, retries) as structured events. NeMo Agent Toolkit does this with an `IntermediateStepManager` that publishes `IntermediateStep` events to a reactive stream which exporters subscribe to — meaning observability is event-driven and framework-agnostic. Always **redact PII/secrets** before export (NAT has redaction processors for this).
+
+*Tiny example:* a support agent answers in 12 s. The trace shows: root span 12 s → `chat llama-3.3-70b` 1.2 s → `execute_tool search_orders` **9.4 s** → `chat llama-3.3-70b` 1.1 s. Verdict: the tool's downstream API is slow, not the LLM. Without spans you'd have blamed the model.
+
+### 3.2 Monitoring metrics: the numbers wall
+
+**Latency metrics (LLM-specific — memorize these):**
+
+| Metric | Definition | What it reflects |
+|---|---|---|
+| **TTFT** (time to first token) | request sent → first output token | prefill phase; perceived responsiveness in streaming UIs |
+| **ITL / TPOT** (inter-token latency) | average gap between tokens after the first | decode phase; streaming smoothness |
+| **e2e request latency** | request sent → last token | total user wait; for agents = sum over all LLM+tool hops |
+| **TPS** (tokens/sec) | total tokens generated ÷ time | system throughput |
+| **RPS** (requests/sec) | completed requests per second | request throughput |
+
+Approximation: `e2e ≈ TTFT + ITL × (output_tokens − 1)`. NVIDIA **GenAI-Perf** (ships with the Triton client tooling) is the benchmark tool that measures TTFT/ITL/TPS/RPS against any OpenAI-compatible endpoint (NIM, Triton, vLLM).
+
+**Token usage and cost:** track input/output tokens *per span* and aggregate per request/user/feature. Agents are multiplied-cost systems: one user request may trigger 5–20 LLM calls. A runaway loop shows up as a token-per-request spike before it shows up anywhere else. Tracing platforms (Langfuse, LangSmith) compute cost per trace from token counts × model price.
+
+**Error rates:** layered — HTTP 5xx and timeouts (infra), tool-call failures and malformed tool args (agent layer), guardrail blocks/refusals, and *semantic* failures (wrong answer — only visible via evals). Track each separately.
+
+**GPU utilization — DCGM exporter stack (exam favorite):**
+- **DCGM** (Data Center GPU Manager) = NVIDIA's GPU monitoring/management toolkit.
+- **dcgm-exporter** = exposes DCGM fields as Prometheus metrics on **port 9400** at `/metrics`; deployed as a Kubernetes **DaemonSet**, usually installed automatically by the **NVIDIA GPU Operator**.
+- Key metric names: `DCGM_FI_DEV_GPU_UTIL` (GPU utilization %), `DCGM_FI_DEV_FB_USED`/`FB_FREE` (framebuffer memory), `DCGM_FI_DEV_POWER_USAGE`, `DCGM_FI_DEV_GPU_TEMP`, `DCGM_FI_DEV_SM_CLOCK`, `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` (tensor-core activity), `DCGM_FI_DEV_XID_ERRORS` (hardware errors).
+- Which metrics are collected is configured via a **CSV file** (`/etc/dcgm-exporter/default-counters.csv`, override with `-f`).
+- **Prometheus** scrapes it; **Grafana** visualizes it (official dashboard ID **12239**).
+- Subtlety: `DCGM_FI_DEV_GPU_UTIL` high ≠ efficient — it means "some kernel was resident," not "tensor cores busy." For real efficiency look at `DCGM_FI_PROF_*` (SM activity, tensor active) metrics.
+
+**Throughput and queue depth:** inference servers expose these natively.
+- **Triton Inference Server**: Prometheus metrics on **port 8002** (`/metrics`), e.g. `nv_inference_request_success/_failure`, `nv_inference_count`, and `nv_inference_queue_duration_us` (time requests wait before batching — *the* signal for dynamic-batching tuning and saturation).
+- **NIM for LLMs** (vLLM-derived metrics at `/v1/metrics`): `num_requests_running` (in-flight concurrency), `num_requests_waiting` (**queue depth**), `gpu_cache_usage_perc` (**KV-cache utilization**), TTFT and e2e latency histograms, token counters.
+- Rising queue depth with flat GPU util = capacity exhausted → scale out. This is why **HPA/KEDA autoscaling for LLM services keys on queue depth or KV-cache usage via Prometheus Adapter, not CPU/memory** (CPU is meaningless for a GPU-bound service).
+
+```mermaid
+flowchart LR
+    NIM[NIM / Triton pods<br/>:8000 /v1/metrics or :8002 /metrics] --> P[Prometheus]
+    DCGM[dcgm-exporter DaemonSet :9400] --> P
+    P --> PA[Prometheus Adapter<br/>custom metrics API]
+    PA --> HPA[HPA: scale on num_requests_waiting<br/>or gpu_cache_usage_perc]
+    P --> G[Grafana dashboards + alert rules]
+    G --> OnCall[Alertmanager -> pager]
+```
+
+### 3.3 Drift: when nothing errors but quality decays
+
+| Drift type | What changes | Example | How to detect |
+|---|---|---|---|
+| **Data drift** (input/covariate) | distribution of *inputs* | new product launches → users ask about features the RAG corpus lacks; new language mix | statistical distance on **prompt-embedding distributions** (e.g., PSI/KL between reference and live windows); topic clustering of queries |
+| **Concept drift** | relationship between input and *correct output* | "current tax rules" change; correct answer last month is wrong now | inputs look the same, so embedding stats stay flat — must monitor **output quality**: eval scores, user feedback, business KPIs |
+| **Behavior drift** (agent/model) | the *system* changes | upstream API model silently updated; prompt edit; tool API change; degradation over long multi-turn sessions | regression eval suite on a fixed golden dataset; tool-choice distribution and trajectory-length monitoring; refusal/retry rates |
+
+Key distinction the exam tests: **data drift = inputs changed; concept drift = the right answer changed (inputs may look identical); behavior drift = your agent/model changed.** Embedding-distance monitoring catches the first; only output evals/feedback catch the second and third.
+
+**Eval-in-production (online evaluation):** since you have no ground-truth labels live, you sample real traffic and score it continuously — LLM-as-judge on correctness/groundedness/tone, heuristics (format compliance, citation presence), and implicit/explicit user feedback (thumbs, edits, task completion). Run it as a *continuous control loop*, not a one-off pre-launch snapshot. Trend the scores; alert on regression.
+
+**Canary evals / canary deployment:** before fully shipping a new model, prompt, or agent version: (1) run the **offline regression eval** on a golden dataset as a gate; (2) route a small slice of live traffic (commonly 1–5%, as low as 0.1% for high-stakes) to the candidate; (3) compare canary vs. baseline on latency, cost, error rate, and judge scores; (4) progressively ramp (1% → 5% → 20% → 50% → 100%) or auto-rollback if metrics breach bounds. **Shadow mode** is the zero-risk variant: candidate processes copies of real traffic but its answers are never shown to users — great for evaluation, but it doubles inference cost and gets no user feedback.
+
+### 3.4 Alerting, SLOs/SLIs, dashboards, incident response
+
+- **SLI** = the measured indicator (e.g., fraction of requests with TTFT < 2 s; fraction of non-5xx responses; fraction of judged-correct sampled answers).
+- **SLO** = target for the SLI over a window (e.g., "99.5% of requests succeed over 28 days"; "p95 e2e latency < 15 s").
+- **Error budget** = `100% − SLO` (99.5% SLO → 0.5% budget). **Burn rate** = how fast you consume it; burn rate 1 = budget exactly exhausted at window end. **Burn-rate alerts** (e.g., fast-burn 14.4x over 1 h pages, slow-burn 6x over 6 h tickets) beat naive threshold alerts because they alert on *user-impacting trends*, not single spikes.
+- **Agent-specific twist:** agents need *multiple parallel SLOs* — availability, latency, cost-per-request, **and a quality SLO** (e.g., ≥ 92% of sampled responses pass the LLM-judge). Your latency budget can burn while your quality budget is healthy, and vice versa.
+- **Alert routing & severity:** Prometheus alert rules fire into **Alertmanager**, which deduplicates, groups, silences, and routes by severity — *page* (fast-burn, user-impacting now) vs. *ticket* (slow-burn, fix this week). Every page must be **actionable with a linked runbook**; non-actionable alerts cause alert fatigue and are the classic anti-pattern answer.
+- **Dashboards (Grafana):** layered — (1) infra: GPU util/memory/temp (DCGM), node health; (2) serving: TTFT/ITL/e2e percentiles, RPS, queue depth, KV-cache %, error rate; (3) agent/business: tokens & cost per request, tool-failure rate, trajectory length, eval scores, feedback rate.
+- **Incident response flow for agents:** alert fires → check dashboard (which layer is unhealthy?) → pull **traces** of failing requests to localize the span (LLM? tool? retrieval?) → mitigate fast with **rollback** (prompt label, model version, or deployment) → root-cause later → add the failing cases to the regression eval set so the same incident becomes a permanent test. Mitigation-first (rollback) beats debug-in-prod. Close the loop with a **blameless postmortem**: document trigger, detection gap, mitigation time (MTTD/MTTR), and update the **runbook** so the next on-call mitigates in minutes.
+
+### 3.5 Maintenance: keeping the agent healthy over time
+
+| Maintenance task | What/how | Key practice |
+|---|---|---|
+| **Model version updates** | new NIM container tag / new checkpoint behind same API | pin versions; never `latest` in prod; gate with offline regression evals; blue-green or canary rollout; keep N−1 warm for instant rollback |
+| **Prompt version rollouts/rollbacks** | prompts managed *outside code* in a registry (e.g., Langfuse: immutable **versions** + movable **labels** like `production`) | deploy = move `production` label to new version; rollback = move label back (no code redeploy); SDK caching means a few stale traces right after a switch |
+| **Vector index refreshes** | re-ingest changed docs, re-embed, rebuild/upsert index | scheduled or event-driven incremental upserts; **changing the embedding model forces a full re-embed of the entire corpus** (old and new vectors aren't comparable); rebuild side-by-side, validate retrieval recall on a golden query set, then atomically swap the alias/collection |
+| **Dependency updates** | framework libs, tool/MCP API schemas, guardrail configs, CUDA/driver stack | treat *everything* the agent depends on as versioned config; run the eval suite on every dependency bump — a tool's API response-shape change is a classic silent agent-breaker |
+| **Cost optimization over time** | track cost/request trend; cache (semantic cache, KV-cache reuse); trim context; route easy queries to small models; distill | NVIDIA's answer = **Data Flywheel Blueprint**: continuously use logged production traffic to fine-tune/distill smaller NIMs, auto-evaluate them against the production model, and promote when accuracy holds (NVIDIA cites up to **~98% inference-cost reduction** in its example while matching teacher accuracy) |
+
+**Everything-is-versioned rule:** model, prompt, tools, RAG corpus/index, guardrails, agent code each have versions; a production "release" is a *pinned combination*, and any change to any element goes through the same eval-gate → canary → ramp → (rollback-ready) pipeline.
+
+## 4. NVIDIA-specific layer
+
+| NVIDIA product | Role in this domain |
+|---|---|
+| **NeMo Agent Toolkit (NAT / Agent Intelligence Toolkit)** | The agent observability hub. Config-driven telemetry in the workflow YAML under `general.telemetry` with `logging` (console/file, levels DEBUG…CRITICAL) and `tracing` subsections; multiple exporters can run simultaneously. Built-in exporters: **Phoenix, Langfuse, LangSmith, W&B Weave, Galileo, Dynatrace, Patronus, Arize AX, OTel Collector (OTLP), file**, plus the Data Flywheel Blueprint. Event-driven `IntermediateStepManager` streams every LLM call, tool call, and intermediate step; processors handle batching, **redaction**, span tagging. Also includes a **profiler** that breaks down latency and token usage per tool/agent to find bottlenecks, and an **evaluation harness** for repeatable evals. Framework-agnostic (LangChain/LangGraph, CrewAI, Llama Index, Semantic Kernel...). |
+| **DCGM + dcgm-exporter** | GPU telemetry → Prometheus (**:9400**, DaemonSet, installed by GPU Operator, CSV-configurable fields, Grafana dashboard 12239). The exam's canonical answer for "how do I monitor GPU utilization in Kubernetes." |
+| **NVIDIA GPU Operator** | Installs/manages the GPU software stack on K8s (drivers, container toolkit, **dcgm-exporter**, device plugin) — the recommended way to get GPU monitoring rather than deploying dcgm-exporter by hand. |
+| **NIM (NVIDIA Inference Microservices)** | Each NIM exposes Prometheus metrics (vLLM-style: `num_requests_running`, `num_requests_waiting`, `gpu_cache_usage_perc`, TTFT/e2e histograms, token counters) and supports OTel tracing/metrics via env vars (`NIM_ENABLE_OTEL=1`, `OTEL_TRACES_EXPORTER=otlp`, `OTEL_METRICS_EXPORTER=otlp`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`). **NIM Operator** adds ServiceMonitors and HPA on these custom metrics. |
+| **Triton Inference Server** | Metrics on **:8002/metrics** — `nv_inference_count`, success/failure counters, `nv_inference_queue_duration_us` for queue/batching health. Choose Triton metrics when serving non-LLM or multi-framework models; NIM metrics for packaged LLMs. |
+| **GenAI-Perf** | NVIDIA's load-testing/benchmark CLI for LLM endpoints; reports TTFT, ITL, TPS, RPS. Use it to establish the latency/throughput baselines your SLOs and capacity plans are built on. |
+| **Data Flywheel Blueprint (build.nvidia.com)** | Production-traffic-driven continuous improvement: logs traffic (Elasticsearch), curates datasets, runs **NeMo Customizer** (LoRA fine-tune/distill) and **NeMo Evaluator** on candidate NIMs, and surfaces cheaper models that match accuracy — NVIDIA's flagship answer to "cost optimization over time" and "eval-in-production." |
+| **NeMo Evaluator (microservice)** | API-driven evaluation jobs (academic benchmarks + LLM-as-judge + custom datasets) — the gate for model/prompt rollouts in NVIDIA's stack. |
+| **NeMo Guardrails** | Operationally relevant because guardrail block/violation rates are a monitored production metric and guardrail configs are versioned artifacts that roll out/back like prompts. |
+
+**When NVIDIA vs. generic:** GPU-level monitoring → always DCGM stack (there is no generic alternative with that fidelity). Agent tracing → NAT if you want config-driven multi-exporter telemetry across frameworks; plain OTel SDK or LangSmith/Langfuse if you're committed to one framework/vendor. Continuous cost optimization with fine-tuning → Data Flywheel; if you only need prompt/routing tweaks, lighter generic tooling suffices.
+
+## 5. Decision frameworks
+
+**Which observability tool?**
+
+| Situation | Choose | Why |
+|---|---|---|
+| Vendor-neutral, multi-backend, future-proof tracing | OpenTelemetry (+ Collector) | open standard, GenAI semconv, fan-out to any backend |
+| Deep LangChain/LangGraph workflow, managed SaaS, datasets+evals together | LangSmith | first-party integration |
+| Self-hosted/open-source tracing **plus prompt version management** | Langfuse | OSS, prompt labels for rollout/rollback |
+| Local-first, free, OTel-native debugging of traces/embeddings | Phoenix (Arize) | runs locally on :6006, OpenInference |
+| NVIDIA-stack agent across mixed frameworks, one YAML for many exporters | NeMo Agent Toolkit telemetry | config-driven, simultaneous exporters, profiler included |
+
+**Which metric for which question?**
+
+| Symptom / goal | Metric to look at |
+|---|---|
+| Streaming chat feels sluggish to start | **TTFT** (prefill) |
+| Tokens visibly stutter mid-answer | **ITL** (decode) |
+| Batch/offline pipeline cost-efficiency | TPS / total throughput, GPU util |
+| Decide when to **scale out** an LLM service | `num_requests_waiting` (queue depth), `gpu_cache_usage_perc` — NOT CPU/memory |
+| Is the GPU the bottleneck? | `DCGM_FI_DEV_GPU_UTIL` + `DCGM_FI_PROF_PIPE_TENSOR_ACTIVE` + FB memory |
+| Runaway agent loops / cost spike | tokens-per-request, LLM-calls-per-request from traces |
+| Dynamic batching tuned right? (Triton) | `nv_inference_queue_duration_us` |
+
+**Which detection method for which drift?**
+
+| Signal | Method |
+|---|---|
+| Input topics/language changing | embedding-distribution distance on prompts (data drift) |
+| Same inputs, answers now "wrong" | online evals + user feedback + KPI trend (concept drift) |
+| After any model/prompt/tool change | golden-set regression evals + canary comparison (behavior drift) |
+
+**Rollout strategy chooser:**
+
+| Constraint | Strategy |
+|---|---|
+| Zero user exposure allowed during test | **Shadow/mirror mode** (costly: duplicate inference; no user feedback) |
+| Limit blast radius, learn from real users | **Canary** 1–5% with auto-rollback gates |
+| Instant all-or-nothing switch + instant rollback | **Blue-green** (2x capacity needed during switch) |
+| Compare two variants on a business KPI | **A/B test** (needs stats horsepower + traffic) |
+| Prompt-only change | move prompt-registry **label**; no redeploy at all |
+
+## 6. Exam traps & gotchas
+
+1. **GPU utilization ≠ efficiency.** `DCGM_FI_DEV_GPU_UTIL` only says a kernel was resident; a memory-bound decode can show 95% "util" with idle tensor cores. Profiling-class metrics (`DCGM_FI_PROF_*`) or throughput-per-GPU tell the real story.
+2. **Autoscaling LLM/NIM services on CPU or memory is wrong.** Inference is GPU-bound; the exam answer is custom metrics via Prometheus Adapter — queue depth (`num_requests_waiting`) or KV-cache (`gpu_cache_usage_perc`).
+3. **TTFT vs. ITL vs. e2e confusion.** TTFT = prefill/responsiveness; ITL = decode/streaming smoothness; e2e = total. "Users complain the answer takes long to *start*" → TTFT, not e2e or throughput.
+4. **Data drift vs. concept drift.** If prompt-embedding distributions are *unchanged* but quality fell, it's concept (or behavior) drift — input-distribution monitors will never catch it; you need output evals/feedback.
+5. **Metrics ≠ traces ≠ evals.** Latency/error dashboards can be all-green while the agent answers wrongly. "All metrics normal but answers are bad — what's missing?" → eval-in-production / trace-level quality scoring, not more Prometheus.
+6. **Prompt rollback does not require redeploying code.** With prompt management (Langfuse-style versions+labels), rollback = repoint the `production` label. If an answer option says "rebuild and redeploy the container to restore the old prompt," it's the distractor. (Watch the sub-trap: SDK prompt *caching* means a brief tail of old-version traces after switching.)
+7. **Changing the embedding model silently breaks RAG.** New query embeddings vs. an index built with the old model = garbage similarity scores. Correct: full re-embed + rebuild side-by-side, validate retrieval, atomic swap — not "just refresh new documents."
+8. **Shadow deployment ≠ canary.** Shadow serves *no* users (zero risk, double cost, no user feedback); canary serves a *small %* of users (small real risk, real feedback). The exam swaps these definitions.
+9. **Port/endpoint trivia mix-ups.** dcgm-exporter = **9400**; Triton metrics = **8002**; NIM metrics at `/v1/metrics` on the service port; Phoenix UI defaults to **6006**. Also: Prometheus *scrapes* (pull model) — Triton/NIM never push metrics.
+10. **SLO math.** 99.5% SLO ⇒ 0.5% error budget over the window. Burn rate > 1 = budget exhausted *early*. Burn-rate alerting (fast + slow windows) is preferred over single static thresholds — alerting on every p99 blip is the distractor answer.
+11. **An agent retry/`finish_reason: length`/tool-error is not always an HTTP error.** Error-rate SLIs based only on 5xx undercount agent failures; tool-call failure rate and refusal rate are separate SLIs.
+12. **"Eval once before launch" is never the right answer.** Production agents need *continuous* evals (sampled judge scoring, canary evals on every change) because models, data, and user behavior all drift.
+
+## 7. Scenario drills
+
+1. **Q:** A LangGraph customer-support agent's p95 latency jumped from 8 s to 40 s overnight. Dashboards show normal GPU util and error rates. What's the fastest way to find the cause?
+   **A:** Pull distributed traces (OTel/Langfuse/Phoenix) of slow requests and compare span durations — the span tree will localize whether an LLM call, a specific tool's downstream API, or extra loop iterations added the time; aggregate metrics can't attribute latency inside a trajectory.
+
+2. **Q:** You must autoscale a NIM LLM microservice on Kubernetes. Which signal should drive the HPA?
+   **A:** A custom Prometheus metric like `num_requests_waiting` (queue depth) or `gpu_cache_usage_perc` exposed via Prometheus Adapter — CPU/memory HPA signals don't reflect GPU-bound inference load.
+
+3. **Q:** Three weeks after launch, embedding-distribution monitoring on incoming prompts shows no shift, yet the LLM-judge pass rate on sampled production answers fell from 93% to 81%. What's happening and what do you check?
+   **A:** Concept/behavior drift, not data drift — inputs are stable but correct outputs changed (or a dependency changed); check recent model/prompt/tool/corpus versions and refresh the knowledge source, guided by failing eval cases.
+
+4. **Q:** A new system prompt looks better in offline evals. The safest production rollout?
+   **A:** Publish it as a new immutable prompt version, canary it on ~1–5% of traffic with automated comparison (judge scores, latency, cost, error rate) against baseline, ramp gradually, and keep one-click rollback by re-pointing the `production` label.
+
+5. **Q:** Finance reports agent inference cost doubled in a month with flat traffic. First diagnostic step? And NVIDIA's long-term lever?
+   **A:** Inspect token-usage-per-request trends from traces to find the regression (longer contexts, retry storms, looping after a prompt/tool change); long-term, use the Data Flywheel Blueprint to distill/fine-tune smaller NIMs on production traffic and promote ones that match accuracy at far lower cost.
+
+6. **Q:** You need GPU utilization, memory, and temperature for every GPU node of your agent cluster in Grafana. Which components?
+   **A:** dcgm-exporter (DaemonSet, port 9400, typically installed by the GPU Operator) scraped by Prometheus, visualized with the NVIDIA DCGM Grafana dashboard (ID 12239) — DCGM is the NVIDIA-native GPU telemetry path.
+
+## 8. Builder's corner
+
+- **Instrument from day one, via the standard.** Emit OTel spans with GenAI semantic-convention attributes (or turn on NAT's `general.telemetry` YAML) before launch — retrofitting tracing during an incident is miserable, and OTLP keeps you backend-portable (Phoenix locally today, Langfuse/Arize in prod tomorrow).
+- **Put tokens-per-request and LLM-calls-per-request on your front dashboard.** They are the earliest leading indicators of loops, prompt regressions, and cost blowups — usually moving days before latency or error SLOs notice.
+- **Make rollback a label, not a deploy.** Externalize prompts (and model endpoint choices) into a versioned registry with environment labels; your mean-time-to-mitigate drops from "CI pipeline" to "seconds." Pin every model/container version explicitly.
+- **Turn incidents into evals.** Every production failure trace gets distilled into a golden-dataset case; the regression suite then gates all future model/prompt/dependency changes. This single habit compounds more than any tool choice.
+- **Budget for observability cost itself.** Tracing every token of every request at scale is expensive — sample traces (keep 100% of errors/slow requests, sample successes), batch span exports, and redact payloads both for privacy and storage.
+
+## 9. Sources
+
+- NeMo Agent Toolkit — Observe Workflows: https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/observe/observe.html
+- NeMo Agent Toolkit observe docs (GitHub, exporter list + YAML): https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/docs/source/run-workflows/observe/observe.md
+- NVIDIA NeMo Agent Toolkit repo: https://github.com/NVIDIA/NeMo-Agent-Toolkit
+- NVIDIA dcgm-exporter (port 9400, CSV config, GPU Operator): https://github.com/NVIDIA/dcgm-exporter
+- DCGM-Exporter docs: https://docs.nvidia.com/datacenter/dcgm/latest/gpu-telemetry/dcgm-exporter.html
+- Grafana NVIDIA DCGM dashboard 12239: https://grafana.com/grafana/dashboards/12239-nvidia-dcgm-exporter-dashboard/
+- NVIDIA blog — LLM Inference Benchmarking: Fundamental Concepts (TTFT/ITL/TPS/RPS): https://developer.nvidia.com/blog/llm-benchmarking-fundamental-concepts/
+- NVIDIA NIM Benchmarking — Metrics: https://docs.nvidia.com/nim/benchmarking/llm/latest/metrics.html
+- Observability for NVIDIA NIM for LLMs (OTel env vars, /v1/metrics): https://docs.nvidia.com/nim/large-language-models/latest/observability.html
+- NVIDIA blog — Horizontal Autoscaling of NIM Microservices on Kubernetes: https://developer.nvidia.com/blog/horizontal-autoscaling-of-nvidia-nim-microservices-on-kubernetes/
+- Triton Inference Server — Metrics (port 8002, queue duration): https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/metrics.html
+- OpenTelemetry GenAI semantic conventions (spans): https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-spans/
+- OpenTelemetry blog — GenAI observability: https://opentelemetry.io/blog/2026/genai-observability/
+- Evidently — data drift vs concept drift: https://www.evidentlyai.com/ml-in-production/data-drift and https://www.evidentlyai.com/ml-in-production/concept-drift
+- Shadow/canary/A-B rollouts for LLMs: https://tianpan.co/blog/2026-04-09-llm-gradual-rollout-shadow-canary-ab-testing
+- Langfuse prompt version control (labels, rollback): https://langfuse.com/docs/prompt-management/features/prompt-version-control
+- Grafana SLO docs (error budget, burn rate): https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/introduction/
+- NVIDIA Data Flywheel Blueprint: https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard and https://github.com/NVIDIA-AI-Blueprints/data-flywheel
+- NVIDIA blog — Model distillation with Data Flywheel Blueprint (≈98% cost reduction example): https://developer.nvidia.com/blog/build-efficient-ai-agents-through-model-distillation-with-nvidias-data-flywheel-blueprint/
+- FlashGenius NCP-AAI exam guide (domain weight context): https://flashgenius.net/blog-article/your-comprehensive-guide-to-the-nvidia-agentic-ai-llm-professional-certification-ncp-aai
+
+## 10. Code Companion
+
+**1) Langfuse tracing for a LangGraph agent — one callback handler, full span tree + cost per trace**
+
+```python
+import os
+from langfuse.langchain import CallbackHandler   # SDK v3 import (older form: from langfuse.callback import CallbackHandler)
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-..."
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-..."
+os.environ["LANGFUSE_BASE_URL"]  = "https://cloud.langfuse.com"  # or your self-hosted URL
+
+llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct",            # build.nvidia.com hosted...
+                 base_url="http://localhost:8000/v1")            # ...or a local NIM
+
+langfuse_handler = CallbackHandler()  # v3: creds come from env vars, no args needed
+
+# `graph` = any compiled LangGraph StateGraph; one invoke = one Langfuse trace
+result = graph.invoke(
+    {"messages": [("user", "Where is order 4711?")]},
+    config={"callbacks": [langfuse_handler]},
+)
+```
+
+What to notice: a single callback in `config` captures the *entire* trajectory — every LLM generation and tool call becomes a nested observation under one trace, and Langfuse multiplies the per-span token usage by model price to show **cost per trace** (the "runaway loop shows up in tokens first" metric from §3.2). No code change inside your nodes.
+
+**2) Manual OTel span around a tool call — GenAI semconv attributes + OTLP export**
+
+```python
+# pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")))  # OTel Collector / Phoenix
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("support-agent")
+
+with tracer.start_as_current_span("execute_tool search_orders") as span:  # name = "execute_tool {tool.name}"
+    span.set_attribute("gen_ai.operation.name", "execute_tool")
+    span.set_attribute("gen_ai.tool.name", "search_orders")
+    span.set_attribute("gen_ai.tool.call.id", "call_8f2a")
+    span.set_attribute("gen_ai.provider.name", "nvidia")  # older form was gen_ai.system (renamed in 2025 semconv)
+    out = search_orders(order_id="4711")
+    span.set_attribute("gen_ai.tool.call.result", str(out)[:512])  # truncate/redact payloads
+```
+
+What to notice: the span name convention (`execute_tool {gen_ai.tool.name}`; LLM calls use `{operation} {model}`) and the `gen_ai.*` attributes are exactly what the exam means by "spans for tool calls with standard semantic conventions" — any OTLP backend (Phoenix, Langfuse, Collector fan-out) understands them, which is the vendor-neutrality argument.
+
+**3) LangSmith for LangGraph — tracing is literally environment variables**
+
+```bash
+export LANGSMITH_TRACING=true            # older form was LANGCHAIN_TRACING_V2=true
+export LANGSMITH_API_KEY="lsv2_pt_..."
+export LANGSMITH_PROJECT="support-agent-prod"   # optional; defaults to "default"
+# then run your LangGraph app unchanged — every graph.invoke() is traced
+python agent.py
+```
+
+What to notice: zero code change — LangGraph auto-instruments when the env vars are present, which is why LangSmith is the "deepest first-party integration" answer in the tool-chooser table (§5). Contrast with snippet 1 where Langfuse needs an explicit callback (or its OTel integration).
+
+**4) NeMo Agent Toolkit: one YAML, two exporters at once (Phoenix + Langfuse)**
+
+```yaml
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+    tracing:
+      phoenix:                       # local debugging UI
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: support_agent
+      langfuse:                      # team backend, simultaneously
+        _type: langfuse
+        endpoint: https://cloud.langfuse.com/api/public/otel/v1/traces
+        public_key: ${LANGFUSE_PUBLIC_KEY}
+        secret_key: ${LANGFUSE_SECRET_KEY}
+```
+
+What to notice: multiple exporters under `tracing` run **simultaneously** — NAT's event-driven `IntermediateStepManager` publishes every LLM/tool step once and each exporter subscribes. This config-not-code approach is NVIDIA's flagship observability answer (§4), and it works regardless of whether the workflow underneath is LangGraph, CrewAI, or Llama Index.
+
+**5) PromQL you would actually alert on (NIM `/v1/metrics` + DCGM :9400)**
+
+```text
+# KV-cache nearly full -> requests about to queue/preempt (NIM, vLLM-derived gauge 0-1)
+avg by (model_name) (gpu_cache_usage_perc) > 0.90
+
+# Queue depth sustained -> capacity exhausted, scale out (the HPA signal, NOT cpu/mem)
+sum(num_requests_waiting) > 5            # with `for: 5m` in the alert rule
+
+# p90 TTFT from the histogram -> user-perceived responsiveness regressing
+histogram_quantile(0.90,
+  sum by (le) (rate(time_to_first_token_seconds_bucket[5m]))) > 2
+
+# Queue growing while GPUs idle -> serving-layer bug, not capacity (pair NIM + DCGM)
+sum(num_requests_waiting) > 5 and avg(DCGM_FI_DEV_GPU_UTIL) < 30
+```
+
+What to notice: the first two are the canonical autoscaling signals from §3.2; `histogram_quantile` over `rate(..._bucket[5m])` is *the* PromQL idiom for latency percentiles; and the last query shows why you scrape NIM and dcgm-exporter into the same Prometheus — cross-layer queries localize the fault before you ever open a trace.
+
+**6) Burn-rate alert + the rollback story: flip a Langfuse prompt label, no redeploy**
+
+```yaml
+# prometheus alert rule: fast-burn on a "TTFT < 2s for 99.5% of requests" SLO
+groups:
+- name: agent-slo
+  rules:
+  - alert: TTFTSLOFastBurn          # 14.4x burn over 1h AND 5m = page now
+    expr: |
+      (1 - sum(rate(time_to_first_token_seconds_bucket{le="2"}[1h]))
+         / sum(rate(time_to_first_token_seconds_count[1h]))) > 14.4 * 0.005
+      and
+      (1 - sum(rate(time_to_first_token_seconds_bucket{le="2"}[5m]))
+         / sum(rate(time_to_first_token_seconds_count[5m]))) > 14.4 * 0.005
+    labels: { severity: page }
+    annotations: { runbook: "https://wiki/runbooks/agent-rollback" }
+```
+
+```python
+# the runbook's mitigation step — one API call, zero redeploys:
+from langfuse import get_client
+get_client().update_prompt(name="support-system-prompt", version=7,  # last known good
+                           new_labels=["production"])  # label moves; clients fetching by label pick it up
+```
+
+What to notice: the dual-window (1h + 5m) burn-rate condition pages only when the error budget is burning fast *right now* — the anti-pattern answer is alerting on a single p99 blip (§3.4). The mitigation is exam trap #6 verbatim: rollback = re-point the `production` label; expect a brief tail of old-version traces due to SDK prompt caching.
+
+**7) Tiny data-drift check: daily centroid vs baseline cosine distance**
+
+```python
+import os, numpy as np
+from openai import OpenAI  # NVIDIA endpoints are OpenAI-compatible
+
+emb = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+
+def centroid(texts: list[str]) -> np.ndarray:
+    r = emb.embeddings.create(model="nvidia/nv-embedqa-e5-v5", input=texts,
+                              extra_body={"input_type": "query", "truncate": "END"})
+    v = np.array([d.embedding for d in r.data])
+    v /= np.linalg.norm(v, axis=1, keepdims=True)          # normalize each vector
+    return v.mean(axis=0)
+
+baseline = np.load("baseline_centroid.npy")                 # built once from launch-week prompts
+today = centroid(sample_todays_user_prompts(n=200))         # daily sample of live inputs
+dist = 1 - float(baseline @ today) / (np.linalg.norm(baseline) * np.linalg.norm(today))
+if dist > 0.15:                                             # threshold tuned on historical jitter
+    page_oncall(f"Input drift: centroid cosine distance {dist:.3f} vs baseline")
+```
+
+What to notice: this catches **data drift only** — inputs moving to topics your corpus doesn't cover. If this stays flat while judge scores fall, that's concept/behavior drift (exam trap #4) and no amount of embedding monitoring will see it. Note the NV-EmbedQA `input_type` requirement via `extra_body` — asymmetric retrieval models embed queries and passages differently.
+
+**8) Eval-in-production: nightly cron samples traces, LLM-judges them, writes scores back**
+
+```python
+# crontab: 0 6 * * *  python judge_sample.py   (sample N traces/day, score, push back)
+import os, datetime
+from langfuse import get_client
+from openai import OpenAI
+
+langfuse = get_client()                                     # reads LANGFUSE_* env vars
+judge = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+JUDGE = "Question:\n{q}\n\nAnswer:\n{a}\n\nIs the answer correct, grounded, and on-tone? Reply PASS or FAIL, then one reason."
+
+since = datetime.datetime.now() - datetime.timedelta(days=1)
+for t in langfuse.api.trace.list(from_timestamp=since, limit=50).data:   # N=50/day sample
+    verdict = judge.chat.completions.create(
+        model="meta/llama-3.3-70b-instruct", temperature=0,
+        messages=[{"role": "user", "content": JUDGE.format(q=t.input, a=t.output)}],
+    ).choices[0].message.content
+    langfuse.create_score(trace_id=t.id, name="llm_judge_pass",
+                          value=1.0 if verdict.startswith("PASS") else 0.0, comment=verdict)
+langfuse.flush()
+```
+
+What to notice: this is the continuous quality-SLO loop from §3.3/§3.4 — no ground truth in prod, so you sample, judge, and trend `llm_judge_pass` in the same UI as latency and cost; alert when the daily mean regresses. Scores attach to the *trace*, so a failing score links straight to the trajectory you need to debug, and failing cases feed the golden regression set.
+
+## 11. What top engineers are saying (2025-26)
+
+1. **Shreya Shankar — sh-reya.com, "Data Flywheels for LLM Applications" (+ the *AI Evals for Engineers & PMs* course/book with Hamel Husain).** Her core take: production LLM systems need an *ongoing* flywheel — sample real outputs, label them cheaply, align an LLM-judge against those human labels (her "Who Validates the Validators?" research line), and feed results back into prompts and regression sets — rather than a one-time pre-launch eval. This is exactly the exam's "eval-in-production as a continuous control loop, never eval-once" doctrine, and snippet 8 above is a minimal implementation of her loop. https://www.sh-reya.com/blog/ai-engineering-flywheel/
+
+2. **Hamel Husain — hamel.dev, "LLM Evals: Everything You Need to Know" (evals FAQ).** Take: "You must remove all friction from the process of looking at data" — error analysis on real traces beats generic dashboards and off-the-shelf metric suites; keep reading logs/traces until you stop learning new failure modes. For this domain it grounds why traces (not aggregate metrics) are the first stop in incident triage (scenario drill 1), and why every incident should mint new eval cases. https://hamel.dev/blog/posts/evals-faq/
+
+3. **Charity Majors & Phillip Carter — Honeycomb blog, "The Role of AI Observability in 2025."** Take: you cannot understand or improve an LLM feature in isolation — RAG is a tracing problem, LLM-as-router is a high-cardinality problem, agents are high-dimensionality — so "you can't have great observability for AI unless you start with great observability for the rest of your software," and aggregates with random exemplars are not enough; you need outlier inspection over full event chains. Maps directly to the layered dashboards + trace-first triage model in §3.4. https://www.honeycomb.io/blog/observability-age-of-ai
+
+4. **OpenTelemetry GenAI SIG — otel blog, "AI Agent Observability: Evolving Standards and Best Practices" (Mar 2025).** Take: because GenAI observability tooling is fragmenting across vendors and frameworks, "it is important to establish standards around the shape of the telemetry generated by agent apps to avoid lock-in" — hence the `gen_ai.*` semconv push (including the 2025 `gen_ai.system` → `gen_ai.provider.name` rename) and agent-app conventions. Exam-relevant: this is the *why* behind OTel being the "vendor-neutral, future-proof" answer in the decision table, and why NIM/NAT both speak OTLP. https://opentelemetry.io/blog/2025/ai-agent-observability/ (follow-up deep dive: https://opentelemetry.io/blog/2026/genai-observability/)
+
+5. **Greptime engineering blog — "Agent Observability: Can the Old Playbook Handle the New Game?" (Dec 2025).** Take: the classic three-pillars (metrics/logs/traces) playbook strains under agent workloads — trajectories are long, branching, high-cardinality and semantically judged — pushing the field toward wide events / "Observability 2.0" where one rich event per step carries everything needed for later slicing. Useful framing for why agent platforms (Langfuse observations, NAT IntermediateStep events) all converge on structured per-step events rather than flat logs. https://www.greptime.com/blogs/2025-12-11-agent-observability
+
+6. **Softcery (practitioner agency) — "9 AI Observability Platforms Compared: Phoenix, LangSmith, Langfuse, Logfire..." (2025).** Take from the tooling-choice discourse: the decision is less about features (all do traces+evals now) and more about lock-in surface — LangSmith wins if you're committed to LangGraph, Langfuse if self-hosting/MIT-licensing and prompt management matter, Phoenix if you want OTel/OpenInference-native local-first debugging. Mirrors the §5 chooser table almost line for line — which is reassuring signal that the exam's framing matches field practice. https://softcery.com/lab/top-8-observability-platforms-for-ai-agents-in-2025
+
+7. **Laminar — "Langfuse Alternatives 2026: 7 Top Picks for Agent Observability."** Take (representative of a 2026 discourse thread on observability *pricing economics*): unit-based pricing that counts traces + observations + scores "punishes" agentic workloads, because one agent run emits dozens of small spans — so observability cost itself becomes a production engineering concern, pushing teams to sample successes, keep 100% of errors, and batch exports. This validates the "budget for observability cost" point in Builder's corner §8 as a live practitioner debate, not a textbook footnote. https://laminar.sh/article/langfuse-alternatives-2026

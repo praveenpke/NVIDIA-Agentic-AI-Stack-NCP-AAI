@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 4 — Deployment &amp; Scaling</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0f1521; --bg3:#131b2a; --panel:#121927;
+    --line:#1f2a3d; --line2:#2a3a52;
+    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.25);
+    --txt:#dbe4f0; --muted:#8fa0b8; --faint:#5d6c82;
+    --amber:#e8b339; --red:#e85d5d; --blue:#4da3ff; --purple:#b07cff; --cyan:#39d3c8;
+  }
+  /* bridge page-local var names to the shared theme slots (theme.css overrides the palette) */
+  :root{--txt:var(--text);--faint:var(--muted);--line2:var(--line)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+  a{color:var(--green);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:Consolas,"SF Mono",Menlo,monospace;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.86em;color:var(--green)}
+  pre{background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:12px 0 10px;font-size:.78rem;line-height:1.55}
+  pre code{display:block;background:none;border:none;padding:0;font-size:inherit;color:var(--green);white-space:pre}
+  h2{font-size:1.7rem;margin-bottom:.4rem}
+  h3{font-size:1.15rem;margin:1.4rem 0 .6rem;color:var(--txt)}
+  section{max-width:1180px;margin:0 auto;padding:64px 24px 24px}
+  .sub{color:var(--muted);max-width:880px;margin-bottom:1.6rem}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:.4rem}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .wrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:4px;padding:10px 16px;overflow-x:auto;white-space:nowrap}
+  nav .brand{font-weight:800;color:var(--txt);margin-right:12px;font-size:.9rem}
+  nav .brand b{color:var(--green)}
+  nav a{color:var(--muted);font-size:.82rem;padding:6px 10px;border-radius:7px}
+  nav a:hover{color:var(--txt);background:var(--bg3);text-decoration:none}
+
+  /* hero */
+  header.hero{position:relative;padding:84px 24px 60px;text-align:center;background:
+    radial-gradient(900px 420px at 50% -120px, var(--green-glow), transparent 65%),
+    radial-gradient(700px 380px at 85% 10%, color-mix(in srgb, var(--blue) 7%, transparent), transparent 60%), var(--bg)}
+  .hero .dom{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green-dim);background:var(--green-glow);color:var(--green);border-radius:999px;padding:6px 16px;font-weight:700;font-size:.85rem;letter-spacing:.08em}
+  .hero h1{font-size:clamp(2rem,4.6vw,3.3rem);margin:18px 0 10px;color:var(--txt);letter-spacing:-.02em}
+  .hero h1 span{color:var(--green)}
+  .hero .hook{color:var(--muted);font-size:1.08rem;max-width:820px;margin:0 auto}
+  .hero .weight{margin-top:18px;color:var(--faint);font-size:.85rem}
+  .hero .weightbar{width:280px;height:8px;border-radius:6px;background:var(--bg3);margin:8px auto 0;overflow:hidden}
+  .hero .weightbar i{display:block;height:100%;width:13%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:6px}
+
+  /* 3D scene */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-canvas{width:100%;height:100%;display:block}
+  .overlay{position:absolute;font-size:.78rem;color:#8fa0b8;background:rgba(10,14,22,.82);border:1px solid #3a4a66;border-radius:10px;backdrop-filter:blur(6px)}
+  #legend{left:14px;bottom:14px;padding:12px 14px;max-width:300px}
+  #legend h4{color:#fff;font-size:.8rem;margin-bottom:7px;letter-spacing:.05em}
+  #legend .row{display:flex;gap:8px;align-items:center;margin:4px 0}
+  #legend .dot{width:11px;height:11px;border-radius:3px;flex:none}
+  #meters{right:14px;top:14px;padding:13px 16px;width:218px}
+  #meters h4{color:#fff;font-size:.8rem;margin-bottom:9px;letter-spacing:.05em}
+  .meter{margin-bottom:10px}
+  .meter .lab{display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:3px}
+  .meter .lab b{color:#fff;font-weight:600}
+  .meter .bar{height:7px;background:#0a101c;border:1px solid #3a4a66;border-radius:5px;overflow:hidden}
+  .meter .bar i{display:block;height:100%;width:30%;border-radius:5px;transition:width .25s linear}
+  #m-ttft i{background:#e8b339} #m-tps i{background:#76b900} #m-gpu i{background:#4da3ff} #m-kv i{background:#b07cff}
+  #scene-hint{left:50%;transform:translateX(-50%);top:14px;padding:7px 16px;font-size:.74rem}
+  #tooltip{display:none;position:absolute;pointer-events:none;padding:8px 12px;max-width:260px;font-size:.75rem;color:#dfe7f3;z-index:5}
+  #tooltip b{color:#76b900}
+
+  /* cards & grids */
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card h4{color:var(--txt);font-size:1rem;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+  .card p{font-size:.88rem;color:var(--muted)}
+  .card .big{font-size:1.5rem;font-weight:800;color:var(--green)}
+  .ic{width:30px;height:30px;flex:none;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;background:var(--green-glow);border:1px solid var(--green-dim)}
+  ul.tick{list-style:none;font-size:.86rem;color:var(--muted)}
+  ul.tick li{padding:3px 0 3px 20px;position:relative}
+  ul.tick li::before{content:"▸";position:absolute;left:2px;color:var(--green)}
+  .pill{display:inline-block;font-size:.7rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.05em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid var(--green-dim)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 12%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 55%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 12%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 55%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 12%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 55%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 12%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 55%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 12%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 55%, transparent)}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:.85rem;background:var(--bg2);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tablewrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+  .tablewrap table{border:none}
+  th{background:var(--bg3);color:var(--txt);text-align:left;padding:10px 14px;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase}
+  td{padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);vertical-align:top}
+  td b{color:var(--txt)}
+  td.good{background:var(--green-glow);color:var(--green)}
+  td.warn{background:color-mix(in srgb, var(--amber) 8%, transparent);color:var(--amber)}
+  td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  td.info{background:color-mix(in srgb, var(--blue) 8%, transparent);color:var(--blue)}
+
+  /* svg labels */
+  .svgbox{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px;overflow-x:auto}
+  .svgbox svg{display:block;margin:0 auto}
+  .svg-t{fill:var(--txt);font-family:inherit}
+  .svg-m{fill:var(--muted);font-family:inherit}
+  .svg-g{fill:var(--green);font-family:inherit}
+
+  /* bars */
+  .hbar{margin:10px 0}
+  .hbar .lab{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:4px;color:var(--muted)}
+  .hbar .lab b{color:var(--txt)}
+  .hbar .track{height:18px;background:var(--bg3);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .hbar .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--green-dim),var(--green));display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:.7rem;color:var(--on-accent);font-weight:800;min-width:34px}
+  .hbar .fill.amber{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 60%, black),var(--amber))}
+  .hbar .fill.blue{background:linear-gradient(90deg,color-mix(in srgb, var(--blue) 60%, black),var(--blue))}
+
+  /* traps */
+  .trap{background:linear-gradient(180deg,var(--panel2),var(--bg2));border:1px solid color-mix(in srgb, var(--amber) 45%, transparent);border-left:4px solid var(--amber);border-radius:12px;padding:14px 18px}
+  .trap h4{color:var(--amber);font-size:.92rem;margin-bottom:5px}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--amber)}
+
+  /* drills */
+  details.drill{background:var(--bg2);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:16px 20px;font-size:.94rem;color:var(--txt);list-style:none;display:flex;gap:12px;align-items:flex-start}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary .qn{flex:none;width:28px;height:28px;border-radius:8px;background:var(--green-glow);border:1px solid var(--green-dim);color:var(--green);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+  details.drill summary .hintreveal{margin-left:auto;flex:none;font-size:.72rem;color:var(--faint);padding-top:5px}
+  details.drill[open]{border-color:var(--green-dim);box-shadow:0 0 24px var(--green-glow)}
+  details.drill .ans{padding:0 20px 18px 60px;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--line)}
+  details.drill .ans .tag{display:inline-block;margin:12px 0 8px;font-size:.72rem;font-weight:800;color:var(--on-accent);background:var(--green);border-radius:6px;padding:2px 10px;letter-spacing:.06em}
+  details.drill .ans b{color:var(--txt)}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);margin-top:70px;padding:40px 24px 60px;background:var(--bg2)}
+  footer .wrap{max-width:1180px;margin:0 auto}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.82rem}
+  footer li{margin-bottom:7px;break-inside:avoid}
+  @media(max-width:760px){footer ul{columns:1}}
+
+  .flow-note{font-size:.78rem;color:var(--faint);margin-top:8px;text-align:center}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:860px){.twocol{grid-template-columns:1fr}}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:48px 0 0}
+
+  /* theme-aware overrides for SVG presentation attributes (attributes can't use var()) */
+  svg [fill="#0f1722"]{fill:var(--panel)}
+  svg [fill="#13202e"],svg [fill="#101723"]{fill:var(--panel2)}
+  svg [fill="#1b2535"],svg [fill="#2a3548"]{fill:var(--bg3)}
+  svg [fill="#16243a"]{fill:color-mix(in srgb, var(--blue) 15%, transparent)}
+  svg [fill="#3b2a5e"]{fill:color-mix(in srgb, var(--purple) 18%, transparent)}
+  svg [fill="#3a1518"]{fill:color-mix(in srgb, var(--red) 15%, transparent)}
+  svg [fill="#2c4a00"]{fill:var(--green-glow)}
+  svg [fill="#3a5c00"]{fill:color-mix(in srgb, var(--green) 40%, transparent)}
+  svg [fill="#4e7a00"]{fill:color-mix(in srgb, var(--green) 65%, transparent)}
+  svg [fill="#76b900"],svg [fill="#3f6a00"],svg [fill="#a4e22f"],svg [fill="#cdf38a"],svg [fill="#a8e063"]{fill:var(--green)}
+  svg [fill="#06210b"],svg [fill="#d9ff7a"],svg [fill="#cfe6ff"]{fill:var(--on-accent)}
+  svg [fill="#4da3ff"],svg [fill="#1d4f86"],svg [fill="#9cc8f5"],svg [fill="#5d8ab8"]{fill:var(--blue)}
+  svg [fill="#b07cff"],svg [fill="#d8c2ff"]{fill:var(--purple)}
+  svg [fill="#39d3c8"]{fill:var(--cyan)}
+  svg [fill="#e8b339"]{fill:var(--amber)}
+  svg [fill="#e85d5d"],svg [fill="#f0a0a0"]{fill:var(--red)}
+  svg [fill="#5d6c82"]{fill:var(--muted)}
+  svg [stroke="#2a3a52"],svg [stroke="#3a4a62"]{stroke:var(--line)}
+  svg [stroke="#3a5c00"]{stroke:var(--green-dim)}
+  svg [stroke="#76b900"]{stroke:var(--green)}
+  svg [stroke="#4da3ff"]{stroke:var(--blue)}
+  svg [stroke="#b07cff"],svg [stroke="#5b3f8f"]{stroke:var(--purple)}
+  svg [stroke="#1d6f68"]{stroke:var(--cyan)}
+  svg [stroke="#e8b339"]{stroke:var(--amber)}
+  svg [stroke="#e85d5d"]{stroke:var(--red)}
+  svg [stroke="#5d6c82"]{stroke:var(--muted)}
+  svg [stroke="#0b0f17"]{stroke:var(--bg)}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">NCP-AAI · <b>Domain 4</b></span>
+    <a href="#scene-wrap">3D Scene</a>
+    <a href="#mental">Mental Model</a>
+    <a href="#nim">NIM</a>
+    <a href="#triton">Triton</a>
+    <a href="#trtllm">TensorRT-LLM</a>
+    <a href="#scaling">Scaling</a>
+    <a href="#edge">Edge &amp; DGX Cloud</a>
+    <a href="#cicd">CI/CD</a>
+    <a href="#decide">Decisions</a>
+    <a href="#traps">Traps</a>
+    <a href="#quiz">Drills</a>
+    <a href="#code">Code</a>
+    <a href="#voices">Voices</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <span class="dom">DOMAIN 4 · DEPLOYMENT AND SCALING</span>
+  <h1>From Laptop Demo<br>to a <span>GPU Fleet</span></h1>
+  <p class="hook">TensorRT-LLM makes one GPU as fast as possible, Triton turns one node into a serving platform, NIM ships it as a container with an OpenAI API, and Kubernetes + HPA on KV-cache metrics scales it to a fleet — almost every exam question is "best choice under constraints."</p>
+  <div class="weight">EXAM WEIGHT: 13% · ~8–9 of 60–70 questions</div>
+  <div class="weightbar"><i></i></div>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="overlay" id="scene-hint">Drag to orbit · scroll to zoom · hover objects for info · click a pod to highlight its requests</div>
+  <div class="overlay" id="legend">
+    <h4>LEGEND — GPU DATACENTER</h4>
+    <div class="row"><span class="dot" style="background:#4da3ff"></span>Client orbs → request particles</div>
+    <div class="row"><span class="dot" style="background:#76b900"></span>Load balancer pyramid (fans out)</div>
+    <div class="row"><span class="dot" style="background:rgba(118,185,0,.4);border:1px solid #76b900"></span>K8s pods (translucent) + glowing GPU</div>
+    <div class="row"><span class="dot" style="background:#b07cff"></span>Zoomed pod: in-flight batching lanes — slots free &amp; refill per token iteration</div>
+    <div class="row"><span class="dot" style="background:#e8b339"></span>Traffic sine wave → HPA spawns / despawns pods</div>
+  </div>
+  <div class="overlay" id="meters">
+    <h4>LIVE METERS</h4>
+    <div class="meter" id="m-ttft"><div class="lab"><b>TTFT</b><span id="v-ttft">—</span></div><div class="bar"><i></i></div></div>
+    <div class="meter" id="m-tps"><div class="lab"><b>Tokens / sec</b><span id="v-tps">—</span></div><div class="bar"><i></i></div></div>
+    <div class="meter" id="m-gpu"><div class="lab"><b>GPU utilization</b><span id="v-gpu">—</span></div><div class="bar"><i></i></div></div>
+    <div class="meter" id="m-kv"><div class="lab"><b>gpu_cache_usage_perc</b><span id="v-kv">—</span></div><div class="bar"><i></i></div></div>
+    <div style="font-size:.68rem;color:#8fa0b8;margin-top:6px">HPA scales pods on KV-cache % — <b style="color:#e85d5d">never CPU</b>. Pods: <span id="v-pods" style="color:#76b900;font-weight:700">3</span></div>
+  </div>
+  <div class="overlay" id="tooltip"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 60, 140);
+
+const camera = new THREE.PerspectiveCamera(50, 2, .1, 400);
+camera.position.set(0, 16, 38);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 4, 0);
+controls.enableDamping = true; controls.dampingFactor = .06;
+controls.maxDistance = 90; controls.minDistance = 10;
+
+scene.add(new THREE.AmbientLight(0x6f7f9a, .55));
+const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(10, 24, 14); scene.add(key);
+const grn = new THREE.PointLight(0x76b900, 60, 60); grn.position.set(0, 10, 0); scene.add(grn);
+
+// floor grid
+const grid = new THREE.GridHelper(120, 48, 0x1d2a3e, 0x121a28);
+grid.position.y = -0.01; scene.add(grid);
+
+// ---------- label sprites (canvas textures) ----------
+function makeLabel(text, color='#dbe4f0', size=46, bg=true){
+  const pad=18, c=document.createElement('canvas'), ctx=c.getContext('2d');
+  ctx.font = `600 ${size}px -apple-system, Segoe UI, Roboto, sans-serif`;
+  const w = ctx.measureText(text).width;
+  c.width = Math.ceil(w+pad*2); c.height = size+pad*1.4;
+  const x = c.getContext('2d');
+  if(bg){ x.fillStyle='rgba(10,15,24,0.78)'; x.beginPath(); x.roundRect(0,0,c.width,c.height,14); x.fill();
+    x.strokeStyle='rgba(118,185,0,0.35)'; x.lineWidth=2; x.stroke(); }
+  x.font = `600 ${size}px -apple-system, Segoe UI, Roboto, sans-serif`;
+  x.fillStyle = color; x.textBaseline='middle';
+  x.fillText(text, pad, c.height/2+2);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy=4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false}));
+  const s = 0.018;
+  sp.scale.set(c.width*s, c.height*s, 1);
+  return sp;
+}
+
+const hoverables = []; // {mesh, title, desc}
+function hoverable(mesh, title, desc){ mesh.userData.hover={title,desc}; hoverables.push(mesh); }
+
+// ---------- clients (orbs, left side) ----------
+const CLIENTS=[];
+const clientMat = new THREE.MeshStandardMaterial({color:0x4da3ff, emissive:0x1c4f8f, emissiveIntensity:1.2, roughness:.35});
+for(let i=0;i<4;i++){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(.85, 24, 18), clientMat.clone());
+  m.position.set(-26, 3.2 + i*2.6, -6 + i*4.2);
+  scene.add(m); CLIENTS.push(m);
+  hoverable(m, 'Client / Agent', 'Agents fire many LLM calls per user task (planning, tool selection, reflection) — cost and latency multiply.');
+}
+const clLab = makeLabel('Clients (agent LLM calls)', '#9cc8f5'); clLab.position.set(-26, 13.5, 0); scene.add(clLab);
+
+// ---------- load balancer pyramid ----------
+const lb = new THREE.Mesh(
+  new THREE.ConeGeometry(2.6, 4.2, 4),
+  new THREE.MeshStandardMaterial({color:0x76b900, emissive:0x3a5c00, emissiveIntensity:.9, roughness:.3, metalness:.2})
+);
+lb.position.set(-10, 4.4, 0); lb.rotation.y = Math.PI/4; scene.add(lb);
+hoverable(lb, 'Load Balancer / Ingress', 'Fans requests across replicas. Round-robin is naive for LLMs (request costs vary) — prefer least-outstanding-requests or KV-cache/prefix-aware routing.');
+const lbLab = makeLabel('Load Balancer', '#a4e22f'); lbLab.position.set(-10, 8.6, 0); scene.add(lbLab);
+
+// ---------- pods ----------
+const POD_SLOTS = [ [4,-9],[4,-3],[4,3],[4,9],[11,-6],[11,0],[11,6] ]; // x,z — up to 7 pods (min 2)
+const pods = []; // {group, box, gpu, alive, scale, slot}
+const podGeo = new THREE.BoxGeometry(4.4, 5, 4.4);
+function spawnPod(i){
+  const g = new THREE.Group();
+  const box = new THREE.Mesh(podGeo, new THREE.MeshStandardMaterial({
+    color:0x76b900, transparent:true, opacity:.16, roughness:.2, metalness:.1,
+    emissive:0x2c4a00, emissiveIntensity:.35, depthWrite:false}));
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(podGeo),
+    new THREE.LineBasicMaterial({color:0x76b900, transparent:true, opacity:.65}));
+  const gpu = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1, 1.7),
+    new THREE.MeshStandardMaterial({color:0x0c1320, emissive:0x76b900, emissiveIntensity:1.6, roughness:.35}));
+  gpu.position.y = -0.6;
+  g.add(box, edge, gpu);
+  g.position.set(POD_SLOTS[i][0], 2.8, POD_SLOTS[i][1]);
+  g.scale.setScalar(.01);
+  scene.add(g);
+  hoverable(box, 'K8s Pod — NIM container', 'Versioned NIM container: optimized engine + OpenAI-compatible API on :8000. Requests GPU via nvidia.com/gpu (exposed by GPU Operator device plugin).');
+  const pod = {group:g, box, gpu, alive:true, scale:.01, slot:i, edge};
+  pods.push(pod); return pod;
+}
+const podLab = makeLabel('K8s pods · NIM :8000', '#a4e22f'); podLab.position.set(7.5, 9.4, 0); scene.add(podLab);
+const hpaLab = makeLabel('HPA: scales on gpu_cache_usage_perc / TTFT p90', '#e8b339', 38); hpaLab.position.set(7.5, 11.6, 0); scene.add(hpaLab);
+for(let i=0;i<3;i++) spawnPod(i);
+
+// ---------- zoomed pod (in-flight batching) ----------
+const zoom = new THREE.Group(); zoom.position.set(24, 6, -10); scene.add(zoom);
+const zoomShellGeo = new THREE.BoxGeometry(10.5, 8.4, 1.6);
+const zoomShell = new THREE.Mesh(zoomShellGeo, new THREE.MeshStandardMaterial({
+  color:0xb07cff, transparent:true, opacity:.07, depthWrite:false}));
+const zoomEdge = new THREE.LineSegments(new THREE.EdgesGeometry(zoomShellGeo),
+  new THREE.LineBasicMaterial({color:0xb07cff, transparent:true, opacity:.7}));
+zoom.add(zoomShell, zoomEdge);
+hoverable(zoomShell, 'Zoomed pod — in-flight batching', 'Iteration-level batching: when a sequence finishes, it is evicted and a new request injected immediately — no waiting for the whole batch. Prefill + decode interleave.');
+const zoomLab = makeLabel('In-flight (continuous) batching', '#cdaaff', 42); zoomLab.position.set(0, 5.6, 0); zoom.add(zoomLab);
+const zoomLab2 = makeLabel('finished seq evicted → new request injected same iteration', '#8fa0b8', 30, true); zoomLab2.position.set(0, -5.4, 0); zoom.add(zoomLab2);
+
+// lanes: 6 lanes x 14 token slots (instanced cubes)
+const LANES=6, SLOTS=14;
+const slotGeo = new THREE.BoxGeometry(.52,.52,.52);
+const slotMesh = new THREE.InstancedMesh(slotGeo, new THREE.MeshStandardMaterial({roughness:.4}), LANES*SLOTS);
+slotMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+zoom.add(slotMesh);
+const cFilled = new THREE.Color(0x76b900), cEmpty = new THREE.Color(0x182232), cHead = new THREE.Color(0xd9ff7a), cPrefill = new THREE.Color(0x4da3ff);
+const lanes = []; // {len(target output len), prog, state:'gen'|'free', freeT}
+for(let l=0;l<LANES;l++) lanes.push({len: 5+Math.floor(Math.random()*9), prog: Math.random()*5, state:'gen'});
+const tmpM = new THREE.Matrix4(), tmpC = new THREE.Color();
+function layoutSlots(){
+  let id=0;
+  for(let l=0;l<LANES;l++) for(let s=0;s<SLOTS;s++){
+    tmpM.setPosition(-4.4 + s*.66, 3.4 - l*1.18, 0);
+    slotMesh.setMatrixAt(id++, tmpM);
+  }
+  slotMesh.instanceMatrix.needsUpdate = true;
+}
+layoutSlots();
+
+// ---------- traffic sine wave (back wall) ----------
+const WAVE_N = 120;
+const wavePos = new Float32Array(WAVE_N*3);
+const waveGeo = new THREE.BufferGeometry();
+waveGeo.setAttribute('position', new THREE.BufferAttribute(wavePos,3));
+const waveLine = new THREE.Line(waveGeo, new THREE.LineBasicMaterial({color:0xe8b339, transparent:true, opacity:.85}));
+waveLine.position.set(-8, 14.5, -20); scene.add(waveLine);
+const waveLab = makeLabel('Traffic wave → HPA target', '#e8b339', 38); waveLab.position.set(-8, 19.6, -20); scene.add(waveLab);
+const waveDot = new THREE.Mesh(new THREE.SphereGeometry(.45,16,12), new THREE.MeshBasicMaterial({color:0xe8b339}));
+waveLine.add(waveDot);
+hoverable(waveDot, 'Current load', 'NIM/Triton expose Prometheus metrics → prometheus-adapter → custom metrics API → HPA. Watch downscale stabilization (default 5 min) and slow GPU cold starts.');
+
+// ---------- request particles ----------
+const MAXP = 240;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(MAXP*3); const pCol = new Float32Array(MAXP*3);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos,3));
+pGeo.setAttribute('color', new THREE.BufferAttribute(pCol,3));
+const pMat = new THREE.PointsMaterial({size:.55, vertexColors:true, transparent:true, opacity:.95, sizeAttenuation:true});
+const points = new THREE.Points(pGeo, pMat); points.frustumCulled=false; scene.add(points);
+const parts = []; // {t, speed, from:Vector3, pod, active, batchPhase}
+for(let i=0;i<MAXP;i++) parts.push({active:false, t:0, speed:1, from:new THREE.Vector3(), pod:0});
+const LBPOS = new THREE.Vector3(-10, 4.4, 0);
+const colBlue = new THREE.Color(0x4da3ff), colGreen = new THREE.Color(0xa4e22f);
+
+let selectedPod = -1; // click highlight
+
+function spawnParticle(){
+  const p = parts.find(p=>!p.active); if(!p) return;
+  const c = CLIENTS[Math.floor(Math.random()*CLIENTS.length)];
+  p.from.copy(c.position);
+  const alive = pods.filter(pd=>pd.alive);
+  if(!alive.length) return;
+  p.pod = alive[Math.floor(Math.random()*alive.length)].slot;
+  p.t = 0; p.speed = .55 + Math.random()*.3; p.active = true;
+}
+
+// ---------- simulation state ----------
+let traffic = .5, ttft = 120, tps = 0, gpuU = 0, kv = 0;
+const clock = new THREE.Clock();
+let spawnAcc = 0;
+
+function resize(){
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// ---------- raycast hover/click ----------
+const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2(-2,-2);
+const tooltip = document.getElementById('tooltip');
+canvas.addEventListener('pointermove', e=>{
+  const r = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX-r.left)/r.width)*2-1;
+  mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+  tooltip.style.left = (e.clientX-r.left+14)+'px';
+  tooltip.style.top = (e.clientY-r.top+10)+'px';
+});
+canvas.addEventListener('click', ()=>{
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(pods.filter(p=>p.alive).map(p=>p.box), false);
+  if(hits.length){
+    const pod = pods.find(p=>p.box===hits[0].object);
+    selectedPod = (selectedPod===pod.slot) ? -1 : pod.slot;
+  } else selectedPod = -1;
+});
+
+// ---------- meters DOM ----------
+const $ = id=>document.getElementById(id);
+const mTTFT=$('m-ttft').querySelector('i'), mTPS=$('m-tps').querySelector('i'),
+      mGPU=$('m-gpu').querySelector('i'), mKV=$('m-kv').querySelector('i');
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), .05);
+  const t = clock.elapsedTime;
+
+  // ---- traffic wave ----
+  traffic = .5 + .45*Math.sin(t*.22) * Math.sin(t*.061+1.3);
+  traffic = Math.max(.07, Math.min(.97, traffic + .03*Math.sin(t*1.7)));
+  for(let i=0;i<WAVE_N;i++){
+    const x = i/(WAVE_N-1);
+    const tt = t - (1-x)*18; // history scroll
+    let v = .5 + .45*Math.sin(tt*.22)*Math.sin(tt*.061+1.3);
+    v = Math.max(.07, Math.min(.97, v + .03*Math.sin(tt*1.7)));
+    wavePos[i*3] = -10 + x*20; wavePos[i*3+1] = v*4.5; wavePos[i*3+2] = 0;
+  }
+  waveGeo.attributes.position.needsUpdate = true;
+  waveDot.position.set(10, wavePos[(WAVE_N-1)*3+1], 0);
+
+  // ---- HPA: target pod count from traffic (like KV-cache-driven scaling) ----
+  const target = Math.max(2, Math.min(POD_SLOTS.length, Math.round(2 + traffic*5)));
+  const aliveCount = pods.filter(p=>p.alive).length;
+  if(target > aliveCount){
+    // spawn into first free slot
+    const used = new Set(pods.filter(p=>p.alive).map(p=>p.slot));
+    for(let i=0;i<POD_SLOTS.length && pods.filter(p=>p.alive).length<target;i++){
+      if(!used.has(i)){
+        const existing = pods.find(p=>p.slot===i && !p.alive);
+        if(existing){ existing.alive=true; } else spawnPod(i);
+        used.add(i);
+      }
+    }
+  } else if(target < aliveCount){
+    // despawn highest slot
+    const alive = pods.filter(p=>p.alive).sort((a,b)=>b.slot-a.slot);
+    for(let i=0;i<aliveCount-target;i++) alive[i].alive=false;
+  }
+  // pod grow/shrink animation + GPU pulse
+  for(const p of pods){
+    const goal = p.alive ? 1 : .01;
+    p.scale += (goal - p.scale)*Math.min(1, dt*4);
+    p.group.scale.setScalar(p.scale);
+    p.group.visible = p.scale > .03;
+    p.gpu.material.emissiveIntensity = 1.1 + .8*Math.sin(t*5 + p.slot)* (p.alive?1:.2) + traffic;
+    const sel = (selectedPod===p.slot);
+    p.edge.material.color.setHex(sel ? 0xd9ff7a : 0x76b900);
+    p.box.material.opacity = sel ? .3 : .16;
+  }
+
+  // ---- particles ----
+  spawnAcc += dt * (2 + traffic*22);
+  while(spawnAcc > 1){ spawnAcc -= 1; spawnParticle(); }
+  let pi=0;
+  for(const p of parts){
+    if(!p.active){ pPos[pi*3]=0; pPos[pi*3+1]=-999; pPos[pi*3+2]=0; pi++; continue; }
+    p.t += dt * p.speed;
+    const podObj = pods.find(pd=>pd.slot===p.pod);
+    if(!podObj || (!podObj.alive && p.t<.5)){ p.active=false; pPos[pi*3]=0; pPos[pi*3+1]=-999; pPos[pi*3+2]=0; pi++; continue; }
+    const dst = podObj.group.position;
+    let x,y,z, col;
+    if(p.t < .5){ // client -> LB
+      const k = p.t/.5;
+      x = p.from.x + (LBPOS.x-p.from.x)*k;
+      y = p.from.y + (LBPOS.y-p.from.y)*k + Math.sin(k*Math.PI)*2.2;
+      z = p.from.z + (LBPOS.z-p.from.z)*k;
+      col = colBlue;
+    } else if(p.t < 1){ // LB -> pod (batching: particles converge/group)
+      const k = (p.t-.5)/.5;
+      x = LBPOS.x + (dst.x-LBPOS.x)*k;
+      y = LBPOS.y + (dst.y-LBPOS.y)*k + Math.sin(k*Math.PI)*1.6;
+      z = LBPOS.z + (dst.z-LBPOS.z)*k;
+      col = colGreen;
+    } else { p.active=false; pPos[pi*3+1]=-999; pi++; continue; }
+    pPos[pi*3]=x; pPos[pi*3+1]=y; pPos[pi*3+2]=z;
+    const dim = (selectedPod>=0 && p.pod!==selectedPod) ? .25 : 1;
+    pCol[pi*3]=col.r*dim; pCol[pi*3+1]=col.g*dim; pCol[pi*3+2]=col.b*dim;
+    pi++;
+  }
+  pGeo.attributes.position.needsUpdate = true;
+  pGeo.attributes.color.needsUpdate = true;
+
+  // ---- in-flight batching lanes ----
+  const tokRate = 6 + traffic*6; // tokens/sec per lane (visual)
+  for(let l=0;l<LANES;l++){
+    const ln = lanes[l];
+    if(ln.state==='gen'){
+      ln.prog += dt*tokRate;
+      if(ln.prog >= ln.len){ ln.state='free'; ln.freeT = .12 + Math.random()*.25*(1-traffic); } // eviction; refill faster under load
+    } else {
+      ln.freeT -= dt;
+      if(ln.freeT<=0){ ln.len = 4+Math.floor(Math.random()*10); ln.prog=0; ln.state='gen'; }
+    }
+  }
+  let id=0, activeLanes=0;
+  for(let l=0;l<LANES;l++){
+    const ln = lanes[l];
+    if(ln.state==='gen') activeLanes++;
+    for(let s=0;s<SLOTS;s++){
+      let c;
+      if(ln.state==='free') c = cEmpty;
+      else if(s < Math.min(ln.prog, 2)) c = cPrefill;            // prefill chunk
+      else if(s < ln.prog) c = cFilled;                          // generated tokens
+      else if(s === Math.floor(ln.prog) && s < ln.len) c = cHead;// generating head
+      else c = cEmpty;
+      tmpC.copy(c);
+      slotMesh.setColorAt(id++, tmpC);
+    }
+  }
+  if(slotMesh.instanceColor) slotMesh.instanceColor.needsUpdate = true;
+
+  // ---- meters (simulated, driven by traffic & pods) ----
+  const cap = pods.filter(p=>p.alive).length / POD_SLOTS.length;
+  const pressure = Math.max(0, traffic*1.15 - cap); // queueing pressure
+  const ttftTarget = 90 + traffic*160 + pressure*1400;
+  ttft += (ttftTarget-ttft)*Math.min(1,dt*2);
+  const tpsTarget = (activeLanes/LANES) * (1800 + traffic*2600) * (cap*POD_SLOTS.length/3);
+  tps += (tpsTarget-tps)*Math.min(1,dt*2);
+  const gpuTarget = Math.min(98, 30 + traffic*62 + pressure*40);
+  gpuU += (gpuTarget-gpuU)*Math.min(1,dt*2);
+  const kvTarget = Math.min(97, 18 + traffic*55 + pressure*60);
+  kv += (kvTarget-kv)*Math.min(1,dt*2);
+
+  mTTFT.style.width = Math.min(100, ttft/16)+'%';
+  mTPS.style.width = Math.min(100, tps/52)+'%';
+  mGPU.style.width = gpuU+'%';
+  mKV.style.width = kv+'%';
+  $('v-ttft').textContent = Math.round(ttft)+' ms';
+  $('v-tps').textContent = Math.round(tps).toLocaleString();
+  $('v-gpu').textContent = Math.round(gpuU)+'%';
+  $('v-kv').textContent = Math.round(kv)+'%';
+  $('v-pods').textContent = pods.filter(p=>p.alive).length;
+
+  // ---- hover ----
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables.filter(h=>h.visible!==false), false);
+  if(hits.length && hits[0].object.userData.hover){
+    const h = hits[0].object.userData.hover;
+    tooltip.innerHTML = `<b>${h.title}</b><br>${h.desc}`;
+    tooltip.style.display = 'block';
+    canvas.style.cursor = 'pointer';
+  } else { tooltip.style.display='none'; canvas.style.cursor='grab'; }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why + Mental Model</div>
+  <h2>The Restaurant Chain Analogy</h2>
+  <p class="sub">An agent that works in a notebook dies in production: agents fire many LLM calls per task (planning, tool selection, reflection), so inference cost and latency <b>multiply</b>. The exam tests serving layer, parallelism, scaling signal, and rollout strategy — as best-choice-under-constraint scenarios.</p>
+  <div class="grid g3">
+    <div class="card"><h4><span class="ic">🔪</span>TensorRT-LLM</h4><p><b>Industrial kitchen equipment.</b> Quantization = pre-prepped ingredients · in-flight batching = cooks start a new dish the instant a burner frees · paged KV cache = labeled storage bins, no wasted shelf space.</p></div>
+    <div class="card"><h4><span class="ic">👨‍🍳</span>Triton</h4><p><b>The kitchen manager.</b> Runs many menus (frameworks) at once, groups similar orders onto one pan (dynamic batching), chains stations into a production line (ensembles).</p></div>
+    <div class="card"><h4><span class="ic">📦</span>NIM</h4><p><b>Franchise-in-a-box.</b> Sealed container with equipment + manager + menu + a standard order window (OpenAI-compatible API). Plug in a GPU and open.</p></div>
+    <div class="card"><h4><span class="ic">🏢</span>K8s + GPU Operator + HPA</h4><p><b>Corporate operations.</b> Opens more branches when queues grow (horizontal scaling); the load balancer is the host directing customers to the shortest line.</p></div>
+    <div class="card"><h4><span class="ic">🚚</span>Jetson</h4><p><b>The food truck.</b> Small, local, offline-capable — physical-world agents.</p></div>
+    <div class="card"><h4><span class="ic">🏨</span>DGX Cloud</h4><p><b>Renting fully staffed restaurants by the hour.</b> Blue-green/canary = trialing a new menu without poisoning every customer at once.</p></div>
+  </div>
+
+  <h3>The Stack: Optimize → Serve → Scale → Ship</h3>
+  <div class="svgbox">
+    <svg viewBox="0 0 1080 330" width="1080" height="330" font-size="13">
+      <defs>
+        <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#76b900"/></marker>
+        <marker id="arrd" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#5d6c82"/></marker>
+      </defs>
+      <!-- Optimize -->
+      <rect x="15" y="30" width="225" height="150" rx="12" fill="#0f1722" stroke="#2a3a52"/>
+      <text x="127" y="20" text-anchor="middle" class="svg-g" font-weight="700">OPTIMIZE (per model)</text>
+      <rect x="32" y="48" width="191" height="114" rx="9" fill="#13202e" stroke="#3a5c00"/>
+      <text x="127" y="72" text-anchor="middle" class="svg-t" font-weight="700">TensorRT-LLM</text>
+      <text x="127" y="93" text-anchor="middle" class="svg-m" font-size="11">engine build · FP8 / INT4-AWQ</text>
+      <text x="127" y="110" text-anchor="middle" class="svg-m" font-size="11">paged KV cache</text>
+      <text x="127" y="127" text-anchor="middle" class="svg-m" font-size="11">in-flight batching</text>
+      <text x="127" y="144" text-anchor="middle" class="svg-m" font-size="11">speculative decoding</text>
+      <!-- Serve -->
+      <rect x="295" y="30" width="225" height="270" rx="12" fill="#0f1722" stroke="#2a3a52"/>
+      <text x="407" y="20" text-anchor="middle" class="svg-g" font-weight="700">SERVE (per node)</text>
+      <rect x="312" y="48" width="191" height="100" rx="9" fill="#13202e" stroke="#3a5c00"/>
+      <text x="407" y="72" text-anchor="middle" class="svg-t" font-weight="700">Triton Inference Server</text>
+      <text x="407" y="93" text-anchor="middle" class="svg-m" font-size="11">multi-framework backends</text>
+      <text x="407" y="110" text-anchor="middle" class="svg-m" font-size="11">dynamic batching · ensembles</text>
+      <text x="407" y="127" text-anchor="middle" class="svg-m" font-size="11">Model Analyzer</text>
+      <rect x="312" y="165" width="191" height="100" rx="9" fill="#13202e" stroke="#3a5c00"/>
+      <text x="407" y="189" text-anchor="middle" class="svg-t" font-weight="700">NVIDIA NIM</text>
+      <text x="407" y="210" text-anchor="middle" class="svg-m" font-size="11">prebuilt TRT-LLM/vLLM engine</text>
+      <text x="407" y="227" text-anchor="middle" class="svg-m" font-size="11">+ server + OpenAI API</text>
+      <text x="407" y="244" text-anchor="middle" class="svg-g" font-size="11" font-weight="700">port :8000</text>
+      <!-- Scale -->
+      <rect x="575" y="30" width="240" height="270" rx="12" fill="#0f1722" stroke="#2a3a52"/>
+      <text x="695" y="20" text-anchor="middle" class="svg-g" font-weight="700">SCALE (per cluster)</text>
+      <rect x="590" y="45" width="210" height="52" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="695" y="66" text-anchor="middle" class="svg-t" font-size="12" font-weight="700">Kubernetes + GPU Operator</text>
+      <text x="695" y="84" text-anchor="middle" class="svg-m" font-size="10.5">drivers · device plugin · DCGM exporter</text>
+      <rect x="590" y="106" width="210" height="52" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="695" y="127" text-anchor="middle" class="svg-t" font-size="12" font-weight="700">Helm / NIM Operator</text>
+      <text x="695" y="145" text-anchor="middle" class="svg-m" font-size="10.5">NIMCache · NIMService CRDs</text>
+      <rect x="590" y="167" width="210" height="58" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="695" y="188" text-anchor="middle" class="svg-t" font-size="12" font-weight="700">HPA on custom GPU metrics</text>
+      <text x="695" y="205" text-anchor="middle" class="svg-m" font-size="10.5">gpu_cache_usage_perc · TTFT p90</text>
+      <text x="695" y="219" text-anchor="middle" class="svg-m" font-size="10.5">via Prometheus + adapter</text>
+      <rect x="590" y="234" width="210" height="40" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="695" y="259" text-anchor="middle" class="svg-t" font-size="12" font-weight="700">Load balancer / ingress</text>
+      <!-- Ship -->
+      <rect x="870" y="30" width="195" height="150" rx="12" fill="#0f1722" stroke="#2a3a52"/>
+      <text x="967" y="20" text-anchor="middle" class="svg-g" font-weight="700">SHIP (per release)</text>
+      <rect x="885" y="48" width="165" height="114" rx="9" fill="#13202e" stroke="#3a5c00"/>
+      <text x="967" y="72" text-anchor="middle" class="svg-t" font-weight="700">CI/CD</text>
+      <text x="967" y="93" text-anchor="middle" class="svg-m" font-size="11">container images</text>
+      <text x="967" y="110" text-anchor="middle" class="svg-m" font-size="11">model versioning</text>
+      <text x="967" y="127" text-anchor="middle" class="svg-m" font-size="11">blue-green · canary</text>
+      <text x="967" y="144" text-anchor="middle" class="svg-m" font-size="11">eval gates</text>
+      <!-- arrows -->
+      <line x1="240" y1="105" x2="293" y2="98" stroke="#76b900" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="240" y1="125" x2="293" y2="215" stroke="#76b900" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="520" y1="105" x2="573" y2="105" stroke="#76b900" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="520" y1="215" x2="573" y2="200" stroke="#76b900" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="868" y1="120" x2="817" y2="120" stroke="#76b900" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- edge & dgx -->
+      <rect x="295" y="288" width="225" height="34" rx="9" fill="#101723" stroke="#5b3f8f" stroke-dasharray="4 3"/>
+      <text x="407" y="310" text-anchor="middle" fill="#b07cff" font-size="11.5">Edge: Jetson Orin/Thor + Nemotron Nano (quantized) — smaller models</text>
+      <rect x="870" y="200" width="195" height="100" rx="12" fill="#101723" stroke="#1d6f68" stroke-dasharray="4 3"/>
+      <text x="967" y="232" text-anchor="middle" fill="#39d3c8" font-size="12" font-weight="700">DGX Cloud Serverless</text>
+      <text x="967" y="252" text-anchor="middle" class="svg-m" font-size="11">Inference (NVCF)</text>
+      <text x="967" y="272" text-anchor="middle" class="svg-m" font-size="10.5">scale-to-zero · multi-cloud</text>
+      <line x1="815" y1="250" x2="868" y2="250" stroke="#5d6c82" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrd)"/>
+      <text x="842" y="242" text-anchor="middle" class="svg-m" font-size="9.5">managed alt.</text>
+    </svg>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ NIM ============ -->
+<section id="nim">
+  <div class="kicker">Section 2 · Serving in a box</div>
+  <h2>NVIDIA NIM Microservices</h2>
+  <p class="sub">NIM = a <b>prebuilt, versioned Docker container</b> bundling an optimized engine (TensorRT-LLM where possible; vLLM/SGLang fallback), model weights/engine profile, a server runtime, and industry-standard APIs. "Download a container, get optimized inference with an OpenAI-compatible API" — removes weeks of plumbing.</p>
+
+  <div class="grid g2">
+    <div class="card">
+      <h4><span class="ic">🔌</span>OpenAI-compatible API on port 8000</h4>
+      <ul class="tick">
+        <li><code>/v1/chat/completions</code> · <code>/v1/completions</code> · <code>/v1/models</code></li>
+        <li>Health: <code>/v1/health/ready</code> · <code>/v1/health/live</code></li>
+        <li>Prometheus metrics: <code>/v1/metrics</code></li>
+        <li>Existing OpenAI SDK code works — just change <code>base_url</code> + model name</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🚀</span>Run anywhere with NVIDIA GPUs</h4>
+      <ul class="tick">
+        <li>Cloud, on-prem data center, workstation</li>
+        <li><code>docker run --gpus all -e NGC_API_KEY ... -p 8000:8000 nvcr.io/nim/meta/llama-3.1-8b-instruct</code></li>
+        <li>Auth to NGC registry (<code>nvcr.io</code>) via <code>NGC_API_KEY</code></li>
+        <li>Cache weights with <code>NIM_CACHE_PATH</code> (mount a volume — no re-download per restart)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Model Profile Auto-Selection — the exam loves this priority chain</h3>
+  <div class="svgbox">
+    <svg viewBox="0 0 1060 150" width="1060" height="150" font-size="12">
+      <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#76b900"/></marker></defs>
+      <g>
+        <rect x="10" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
+        <text x="100" y="28" text-anchor="middle" class="svg-g" font-weight="800">1</text>
+        <text x="100" y="65" text-anchor="middle" class="svg-t" font-weight="700">Fits in GPU memory</text>
+        <text x="100" y="85" text-anchor="middle" class="svg-m" font-size="11">memory-aware selector</text>
+      </g>
+      <line x1="192" y1="75" x2="218" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
+      <g>
+        <rect x="222" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
+        <text x="312" y="28" text-anchor="middle" class="svg-g" font-weight="800">2</text>
+        <text x="312" y="65" text-anchor="middle" class="svg-t" font-weight="700">Lower precision</text>
+        <text x="312" y="85" text-anchor="middle" class="svg-m" font-size="11">FP8 preferred over FP16</text>
+      </g>
+      <line x1="404" y1="75" x2="430" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
+      <g>
+        <rect x="434" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
+        <text x="524" y="28" text-anchor="middle" class="svg-g" font-weight="800">3</text>
+        <text x="524" y="65" text-anchor="middle" class="svg-t" font-weight="700">Latency-optimized</text>
+        <text x="524" y="85" text-anchor="middle" class="svg-m" font-size="11">NOT throughput — trap!</text>
+      </g>
+      <line x1="616" y1="75" x2="642" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
+      <g>
+        <rect x="646" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
+        <text x="736" y="28" text-anchor="middle" class="svg-g" font-weight="800">4</text>
+        <text x="736" y="65" text-anchor="middle" class="svg-t" font-weight="700">Higher tensor parallelism</text>
+        <text x="736" y="85" text-anchor="middle" class="svg-m" font-size="11">uses more of your GPUs</text>
+      </g>
+      <line x1="828" y1="75" x2="854" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
+      <g>
+        <rect x="858" y="35" width="190" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
+        <text x="953" y="28" text-anchor="middle" class="svg-g" font-weight="800">5</text>
+        <text x="953" y="65" text-anchor="middle" class="svg-t" font-weight="700">Backend preference</text>
+        <text x="953" y="85" text-anchor="middle" class="svg-m" font-size="11">tensorrt_llm &gt; vllm &gt; sglang</text>
+      </g>
+      <text x="530" y="140" text-anchor="middle" class="svg-m" font-size="11.5">Override with <tspan fill="#a8e063" font-family="monospace">NIM_MODEL_PROFILE</tspan> (ID or name like vllm-fp16-tp1-pp1) · "Optimized" profiles = prebuilt TRT-LLM engines for specific GPUs · "generic" = vLLM/SGLang on any supported GPU</text>
+    </svg>
+  </div>
+
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card">
+      <h4><span class="ic">⎈</span>Kubernetes deployment</h4>
+      <p>Official <b>Helm charts on NGC</b> (GPU count, resources, persistence, autoscaling via <code>values.yaml</code>). Fleet scale → <b>NIM Operator</b> (<code>k8s-nim-operator</code>) CRDs: <b>NIMCache</b> (pre-download model to PVC → fast pod starts), <b>NIMService</b> (deploy + autoscale), <b>NIMPipeline</b> (group of services).</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">⚠️</span>Cold-start trap</h4>
+      <p>Model pulls are <b>huge</b>. Default <code>emptyDir</code> storage re-downloads weights on every pod restart → use <b>persistent storage / NIMCache</b> in production or autoscaling adds 20+ min cold-start latency.</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🧰</span>GPU Operator (prerequisite, not a server)</h4>
+      <p>Installs/manages: <b>GPU driver, container toolkit, K8s device plugin</b> (exposes <code>nvidia.com/gpu</code>), <b>DCGM exporter</b> (metrics), <b>MIG manager, node feature discovery</b>. Pods request GPUs via <code>resources.limits: nvidia.com/gpu: 1</code>.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--green)">
+    <h4><span class="ic">🧪</span>Tiny example</h4>
+    <p>RAG agent on EKS → install GPU Operator → <code>helm install</code> the Llama-3.1-70B NIM with <code>tensorParallelism</code>/profile for 4×H100 → point the agent framework's OpenAI client at <code>http://nim-svc:8000/v1</code>.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ TRITON ============ -->
+<section id="triton">
+  <div class="kicker">Section 3 · One node, many models</div>
+  <h2>Triton Inference Server</h2>
+  <p class="sub">Open-source production server that serves <b>many models from many frameworks concurrently</b> on GPU/CPU — one standardized HTTP/gRPC + metrics layer. Agentic sweet spot: LLM + embedder + reranker + classifier together.</p>
+
+  <div class="tablewrap">
+  <table>
+    <tr><th>Feature</th><th>What it does</th><th>Key config</th></tr>
+    <tr><td><b>Multi-framework backends</b></td><td>TensorRT, <b>TensorRT-LLM</b>, ONNX Runtime, PyTorch (LibTorch), TensorFlow, OpenVINO, <b>vLLM</b>, Python (custom logic), FIL</td><td><code>backend:</code> in <code>config.pbtxt</code></td></tr>
+    <tr><td><b>Model repository</b></td><td>Filesystem layout: <code>model_repo/&lt;model&gt;/&lt;version#&gt;/model.x</code> + <code>config.pbtxt</code>; numeric version subdirectories</td><td><code>version_policy { latest / all / specific }</code></td></tr>
+    <tr><td class="good"><b>Dynamic batching</b></td><td class="good">Server-side: queues individual requests, merges into one batch before execution → big throughput gains for <b>stateless</b> models</td><td><code>dynamic_batching { max_queue_delay_microseconds: 100, preferred_batch_size: [...] }</code></td></tr>
+    <tr><td><b>Concurrent model execution</b></td><td>Multiple execution instances of same/different models in parallel on one or more GPUs</td><td><code>instance_group [{ count: 2, kind: KIND_GPU, gpus: [0,1] }]</code></td></tr>
+    <tr><td class="info"><b>Model ensembles</b></td><td class="info">DAG pipeline of models (preprocess → embed → rerank) executed inside Triton — no client round-trips; mixes frameworks &amp; CPU/GPU. Dynamic control flow → <b>BLS</b> (Business Logic Scripting, Python backend) instead</td><td><code>platform: "ensemble"</code> + <code>ensemble_scheduling { step [...] }</code></td></tr>
+    <tr><td><b>Model Analyzer</b></td><td>Offline tool that <b>sweeps configurations</b> (batch sizes, instance counts, dynamic batching) under constraints (latency SLO, memory) → recommends optimal <code>config.pbtxt</code></td><td>uses <code>perf_analyzer</code> under the hood</td></tr>
+  </table>
+  </div>
+
+  <h3>Measured impact (Triton conceptual guide — text-recognition model, 16 concurrent clients)</h3>
+  <div class="twocol">
+    <div class="card">
+      <h4>Throughput (inferences/sec) — higher is better</h4>
+      <div class="hbar"><div class="lab"><b>No batching</b><span>p95 34 ms</span></div><div class="track"><div class="fill amber" style="width:24%">≈975</div></div></div>
+      <div class="hbar"><div class="lab"><b>Dynamic batching</b><span>p95 10.6 ms</span></div><div class="track"><div class="fill blue" style="width:77%">≈3,187</div></div></div>
+      <div class="hbar"><div class="lab"><b>Dynamic batching + 2 instances</b><span>p95 8.2 ms</span></div><div class="track"><div class="fill" style="width:100%">≈4,134</div></div></div>
+      <p style="font-size:.8rem;color:var(--faint);margin-top:10px">Moral: dynamic batching is the single biggest lever; instance count adds more — but features are not always additive wins. <b style="color:var(--green)">Always measure.</b></p>
+    </div>
+    <div class="card">
+      <h4>Benchmarking tools</h4>
+      <ul class="tick">
+        <li><b>perf_analyzer</b> — generic client-side benchmarking</li>
+        <li><b>GenAI-Perf</b> — LLM-focused: TTFT, ITL, TPS, RPS</li>
+        <li><b>Model Analyzer</b> — offline config sweeps under your latency SLO / memory budget</li>
+      </ul>
+      <h4 style="margin-top:14px">Ensemble vs BLS</h4>
+      <p><span class="pill b">ENSEMBLE</span> static DAG, server-side, zero client hops.<br><span class="pill p">BLS</span> Python backend for conditional / looping ("agent-ish") control flow — ensembles can't branch.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ TENSORRT-LLM ============ -->
+<section id="trtllm">
+  <div class="kicker">Section 4 · One GPU, maximum speed</div>
+  <h2>TensorRT-LLM</h2>
+  <p class="sub">NVIDIA's open-source library for optimized LLM inference: custom attention kernels, kernel fusion, quantization, optimized runtime. Historically: convert checkpoint → <code>trtllm-build</code> a compiled engine <b>per GPU type / precision / TP config</b> (engines are not portable across GPU architectures). Newer releases are PyTorch-architecture-based with a high-level <code>LLM</code> API; integrates with Triton (TRT-LLM backend), NIM, and NVIDIA Dynamo.</p>
+
+  <h3>Quantization — shrink weights (and sometimes activations)</h3>
+  <p class="sub" style="margin-bottom:.8rem">Less VRAM → more KV-cache room → higher throughput, lower latency.</p>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Format</th><th>Bits</th><th>Hardware</th><th>Notes</th></tr>
+    <tr><td><b>FP16 / BF16</b></td><td>16</td><td>all</td><td>baseline</td></tr>
+    <tr><td class="good"><b>FP8</b></td><td class="good">8</td><td class="good">Hopper (H100) + Ada and later</td><td class="good">~2× perf, ~½ memory vs FP16, minimal accuracy loss — the "default good choice" on H100+</td></tr>
+    <tr><td class="info"><b>INT8 SmoothQuant</b></td><td class="info">8</td><td class="info">broad</td><td class="info">quantizes weights <b>and activations</b>; needs calibration</td></tr>
+    <tr><td class="warn"><b>INT4 AWQ</b></td><td class="warn">4</td><td class="warn">broad</td><td class="warn"><b>weight-only</b>; activation-aware = protects the most activation-salient weights; best for memory-constrained / edge. (GPTQ = the other common 4-bit weight-only method)</td></tr>
+    <tr><td><b>FP4 / NVFP4</b></td><td>4</td><td>Blackwell (B200/GB200)</td><td>hardware-native 4-bit floating point</td></tr>
+  </table>
+  </div>
+
+  <h3>Paged KV Cache &amp; In-Flight Batching</h3>
+  <div class="twocol">
+    <div class="card">
+      <h4><span class="ic">🗂️</span>Paged KV cache (PagedAttention idea)</h4>
+      <p>Autoregressive decoding reuses K/V of all previous tokens; caching avoids quadratic recompute but VRAM grows with batch × sequence length. Naive allocators reserve max-seq-length contiguous buffers → fragmentation.</p>
+      <svg viewBox="0 0 340 120" width="100%" style="margin-top:10px">
+        <text x="8" y="14" class="svg-m" font-size="10">NAIVE: contiguous max-length buffers (waste)</text>
+        <g>
+          <rect x="8" y="20" width="150" height="14" rx="3" fill="#76b900" opacity=".75"/><rect x="158" y="20" width="170" height="14" rx="3" fill="#2a3548" stroke="#3a4a62" stroke-dasharray="3 2"/>
+          <rect x="8" y="38" width="60" height="14" rx="3" fill="#76b900" opacity=".75"/><rect x="68" y="38" width="260" height="14" rx="3" fill="#2a3548" stroke="#3a4a62" stroke-dasharray="3 2"/>
+        </g>
+        <text x="8" y="72" class="svg-m" font-size="10">PAGED: fixed-size blocks on demand + index table (near-zero waste)</text>
+        <g>
+          <rect x="8" y="78" width="24" height="14" rx="3" fill="#76b900"/><rect x="36" y="78" width="24" height="14" rx="3" fill="#76b900"/><rect x="64" y="78" width="24" height="14" rx="3" fill="#76b900"/><rect x="92" y="78" width="24" height="14" rx="3" fill="#4da3ff"/><rect x="120" y="78" width="24" height="14" rx="3" fill="#4da3ff"/><rect x="148" y="78" width="24" height="14" rx="3" fill="#76b900"/><rect x="176" y="78" width="24" height="14" rx="3" fill="#4da3ff"/><rect x="204" y="78" width="24" height="14" rx="3" fill="#b07cff"/><rect x="232" y="78" width="24" height="14" rx="3" fill="#1b2535" stroke="#3a4a62"/><rect x="260" y="78" width="24" height="14" rx="3" fill="#1b2535" stroke="#3a4a62"/>
+        </g>
+        <text x="8" y="112" fill="#b07cff" font-size="10">purple = shared prefix block (system prompt reused across agent calls)</text>
+      </svg>
+      <p style="margin-top:8px">Enables larger effective batches + <b>KV block reuse / prefix caching</b> — agents resending long system prompts reuse cached blocks. Related: <b>chunked prefill</b> splits long prompts into chunks so prefill doesn't stall ongoing decodes.</p>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🔄</span>In-flight (continuous) batching</h4>
+      <p>Static/dynamic batching waits for the <b>whole batch</b> to finish — variable LLM output lengths leave GPU slots idle. In-flight batching works at <b>iteration granularity</b>: a finished request is <b>evicted and a new one injected immediately</b>; prefill and generation requests interleave in the same batch.</p>
+      <svg viewBox="0 0 340 110" width="100%" style="margin-top:10px">
+        <text x="8" y="14" class="svg-m" font-size="10">STATIC: slots idle until whole batch ends</text>
+        <rect x="8" y="20" width="200" height="11" rx="2" fill="#76b900" opacity=".8"/><rect x="208" y="20" width="100" height="11" rx="2" fill="#1b2535" stroke="#e85d5d" stroke-dasharray="3 2"/>
+        <rect x="8" y="35" width="300" height="11" rx="2" fill="#76b900" opacity=".8"/>
+        <text x="8" y="68" class="svg-m" font-size="10">IN-FLIGHT: evict on finish → inject next request same iteration</text>
+        <rect x="8" y="74" width="200" height="11" rx="2" fill="#76b900" opacity=".8"/><rect x="210" y="74" width="44" height="11" rx="2" fill="#4da3ff"/><rect x="256" y="74" width="52" height="11" rx="2" fill="#a4e22f"/>
+        <rect x="8" y="89" width="300" height="11" rx="2" fill="#76b900" opacity=".8"/>
+        <text x="216" y="106" fill="#4da3ff" font-size="9.5">blue = new prefill</text>
+      </svg>
+      <p style="margin-top:8px">Result: higher GPU utilization, lower queue wait. The LLM-specific evolution of dynamic batching — Triton dynamic batching = request-level (stateless models); in-flight = token/iteration-level inside TRT-LLM/vLLM.</p>
+    </div>
+  </div>
+
+  <h3>Speculative decoding</h3>
+  <div class="card">
+    <div class="twocol">
+      <div>
+        <p style="margin-bottom:10px">Generation is <b>memory-bandwidth-bound</b> (one token per heavy forward pass). A cheap <b>draft</b> mechanism proposes several tokens; the <b>target</b> model verifies them in one parallel pass, accepting the longest correct prefix — <b>same output distribution, fewer target passes</b>.</p>
+        <ul class="tick">
+          <li>Techniques: <b>draft-target</b> (separate small model), <b>EAGLE / EAGLE-3</b>, <b>Medusa</b> (extra decoding heads), <b>MTP</b> (multi-token prediction), <b>NGram lookup</b></li>
+          <li>Measured: up to <b style="color:var(--green)">~3.55× throughput</b> on Llama 3.3 70B with draft models on HGX H200</li>
+          <li>Best when batches are <b>small / latency-bound</b>; gains shrink at very high batch occupancy</li>
+        </ul>
+      </div>
+      <svg viewBox="0 0 380 150" width="100%">
+        <rect x="10" y="18" width="110" height="40" rx="9" fill="#13202e" stroke="#4da3ff"/>
+        <text x="65" y="36" text-anchor="middle" fill="#4da3ff" font-size="11" font-weight="700">DRAFT (cheap)</text>
+        <text x="65" y="51" text-anchor="middle" class="svg-m" font-size="10">proposes k tokens</text>
+        <rect x="10" y="90" width="110" height="40" rx="9" fill="#13202e" stroke="#76b900"/>
+        <text x="65" y="108" text-anchor="middle" fill="#76b900" font-size="11" font-weight="700">TARGET (heavy)</text>
+        <text x="65" y="123" text-anchor="middle" class="svg-m" font-size="10">verifies in 1 pass</text>
+        <line x1="65" y1="58" x2="65" y2="88" stroke="#5d6c82" stroke-width="1.6" marker-end="url(#arrd)"/>
+        <g font-family="monospace" font-size="12">
+          <rect x="150" y="30" width="32" height="22" rx="4" fill="#2c4a00" stroke="#76b900"/><text x="166" y="45" text-anchor="middle" fill="#cdf38a">the</text>
+          <rect x="186" y="30" width="32" height="22" rx="4" fill="#2c4a00" stroke="#76b900"/><text x="202" y="45" text-anchor="middle" fill="#cdf38a">cat</text>
+          <rect x="222" y="30" width="32" height="22" rx="4" fill="#2c4a00" stroke="#76b900"/><text x="238" y="45" text-anchor="middle" fill="#cdf38a">sat</text>
+          <rect x="258" y="30" width="32" height="22" rx="4" fill="#3a1518" stroke="#e85d5d"/><text x="274" y="45" text-anchor="middle" fill="#f0a0a0">in</text>
+          <rect x="294" y="30" width="32" height="22" rx="4" fill="#1b2535" stroke="#3a4a62" stroke-dasharray="3 2"/><text x="310" y="45" text-anchor="middle" fill="#5d6c82">…</text>
+        </g>
+        <text x="252" y="78" text-anchor="middle" class="svg-m" font-size="10.5">accept longest correct prefix (✓✓✓ ✗)</text>
+        <text x="252" y="100" text-anchor="middle" fill="#76b900" font-size="11" font-weight="700">3 tokens for 1 target pass</text>
+        <text x="252" y="125" text-anchor="middle" class="svg-m" font-size="10.5">output distribution unchanged —</text>
+        <text x="252" y="139" text-anchor="middle" fill="#e8b339" font-size="10.5">"trades accuracy for speed" = FALSE (trap)</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ SCALING ============ -->
+<section id="scaling">
+  <div class="kicker">Section 5 · From node to fleet</div>
+  <h2>Scaling: HPA, Parallelism, Load Balancing, Batch Tuning</h2>
+
+  <h3>Horizontal pod autoscaling on GPU metrics — never CPU</h3>
+  <p class="sub" style="margin-bottom:.8rem">CPU/memory utilization is <b style="color:var(--red)">meaningless</b> for GPU inference pods — they show low CPU while fully saturated.</p>
+  <div class="svgbox">
+    <svg viewBox="0 0 1060 120" width="1060" height="120" font-size="12">
+      <defs><marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#76b900"/></marker></defs>
+      <rect x="10" y="25" width="180" height="62" rx="10" fill="#13202e" stroke="#3a5c00"/>
+      <text x="100" y="50" text-anchor="middle" class="svg-t" font-weight="700">NIM / Triton pod</text>
+      <text x="100" y="70" text-anchor="middle" class="svg-m" font-size="10.5">/v1/metrics (Prometheus)</text>
+      <line x1="192" y1="56" x2="222" y2="56" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="226" y="25" width="160" height="62" rx="10" fill="#13202e" stroke="#3a5c00"/>
+      <text x="306" y="50" text-anchor="middle" class="svg-t" font-weight="700">Prometheus</text>
+      <text x="306" y="70" text-anchor="middle" class="svg-m" font-size="10.5">scrapes</text>
+      <line x1="388" y1="56" x2="418" y2="56" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="422" y="25" width="190" height="62" rx="10" fill="#13202e" stroke="#3a5c00"/>
+      <text x="517" y="50" text-anchor="middle" class="svg-t" font-weight="700">prometheus-adapter</text>
+      <text x="517" y="70" text-anchor="middle" class="svg-m" font-size="10.5">custom metrics API</text>
+      <line x1="614" y1="56" x2="644" y2="56" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="648" y="25" width="130" height="62" rx="10" fill="#13202e" stroke="#3a5c00"/>
+      <text x="713" y="50" text-anchor="middle" class="svg-t" font-weight="700">HPA</text>
+      <text x="713" y="70" text-anchor="middle" class="svg-m" font-size="10.5">consumes</text>
+      <line x1="780" y1="56" x2="810" y2="56" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="814" y="25" width="235" height="62" rx="10" fill="#13202e" stroke="#76b900"/>
+      <text x="931" y="50" text-anchor="middle" class="svg-g" font-weight="700">scale replicas ↑↓</text>
+      <text x="931" y="70" text-anchor="middle" class="svg-m" font-size="10.5">+ cluster autoscaler for GPU nodes</text>
+      <text x="530" y="112" text-anchor="middle" class="svg-m" font-size="11">Hardware GPU metrics (e.g. <tspan font-family="monospace" fill="#a8e063">DCGM_FI_DEV_GPU_UTIL</tspan>) come from the DCGM exporter, installed by GPU Operator</text>
+    </svg>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h4><span class="ic">📊</span>Good scaling signals</h4>
+      <ul class="tick">
+        <li><code>gpu_cache_usage_perc</code> — KV-cache utilization; the canonical NIM HPA metric (e.g., target AverageValue <code>100m</code> = 10%)</li>
+        <li><code>num_requests_running</code> / queue depth (concurrency)</li>
+        <li><code>time_to_first_token_p90</code> — latency-SLO-driven scaling</li>
+      </ul></div>
+    <div class="card"><h4><span class="ic">⏱️</span>Caveats</h4>
+      <ul class="tick">
+        <li>Downscale stabilization (default <b>5 min</b>) to avoid flapping</li>
+        <li>GPU pods have <b>slow cold starts</b> (model load) — mitigate with NIMCache/PVCs</li>
+        <li>Scale-up needs free GPU nodes → pair HPA with cluster autoscaler</li>
+      </ul></div>
+    <div class="card"><h4><span class="ic">🔀</span>Alternative</h4>
+      <p><b>KEDA</b> — the common alternative for event/queue-driven scaling (async agent workloads on queue depth).</p></div>
+  </div>
+
+  <h3>Tensor Parallelism vs Pipeline Parallelism — the exam's favorite axis</h3>
+  <div class="twocol">
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="pill g">TP — TENSOR PARALLELISM</span></h4>
+      <svg viewBox="0 0 360 130" width="100%">
+        <text x="180" y="14" text-anchor="middle" class="svg-m" font-size="10.5">each layer's weight matrices sharded — all GPUs work on every token</text>
+        <g>
+          <rect x="30" y="26" width="300" height="26" rx="6" fill="none" stroke="#3a4a62"/>
+          <rect x="33" y="29" width="71" height="20" rx="4" fill="#76b900" opacity=".85"/><rect x="108" y="29" width="71" height="20" rx="4" fill="#4da3ff" opacity=".85"/><rect x="183" y="29" width="71" height="20" rx="4" fill="#b07cff" opacity=".85"/><rect x="258" y="29" width="69" height="20" rx="4" fill="#39d3c8" opacity=".85"/>
+          <text x="180" y="66" text-anchor="middle" class="svg-m" font-size="10">Layer 1 split across GPU0·1·2·3</text>
+          <rect x="30" y="74" width="300" height="26" rx="6" fill="none" stroke="#3a4a62"/>
+          <rect x="33" y="77" width="71" height="20" rx="4" fill="#76b900" opacity=".85"/><rect x="108" y="77" width="71" height="20" rx="4" fill="#4da3ff" opacity=".85"/><rect x="183" y="77" width="71" height="20" rx="4" fill="#b07cff" opacity=".85"/><rect x="258" y="77" width="69" height="20" rx="4" fill="#39d3c8" opacity=".85"/>
+          <text x="180" y="118" text-anchor="middle" fill="#e8b339" font-size="10">all-reduce EVERY layer → needs NVLink/NVSwitch bandwidth</text>
+        </g>
+      </svg>
+      <ul class="tick" style="margin-top:8px">
+        <li><b>Lowers per-request latency</b> (TTFT and ITL); splits weights <i>and</i> KV cache</li>
+        <li>Typical: 2–8 GPUs within one NVLink island</li>
+        <li>Signal words: "minimize TTFT", "NVLink", "2-8 GPUs"</li>
+      </ul>
+    </div>
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <h4><span class="pill b">PP — PIPELINE PARALLELISM</span></h4>
+      <svg viewBox="0 0 360 130" width="100%">
+        <text x="180" y="14" text-anchor="middle" class="svg-m" font-size="10.5">contiguous groups of layers per GPU/node (stages)</text>
+        <rect x="20" y="30" width="95" height="56" rx="8" fill="#13202e" stroke="#76b900"/>
+        <text x="67" y="55" text-anchor="middle" class="svg-t" font-size="10.5">GPU/Node 0</text><text x="67" y="72" text-anchor="middle" class="svg-m" font-size="10">layers 1–40</text>
+        <rect x="133" y="30" width="95" height="56" rx="8" fill="#13202e" stroke="#4da3ff"/>
+        <text x="180" y="55" text-anchor="middle" class="svg-t" font-size="10.5">GPU/Node 1</text><text x="180" y="72" text-anchor="middle" class="svg-m" font-size="10">layers 41–80</text>
+        <rect x="246" y="30" width="95" height="56" rx="8" fill="#13202e" stroke="#b07cff"/>
+        <text x="293" y="55" text-anchor="middle" class="svg-t" font-size="10.5">GPU/Node 2</text><text x="293" y="72" text-anchor="middle" class="svg-m" font-size="10">layers 81–120</text>
+        <line x1="115" y1="58" x2="131" y2="58" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+        <line x1="228" y1="58" x2="244" y2="58" stroke="#76b900" stroke-width="2" marker-end="url(#arr3)"/>
+        <text x="180" y="118" text-anchor="middle" fill="#e8b339" font-size="10">activations cross only at stage boundaries → tolerates PCIe / inter-node</text>
+      </svg>
+      <ul class="tick" style="margin-top:8px">
+        <li><b>Raises throughput / enables bigger models</b>, but adds latency (pipeline bubbles)</li>
+        <li>Typical: across nodes, or PCIe-only boxes</li>
+        <li>Signal words: "two nodes", "PCIe only", "doesn't fit"</li>
+      </ul>
+    </div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h4><span class="ic">📐</span>Rule of thumb</h4><p><code>TP = GPUs per node</code>, <code>PP = number of nodes</code> for models too big for one node. Combine TP×PP multi-node — e.g., 405B: <b>TP8 × PP2</b>.</p></div>
+    <div class="card"><h4><span class="ic">🧩</span>Also exists</h4><p><b>Expert parallelism</b> for MoE models; <b>data parallelism</b> = just more replicas behind a load balancer — that's horizontal scaling, not model splitting.</p></div>
+    <div class="card"><h4><span class="ic">⚖️</span>Load balancing for LLMs</h4><p>Round-robin is naive (request costs vary wildly with prompt/output lengths) — prefer <b>least-outstanding-requests</b> or KV-cache/prefix-aware routing (NVIDIA Dynamo KV-aware router, gateway-API inference extensions). Sticky/affinity routing improves prefix-cache hits for agents reusing long system prompts. Multi-node TP/PP groups = <b>one logical replica</b> (LeaderWorkerSet pattern).</p></div>
+  </div>
+
+  <h3>Throughput vs latency &amp; batch-size tuning</h3>
+  <div class="twocol">
+    <div class="card">
+      <h4>The throughput–latency curve (find the knee)</h4>
+      <svg viewBox="0 0 380 230" width="100%">
+        <line x1="42" y1="195" x2="365" y2="195" stroke="#3a4a62" stroke-width="1.5"/>
+        <line x1="42" y1="195" x2="42" y2="14" stroke="#3a4a62" stroke-width="1.5"/>
+        <text x="200" y="222" text-anchor="middle" class="svg-m" font-size="11">latency (TTFT / e2e) →</text>
+        <text x="16" y="110" text-anchor="middle" class="svg-m" font-size="11" transform="rotate(-90 16 110)">throughput (tokens/sec) →</text>
+        <path d="M 55 188 C 100 140, 130 70, 185 48 C 230 32, 300 26, 358 24" fill="none" stroke="#76b900" stroke-width="3"/>
+        <line x1="240" y1="195" x2="240" y2="14" stroke="#e8b339" stroke-width="1.4" stroke-dasharray="5 4"/>
+        <text x="244" y="28" fill="#e8b339" font-size="10">latency SLO</text>
+        <circle cx="185" cy="48" r="6" fill="#76b900" stroke="#0b0f17" stroke-width="2"/>
+        <text x="185" y="72" text-anchor="middle" fill="#a4e22f" font-size="10.5" font-weight="700">knee = pick here</text>
+        <circle cx="70" cy="172" r="4.5" fill="#4da3ff"/>
+        <text x="80" y="178" fill="#9cc8f5" font-size="10">small batch: snappy, wasteful</text>
+        <circle cx="340" cy="25" r="4.5" fill="#e85d5d"/>
+        <text x="332" y="44" text-anchor="end" fill="#f0a0a0" font-size="10">huge batch: cheap/token, TTFT explodes</text>
+        <text x="200" y="135" text-anchor="middle" class="svg-m" font-size="10">"goodput" = throughput while meeting the SLO</text>
+      </svg>
+      <p style="font-size:.8rem;color:var(--faint)">Method: <b>GenAI-Perf</b> sweep of concurrency → plot curve → pick the knee that meets your SLO. <code>max_batch_size</code> caps in-flight requests; if concurrency &gt; max_batch_size × replicas → requests queue and <b>TTFT explodes</b>.</p>
+    </div>
+    <div class="card">
+      <h4>Key metrics — know which is which</h4>
+      <div class="tablewrap" style="margin-bottom:12px">
+      <table>
+        <tr><th>Metric</th><th>Meaning</th></tr>
+        <tr><td class="good"><b>TTFT</b></td><td>time to first token — prefill + queue; perceived responsiveness. Long <b>prompts</b> hurt TTFT</td></tr>
+        <tr><td class="info"><b>ITL / TPOT</b></td><td>inter-token latency — streaming smoothness. Long <b>outputs</b> accumulate ITL</td></tr>
+        <tr><td><b>E2E latency</b></td><td>full request time</td></tr>
+        <tr><td class="warn"><b>TPS</b></td><td>tokens/sec — system throughput</td></tr>
+        <tr><td><b>RPS</b></td><td>requests/sec</td></tr>
+      </table>
+      </div>
+      <p><span class="pill g">INTERACTIVE CHAT</span> latency-optimized profile, small batches, maybe speculative decoding.</p>
+      <p style="margin-top:8px"><span class="pill a">OFFLINE / BATCH JOBS</span> (summarize 1M docs) → throughput-optimized profile, large batches.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ EDGE + DGX ============ -->
+<section id="edge">
+  <div class="kicker">Section 6 · The two ends of the spectrum</div>
+  <h2>Edge (Jetson + Nemotron Nano) ↔ DGX Cloud (NVCF)</h2>
+  <div class="twocol">
+    <div class="card" style="border-top:3px solid var(--purple)">
+      <h4><span class="ic">🤖</span>Edge deployment</h4>
+      <ul class="tick">
+        <li><b>Why:</b> physical-world agents (robots, inspection, kiosks) need <b>low latency, privacy/data locality, offline operation</b> — no datacenter round-trip</li>
+        <li><b>Platform:</b> Jetson modules (Orin Nano/NX/AGX → <b>Jetson Thor</b>) running <b>JetPack</b> (CUDA/TensorRT on aarch64)</li>
+        <li><b>Frameworks:</b> TensorRT-LLM / llama.cpp / Ollama on-device; some NIMs supported on Jetson-class devices</li>
+        <li><b>Nemotron Nano</b> — NVIDIA's small open reasoning family <b>purpose-built for edge/local agents</b>: Nemotron Nano 9B v2 (hybrid Mamba-Transformer), Nemotron 3 Nano 4B. Tool calling + reasoning at small size; runs on Jetson Orin Nano/Thor, DGX Spark, RTX PCs</li>
+      </ul>
+      <h4 style="margin-top:14px">Quantization is essential at the edge</h4>
+      <div class="hbar"><div class="lab"><b>FP8 vs BF16 on Jetson Thor</b><span>latency/throughput gain</span></div><div class="track"><div class="fill" style="width:90%">~1.8×</div></div></div>
+      <div class="hbar"><div class="lab"><b>Q4_K_M 4-bit on 8 GB Orin Nano</b><span>tokens/sec</span></div><div class="track"><div class="fill blue" style="width:55%">~18 tok/s</div></div></div>
+      <p style="font-size:.8rem;color:var(--faint);margin-top:6px">Exam pattern: "agent must run offline on a robot with 8 GB" → <b style="color:var(--green)">quantized (INT4/Q4) Nemotron Nano on Jetson</b>, not a 70B NIM.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--cyan)">
+      <h4><span class="ic">☁️</span>DGX Cloud &amp; Serverless Inference (NVCF)</h4>
+      <ul class="tick">
+        <li>NVIDIA's managed AI platform: reserved GPU clusters hosted in partner clouds (AWS/Azure/OCI/GCP) with the full NVIDIA AI Enterprise stack — train/fine-tune/serve without owning hardware</li>
+        <li>Key deployment piece: <b>DGX Cloud Serverless Inference</b>, built on <b>NVIDIA Cloud Functions (NVCF)</b></li>
+        <li>Deploy <b>NIMs, custom containers, or Helm charts</b> behind a single API</li>
+        <li>Auto-scales including <b>scale-to-zero</b> — no charge while idle, no charge for cold-boot time</li>
+        <li><b>Multi-cloud / multi-cluster</b> — one function can burst across DGX Cloud and partner GPU capacity</li>
+        <li>Choose it for <b>elastic, bursty agent inference without operating Kubernetes yourself</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ CICD ============ -->
+<section id="cicd">
+  <div class="kicker">Section 7 · Ship it safely</div>
+  <h2>CI/CD for Agents</h2>
+  <p class="sub">An "agent release" = <b>code version + prompt version + model version + engine version</b> — one artifact. Pin image tags + model versions; Triton↔TRT-LLM container versions must match. Model/prompt changes can regress behavior <b>without any code diff</b> → CI runs eval suites (task success, tool-call correctness, safety) before promotion.</p>
+
+  <div class="grid g2">
+    <div class="card"><h4><span class="ic">📦</span>Containerization</h4><p>Agent code, tool servers (MCP), and model servers ship as <b>separate images</b>; GPU pods request <code>nvidia.com/gpu</code>; pin tags for reproducibility.</p></div>
+    <div class="card"><h4><span class="ic">🏷️</span>Model versioning</h4><p>Triton model repo numeric version dirs + <code>version_policy</code> (latest / all / specific — serving 2 versions simultaneously enables <b>A/B</b>). NIMs = versioned container tags on NGC; registries (NGC, MLflow) track lineage.</p></div>
+  </div>
+
+  <h3>Rollout strategies — pick by constraint</h3>
+  <div class="grid g4">
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <h4>Blue-Green <span class="pill b">INSTANT ROLLBACK</span></h4>
+      <svg viewBox="0 0 220 80" width="100%">
+        <rect x="10" y="14" width="80" height="24" rx="6" fill="#1d4f86"/><text x="50" y="30" text-anchor="middle" fill="#cfe6ff" font-size="10">BLUE 100%</text>
+        <rect x="10" y="46" width="80" height="24" rx="6" fill="#2c4a00"/><text x="50" y="62" text-anchor="middle" fill="#cdf38a" font-size="10">GREEN 0%</text>
+        <path d="M100 40 L130 40" stroke="#e8b339" stroke-width="2" marker-end="url(#arr3)"/>
+        <rect x="135" y="14" width="75" height="24" rx="6" fill="#16243a"/><text x="172" y="30" text-anchor="middle" fill="#5d8ab8" font-size="10">BLUE 0%</text>
+        <rect x="135" y="46" width="75" height="24" rx="6" fill="#3f6a00"/><text x="172" y="62" text-anchor="middle" fill="#d9ff7a" font-size="10">GREEN 100%</text>
+      </svg>
+      <p>Two identical environments; flip 100% after validation. <b>Instant rollback</b> (flip back) but <b style="color:var(--red)">2× capacity — expensive with GPUs</b>. Best for big, risky changes.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4>Canary <span class="pill g">LOW BLAST RADIUS</span></h4>
+      <svg viewBox="0 0 220 80" width="100%">
+        <g font-size="9.5" fill="#cdf38a" text-anchor="middle">
+          <rect x="10" y="30" width="40" height="22" rx="5" fill="#2c4a00"/><text x="30" y="45">1–10%</text>
+          <rect x="62" y="30" width="40" height="22" rx="5" fill="#3a5c00"/><text x="82" y="45">25%</text>
+          <rect x="114" y="30" width="40" height="22" rx="5" fill="#4e7a00"/><text x="134" y="45">50%</text>
+          <rect x="166" y="30" width="44" height="22" rx="5" fill="#76b900"/><text x="188" y="45" fill="#06210b" font-weight="700">100%</text>
+        </g>
+        <text x="110" y="70" text-anchor="middle" class="svg-m" font-size="9">metric-gated ramp: latency · errors · eval scores · hallucination rate · task success · token cost</text>
+      </svg>
+      <p>Small live slice first, watch metrics <b>plus agent-quality signals</b>, ramp 10→25→50→100%. Lowest blast radius; slower; needs good observability.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4>Rolling <span class="pill a">K8S DEFAULT</span></h4>
+      <svg viewBox="0 0 220 80" width="100%">
+        <g>
+          <rect x="20" y="28" width="34" height="26" rx="5" fill="#76b900"/><rect x="62" y="28" width="34" height="26" rx="5" fill="#76b900"/><rect x="104" y="28" width="34" height="26" rx="5" fill="#1d4f86"/><rect x="146" y="28" width="34" height="26" rx="5" fill="#1d4f86"/>
+          <text x="110" y="70" text-anchor="middle" class="svg-m" font-size="9.5">pods replaced gradually, new ⇄ old mix</text>
+        </g>
+      </svg>
+      <p>Gradual pod replacement. Medium risk, <b>no 2× cost</b>. Routine minor stateless updates.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--purple)">
+      <h4>Shadow / Mirror <span class="pill p">ZERO USER RISK</span></h4>
+      <svg viewBox="0 0 220 80" width="100%">
+        <rect x="10" y="28" width="70" height="26" rx="6" fill="#1d4f86"/><text x="45" y="45" text-anchor="middle" fill="#cfe6ff" font-size="10">LIVE v1</text>
+        <rect x="140" y="28" width="70" height="26" rx="6" fill="#3b2a5e" stroke="#b07cff" stroke-dasharray="3 2"/><text x="175" y="45" text-anchor="middle" fill="#d8c2ff" font-size="10">v2 copy</text>
+        <line x1="82" y1="41" x2="136" y2="41" stroke="#b07cff" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#arr3)"/>
+        <text x="110" y="70" text-anchor="middle" class="svg-m" font-size="9.5">responses discarded — pure evaluation</text>
+      </svg>
+      <p>New version gets a <b>copy</b> of traffic; responses discarded. Zero user exposure, evaluate on real traffic.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ NVIDIA LAYER + DECISIONS ============ -->
+<section id="decide">
+  <div class="kicker">Section 8 · NVIDIA product map &amp; decision frameworks</div>
+  <h2>Which Tool, When</h2>
+
+  <h3>NVIDIA-specific layer</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Product</th><th>Role in this domain</th><th>Choose it when</th></tr>
+    <tr><td><b>NIM</b></td><td>Prebuilt optimized inference container + OpenAI API</td><td class="good">Fastest path to production-grade LLM serving; enterprise support; standard models</td></tr>
+    <tr><td><b>NIM Operator</b></td><td>K8s operator (NIMCache/NIMService/NIMPipeline CRDs)</td><td class="good">Many NIMs at cluster scale; pre-caching; CRD-driven autoscaling</td></tr>
+    <tr><td><b>nim-deploy / NGC Helm charts</b></td><td>Reference Helm deployments for NIM</td><td>Single-service Helm installs, values.yaml customization</td></tr>
+    <tr><td><b>GPU Operator</b></td><td>Drivers, container toolkit, device plugin, DCGM exporter, MIG on K8s nodes</td><td class="info">Always — prerequisite for GPUs in Kubernetes</td></tr>
+    <tr><td><b>Triton Inference Server</b></td><td>Multi-framework serving, dynamic batching, ensembles</td><td class="good">Heterogeneous/custom models (embedder+reranker+LLM), custom pipelines</td></tr>
+    <tr><td><b>TensorRT-LLM</b></td><td>LLM kernel/runtime optimization, quantization, in-flight batching, spec decode</td><td class="good">Max performance, custom/fine-tuned models, full control</td></tr>
+    <tr><td><b>Model Analyzer / perf_analyzer / GenAI-Perf</b></td><td>Config sweeps &amp; LLM benchmarking (TTFT/ITL/TPS)</td><td>Batch-size &amp; instance tuning; SLO validation</td></tr>
+    <tr><td><b>DCGM + exporter</b></td><td>GPU telemetry → Prometheus</td><td>GPU dashboards, hardware-level scaling/alerting</td></tr>
+    <tr><td><b>NVIDIA Dynamo</b></td><td>Datacenter-scale distributed inference (disaggregated prefill/decode, KV-aware routing); successor ecosystem to Triton for LLM fleets</td><td class="warn">Very large multi-node LLM serving</td></tr>
+    <tr><td><b>DGX Cloud / NVCF</b></td><td>Managed GPU platform; serverless functions, scale-to-zero</td><td class="info">No-ops elastic inference; bursty workloads</td></tr>
+    <tr><td><b>Jetson + JetPack + Nemotron Nano</b></td><td>Edge hardware + SDK + small agentic models</td><td class="warn">On-device, offline, low-latency physical-world agents</td></tr>
+    <tr><td><b>NGC (nvcr.io)</b></td><td>Registry for NIM containers, Helm charts, models</td><td>Pulling anything NVIDIA-built (needs NGC_API_KEY)</td></tr>
+  </table>
+  </div>
+
+  <h3>Serving-layer decision ladder</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Scenario</th><th>Best choice</th><th>Why</th></tr>
+    <tr><td>Standard model, fastest enterprise-supported path, OpenAI API needed</td><td class="good"><b>NIM</b></td><td>Prebuilt optimized engine + API, Helm/Operator deploy</td></tr>
+    <tr><td>Many heterogeneous models (ONNX classifier + PyTorch embedder + LLM) on shared GPUs</td><td class="good"><b>Triton</b></td><td>Multi-framework backends, concurrent execution, ensembles</td></tr>
+    <tr><td>Custom-architecture model, squeeze max perf, full control of quantization/batching</td><td class="good"><b>TensorRT-LLM</b> directly (often behind Triton)</td><td>Engine-level control</td></tr>
+    <tr><td>Preprocess → embed → rerank pipeline, no client round-trips</td><td class="good"><b>Triton ensemble</b> (BLS if conditional logic)</td><td>Server-side DAG</td></tr>
+    <tr><td>Zero infra ops, spiky traffic, want scale-to-zero</td><td class="good"><b>DGX Cloud Serverless Inference (NVCF)</b></td><td>Managed autoscaling</td></tr>
+    <tr><td>Offline robot / privacy-critical on-device agent</td><td class="good"><b>Jetson + quantized Nemotron Nano</b></td><td>Edge constraints</td></tr>
+  </table>
+  </div>
+
+  <h3>Parallelism &amp; performance picks</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Question</th><th>Pick</th><th>Signal words</th></tr>
+    <tr><td>Model fits on node, want lowest latency, NVLink available</td><td class="good"><b>TP</b></td><td>"minimize TTFT", "NVLink", "2-8 GPUs"</td></tr>
+    <tr><td>Model spans nodes / only PCIe / throughput priority</td><td class="info"><b>PP</b> (often TP in node × PP across nodes)</td><td>"two nodes", "PCIe only", "doesn't fit"</td></tr>
+    <tr><td>More users, model fits on one GPU</td><td class="good"><b>More replicas + LB</b> (horizontal / data parallel) — <b>not TP</b></td><td>"concurrency", "QPS"</td></tr>
+    <tr><td>Cheaper per token, batch jobs</td><td class="warn"><b>Bigger batch / throughput-optimized profile</b></td><td>"cost per token", "offline"</td></tr>
+    <tr><td>Snappier chat</td><td class="good"><b>Smaller batch / latency profile / speculative decoding</b></td><td>"TTFT", "interactive"</td></tr>
+    <tr><td>Stateless small model (embedder, classifier)</td><td class="info"><b>Triton dynamic batching</b></td><td>request-level merge</td></tr>
+    <tr><td>Autoregressive LLM</td><td class="info"><b>In-flight (continuous) batching</b></td><td>variable output lengths</td></tr>
+  </table>
+  </div>
+
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h4><span class="ic">🔢</span>Quantization picks</h4>
+      <ul class="tick">
+        <li>H100/Hopper+ &amp; quality-sensitive → <b>FP8</b></li>
+        <li>Severely memory-bound / edge / single small GPU → <b>INT4 AWQ</b> (weight-only)</li>
+        <li>Weight+activation INT8 on older GPUs → <b>INT8 SmoothQuant</b></li>
+        <li>Blackwell → <b>NVFP4</b></li>
+      </ul></div>
+    <div class="card"><h4><span class="ic">🚦</span>Rollout picks</h4>
+      <ul class="tick">
+        <li>Instant rollback, can afford 2× → <b>blue-green</b></li>
+        <li>Gradual, metric-gated, minimal blast radius → <b>canary</b></li>
+        <li>Zero user exposure, real traffic eval → <b>shadow</b></li>
+        <li>Routine minor stateless update → <b>rolling</b></li>
+      </ul></div>
+    <div class="card"><h4><span class="ic">📈</span>Autoscaling signal picks</h4>
+      <ul class="tick">
+        <li>LLM NIM → <code>gpu_cache_usage_perc</code> or TTFT p90 (custom metrics via Prometheus adapter)</li>
+        <li>Queue-driven async agents → <b>KEDA</b> on queue depth</li>
+        <li><b style="color:var(--red)">Never CPU utilization</b> for GPU inference pods</li>
+      </ul></div>
+  </div>
+
+  <h3>Builder's corner — habits that also win exam points</h3>
+  <div class="grid g2">
+    <div class="card"><h4><span class="ic">♻️</span>Exploit prefix caching deliberately</h4><p>Agents resend huge system prompts + tool schemas every step. Paged-KV block reuse (TRT-LLM/vLLM) + cache-aware/sticky routing across replicas can cut TTFT dramatically — keep the static prompt prefix <b>byte-identical</b> across calls.</p></div>
+    <div class="card"><h4><span class="ic">📏</span>Benchmark with your real traffic shape</h4><p>GenAI-Perf sweep with your actual ISL/OSL (agents = long inputs, short outputs); pick batch size + replicas from the throughput–latency knee meeting your SLO; set HPA thresholds (e.g., <code>gpu_cache_usage_perc</code>) from those curves — never from defaults.</p></div>
+    <div class="card"><h4><span class="ic">🧬</span>Model + prompt + engine = one versioned artifact</h4><p>Pin NIM tags, TRT-LLM↔Triton versions, and prompt versions together; promote through CI only after eval gates (task success, tool-call validity, guardrail violations); canary on <b>quality metrics</b>, not just 5xx rates.</p></div>
+    <div class="card"><h4><span class="ic">🧊</span>Budget for cold starts &amp; right-size with quantization</h4><p>GPU pods load tens of GB — pre-cache (NIMCache/PVCs), keep a warm minimum, use scale-to-zero (NVCF) only where cold latency is OK. And try FP8 / INT4 AWQ or a smaller speculative-decoded model <b>before</b> adding TP across more silicon — often halves the GPU bill at near-equal quality.</p></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 9 · Don't fall for these</div>
+  <h2>⚠ Exam Traps &amp; Gotchas</h2>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="trap"><h4>⚠ 1 · HPA on CPU/memory for LLM pods</h4><p>Wrong. GPU inference pods show low CPU while saturated. Scale on <b>gpu_cache_usage_perc, queue depth/concurrency, or TTFT p90</b> via Prometheus + prometheus-adapter (custom metrics API).</p></div>
+    <div class="trap"><h4>⚠ 2 · GPU Operator vs NIM Operator vs device plugin</h4><p>GPU Operator provisions GPU <b>infrastructure</b> (drivers, toolkit, device plugin, DCGM); NIM Operator manages <b>NIM microservice lifecycle</b> (caching, deploy, autoscale). <b>Neither serves models itself.</b></p></div>
+    <div class="trap"><h4>⚠ 3 · Dynamic batching vs in-flight batching</h4><p>Triton dynamic batching merges requests <b>before</b> execution (stateless models); in-flight/continuous batching swaps requests <b>per token iteration</b> inside the LLM engine (TRT-LLM/vLLM). For LLM generation → in-flight batching.</p></div>
+    <div class="trap"><h4>⚠ 4 · TP vs PP reversed</h4><p>TP = split <b>within</b> layers, needs NVLink, lowers latency. PP = split <b>by</b> layers/stages, tolerates slow interconnects, raises throughput/capacity but adds latency (bubbles). "Lowest latency on one NVLink node" → TP. "Across two nodes" → TP in-node + PP across.</p></div>
+    <div class="trap"><h4>⚠ 5 · Horizontal scaling vs multi-GPU parallelism</h4><p>More concurrent users of a model that <b>fits on one GPU</b> → add replicas + load balancer, <b>NOT tensor parallelism</b>. TP/PP is for models too big or too slow on one GPU.</p></div>
+    <div class="trap"><h4>⚠ 6 · Throughput ≠ latency</h4><p>Bigger batch raises tokens/sec but <b>worsens</b> TTFT/ITL. If the constraint is a latency SLO, "increase batch size" is a trap answer.</p></div>
+    <div class="trap"><h4>⚠ 7 · TTFT vs ITL vs tokens/sec</h4><p>TTFT = prefill/queue (perceived responsiveness); ITL/TPOT = per-token streaming speed; TPS = system throughput. Long prompts hurt TTFT; long outputs accumulate ITL. Don't accept a tokens/sec answer to a "first response feels slow" problem.</p></div>
+    <div class="trap"><h4>⚠ 8 · Quantization confusions</h4><p>FP8 needs Hopper (H100)/Ada or newer. AWQ is <b>weight-only</b> 4-bit (activation-aware = uses activation statistics to pick salient weights — it does <b>NOT</b> quantize activations). SmoothQuant = INT8 weights+activations. Quantization mainly buys memory + bandwidth → more KV cache + throughput.</p></div>
+    <div class="trap"><h4>⚠ 9 · Paged KV cache ≠ faster math</h4><p>It eliminates memory fragmentation/over-allocation, enabling bigger batches and prefix/block reuse — a <b>memory-management technique, not a kernel speedup</b>.</p></div>
+    <div class="trap"><h4>⚠ 10 · Speculative decoding never changes output quality</h4><p>The target model verifies and accepts/rejects draft tokens, preserving the target distribution. "Trades accuracy for speed" is <b>false</b>. It helps latency-bound/small-batch regimes most, not max-throughput ones.</p></div>
+    <div class="trap"><h4>⚠ 11 · Blue-green vs canary cost/rollback</h4><p>Blue-green = instant rollback but ~2× resources (expensive with GPUs!). Canary = gradual + cheap but slower. "Instant rollback required" → blue-green. "Limit blast radius, validate on live traffic" → canary. "No user exposure at all" → shadow.</p></div>
+    <div class="trap"><h4>⚠ 12 · Triton ensemble vs BLS</h4><p>Ensembles are <b>static DAGs</b>; conditional/looping logic (agent-ish control flow) needs <b>BLS</b> (Python backend), not an ensemble.</p></div>
+    <div class="trap"><h4>⚠ 13 · NIM profile auto-selection order</h4><p>Memory fit → lower precision (FP8&gt;FP16) → <b>latency</b>-optimized default → higher TP → trtllm &gt; vllm &gt; sglang. Trap: NIM does <b>NOT</b> default to throughput-optimized.</p></div>
+    <div class="trap"><h4>⚠ 14 · Edge sizing</h4><p>Jetson Orin Nano (8 GB) cannot run a 70B model. The answer is a <b>quantized small model (Nemotron Nano INT4/Q4)</b>, or hybrid edge-cloud where the edge handles fast/local skills.</p></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+  <div class="kicker">Section 10 · Test yourself</div>
+  <h2>Scenario Drills</h2>
+  <p class="sub">Exam-style "best choice under constraints" scenarios. Read, decide, then click to reveal.</p>
+
+  <details class="drill"><summary><span class="qn">1</span><span>A chat agent on 1×H100 feels sluggish at first response under load, though streaming is smooth once started. Best first fix?</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Investigate <b>queueing/prefill</b>: check concurrency vs <code>max_batch_size</code>, scale replicas or enable chunked prefill / latency-optimized profile. <b>TTFT is the bottleneck, not ITL</b> — raising batch size would worsen it.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">2</span><span>Deploy Llama 3.1 405B for lowest possible latency on two 8×H100 NVLink nodes connected by InfiniBand.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p><b>TP=8 within each node + PP=2 across nodes</b> — TP exploits NVLink for latency; PP spans the slower inter-node link where only stage boundaries communicate.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">3</span><span>A RAG pipeline (preprocessing → embedding → reranking → LLM) suffers from client-side round-trip latency between steps.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Serve it as a <b>Triton model ensemble</b> (DAG executed server-side, mixed frameworks/devices) — eliminates network hops between stages.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">4</span><span>Your NIM pods restart and take 20+ minutes to become ready because weights re-download each time.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Use <b>persistent storage / NIM Operator's NIMCache</b> to pre-cache the model profile to a PVC instead of default <code>emptyDir</code>.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">5</span><span>You must release a new fine-tuned model for a customer-facing agent; leadership demands the ability to revert instantly if quality drops, and budget allows temporary duplicate capacity.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p><b>Blue-green deployment</b> — full parallel environment with instant traffic flip-back. <b>Canary</b> would be the answer if the requirement were "minimize users exposed while validating with live metrics."</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">6</span><span>An inspection robot must run a reasoning + tool-calling agent fully offline on an 8 GB Jetson Orin Nano.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Deploy a <b>4-bit quantized Nemotron Nano</b> (small agentic model) on-device via JetPack/TensorRT-LLM or llama.cpp — cloud NIMs and large models violate the offline/memory constraints.</p></div>
+  </details>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code">
+  <div class="kicker">Section 11 · Hands-on</div>
+  <h2>Code Companion</h2>
+  <p class="sub">Every snippet below was verified against current (2025–2026) docs: NVIDIA NIM LLM docs, k8s-nim-operator docs, the NVIDIA HPA-for-NIM blog, GenAI-Perf/AIPerf docs, TensorRT-LLM docs, Triton model-config docs, and langchain-nvidia. The model layer is always a NIM (local <code>:8000</code> or in-cluster) so you practice the NVIDIA stack while learning the generic skill.</p>
+
+  <div class="grid">
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">1</span>Run a NIM on your own GPU with Docker (NGC auth + persistent model cache), then hit the OpenAI-compatible API<span class="pill g" style="margin-left:auto">BASH</span></h4>
+      <pre><code>export NGC_API_KEY=nvapi-xxxx                      # from build.nvidia.com / NGC
+echo "$NGC_API_KEY" | docker login nvcr.io -u '$oauthtoken' --password-stdin   # username is literally $oauthtoken
+export LOCAL_NIM_CACHE=~/.cache/nim &amp;&amp; mkdir -p "$LOCAL_NIM_CACHE"
+docker run -d --name llama31-8b \
+  --runtime=nvidia --gpus all --shm-size=16GB \
+  -e NGC_API_KEY \
+  -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" -u $(id -u) \
+  -p 8000:8000 \
+  nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+
+curl -s localhost:8000/v1/health/ready             # poll until ready (engine load takes minutes)
+curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{
+  "model": "meta/llama-3.1-8b-instruct",
+  "messages": [{"role": "user", "content": "In-flight batching in one sentence."}],
+  "max_tokens": 64}'</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the volume mount onto <code>/opt/nim/.cache</code> (the default <code>NIM_CACHE_PATH</code>) is what prevents the multi-GB weight re-download on every restart — the container-level version of the NIMCache lesson. At startup the NIM auto-selects a model profile (FP8 TRT-LLM if your GPU supports it, vLLM generic otherwise); override with <code>-e NIM_MODEL_PROFILE=...</code>. Same <code>/v1/chat/completions</code> + <code>/v1/metrics</code> + <code>/v1/health/*</code> surface the exam expects on port 8000.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <h4><span class="ic">2</span>Python OpenAI client pointed at the local NIM (zero NVIDIA-specific code)<span class="pill b" style="margin-left:auto">PYTHON</span></h4>
+      <pre><code>from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="not-used")  # self-hosted NIM ignores the key
+stream = client.chat.completions.create(
+    model="meta/llama-3.1-8b-instruct",          # must match `curl localhost:8000/v1/models`
+    messages=[{"role": "user", "content": "TTFT vs ITL, one line each."}],
+    max_tokens=128, temperature=0.2, stream=True,
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="", flush=True)</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> "OpenAI-compatible" means migration is literally <code>base_url</code> + model name — this is the single most-tested NIM fact. Streaming matters because TTFT (first chunk arrives) and ITL (gap between chunks) are only observable as a stream consumer.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4><span class="ic">3</span>Kubernetes path A — NIMService CR (NIM Operator manages Deployment, Service, cache, HPA for you)<span class="pill a" style="margin-left:auto">YAML</span></h4>
+      <pre><code>apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  name: llama-31-8b
+spec:
+  image: {repository: nvcr.io/nim/meta/llama-3.1-8b-instruct, tag: "1.3.3", pullPolicy: IfNotPresent}
+  pullSecrets: [ngc-secret]          # image pull from nvcr.io
+  authSecret: ngc-api-secret         # NGC_API_KEY for model download
+  storage:
+    nimCache: {name: llama-31-8b-cache, profile: ""}   # references a NIMCache CR -&gt; PVC pre-warmed weights
+  resources:
+    limits: {nvidia.com/gpu: 1}
+  expose:
+    service: {type: ClusterIP, port: 8000}
+  metrics: {enabled: true}           # creates a Prometheus ServiceMonitor
+  scale:
+    enabled: true
+    hpa: {minReplicas: 1, maxReplicas: 4}</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> one CR replaces Deployment + Service + PVC wiring + ServiceMonitor + HPA. <code>storage.nimCache</code> pointing at a NIMCache CR is the cold-start fix (drill #4); <code>scale.hpa</code> accepts the same custom-metric blocks as a raw HPA (e.g., <code>gpu_cache_usage_perc</code>).</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4><span class="ic">4</span>Kubernetes path B — plain Deployment + Service (what the operator generates, by hand)<span class="pill a" style="margin-left:auto">YAML</span></h4>
+      <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata: {name: nim-llm}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: nim-llm}}
+  template:
+    metadata: {labels: {app: nim-llm}}
+    spec:
+      containers:
+      - name: nim
+        image: nvcr.io/nim/meta/llama-3.1-8b-instruct:1.3.3   # pin the tag = pin model+engine version
+        ports: [{containerPort: 8000}]
+        env:
+        - name: NGC_API_KEY
+          valueFrom: {secretKeyRef: {name: ngc-api-secret, key: NGC_API_KEY}}
+        resources:
+          limits: {nvidia.com/gpu: 1}                          # exposed by GPU Operator's device plugin
+        volumeMounts: [{name: cache, mountPath: /opt/nim/.cache}]
+        readinessProbe:
+          httpGet: {path: /v1/health/ready, port: 8000}
+          initialDelaySeconds: 120
+      volumes:
+      - {name: cache, persistentVolumeClaim: {claimName: nim-cache-pvc}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: nim-llm}
+spec: {selector: {app: nim-llm}, ports: [{port: 8000, targetPort: 8000}]}</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> <code>nvidia.com/gpu</code> only exists as a schedulable resource because the GPU Operator installed the device plugin — GPU Operator = infrastructure, NIM = the model server (trap #2). The readiness probe on <code>/v1/health/ready</code> keeps traffic off pods still loading weights; the PVC (not <code>emptyDir</code>) is what makes restarts fast.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4><span class="ic">5</span>HPA scaling on KV-cache utilization (<code>gpu_cache_usage_perc</code> via prometheus-adapter)<span class="pill a" style="margin-left:auto">YAML</span></h4>
+      <pre><code>apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: nim-llm-hpa}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: nim-llm}
+  minReplicas: 1
+  maxReplicas: 4
+  behavior:
+    scaleDown: {stabilizationWindowSeconds: 300}   # don't flap on bursty agent traffic
+  metrics:
+  - type: Pods
+    pods:
+      metric: {name: gpu_cache_usage_perc}         # NIM's own /v1/metrics gauge, via prometheus-adapter
+      target: {type: AverageValue, averageValue: 100m}   # 100m = scale when avg KV-cache usage &gt; 10%</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the metric type is <code>Pods</code> and a custom metric — not <code>Resource: cpu</code> (trap #1). The full pipeline is NIM <code>/v1/metrics</code> → Prometheus scrape (ServiceMonitor) → prometheus-adapter rule republishing it on the custom-metrics API → HPA; without the adapter rule this YAML applies cleanly but never scales. Pick the <code>averageValue</code> threshold from your GenAI-Perf curves, not from defaults.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">6</span>GenAI-Perf: benchmark TTFT / ITL / throughput against the NIM<span class="pill g" style="margin-left:auto">BASH</span></h4>
+      <pre><code>pip install genai-perf
+genai-perf profile \
+  -m meta/llama-3.1-8b-instruct \
+  --endpoint-type chat --streaming \
+  -u localhost:8000 \
+  --synthetic-input-tokens-mean 2048 --synthetic-input-tokens-stddev 256 \
+  --output-tokens-mean 256 \
+  --concurrency 32 --request-count 200 \
+  --tokenizer meta-llama/Llama-3.1-8B-Instruct</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the output table gives avg/p75/p90/p99 for <b>Time To First Token</b>, <b>Inter Token Latency</b>, request latency, plus <b>output token throughput (tok/s)</b> and <b>request throughput (RPS)</b> — read p90/p99 (SLOs), never just averages. ISL 2048 / OSL 256 is the agent traffic shape (long context, short decisions); re-run while sweeping <code>--concurrency</code> (1, 8, 32, 64...) and pick the knee where throughput flattens but latency still meets SLO. Note: NVIDIA's NIM benchmarking guide now ships <b>AIPerf</b> (<code>aiperf profile</code>, near-identical flags) as GenAI-Perf's successor — older docs/exam material say GenAI-Perf.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">7</span>trtllm-build: limits get baked into the engine at compile time<span class="pill g" style="margin-left:auto">BASH</span></h4>
+      <pre><code>trtllm-build --checkpoint_dir ./llama3.1-8b-fp8-ckpt \   # produced by quantize.py / Model Optimizer
+  --output_dir ./engine-h100-tp1 \
+  --max_batch_size 64 --max_input_len 4096 --max_seq_len 8192 \
+  --max_num_tokens 8192 \
+  --gemm_plugin auto</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> <code>--max_batch_size</code>, <code>--max_input_len</code>, <code>--max_seq_len</code>, <code>--max_num_tokens</code> (and TP/PP, precision, GPU arch from the checkpoint/build host) are frozen into the serialized engine — changing any of them means a rebuild, which is exactly why NIM ships per-GPU "optimized" profiles. The newer PyTorch-backend path (<code>trtllm-serve</code>, <code>LLM()</code> API) skips ahead-of-time engine compilation, trading a little peak perf for flexibility.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--purple)">
+      <h4><span class="ic">8</span>Triton <code>config.pbtxt</code>: dynamic batching + concurrent instances (the two biggest free levers)<span class="pill p" style="margin-left:auto">PBTXT</span></h4>
+      <pre><code>name: "reranker"
+backend: "onnxruntime"
+max_batch_size: 64
+dynamic_batching {
+  preferred_batch_size: [ 8, 16, 32 ]
+  max_queue_delay_microseconds: 100   # wait up to 100us to merge requests into a batch
+}
+instance_group [
+  { count: 2, kind: KIND_GPU, gpus: [ 0 ] }   # 2 copies execute concurrently on GPU 0
+]</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> this is request-level <i>dynamic</i> batching — right for stateless models (rerankers, embedders, classifiers), wrong answer for LLM generation, where in-flight batching inside TRT-LLM/vLLM is the lever (trap #3). The Triton conceptual-guide numbers (~975 → ~3,187 infer/s from dynamic batching alone, ~4,134 with 2 instances) come from exactly these two stanzas; Model Analyzer sweeps these values for you.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4><span class="ic">9</span>Canary rollout: stable + canary Deployments with weighted ingress and an eval gate<span class="pill a" style="margin-left:auto">YAML</span></h4>
+      <pre><code># nim-llm-v1 (stable) and nim-llm-v2 (canary) are two Deployments with their own Services.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agent-llm-canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "10"   # 10% of live traffic -&gt; v2
+spec:
+  rules:
+  - host: llm.internal
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend: {service: {name: nim-llm-v2, port: {number: 8000}}}
+# Eval gate (CI): run the agent eval suite (task success, tool-call validity, guardrail
+# violations, p90 TTFT, token cost) against the canary endpoint; only then ramp the
+# weight 10 -&gt; 25 -&gt; 50 -&gt; 100. Any regression: set weight to 0 = instant-ish rollback.</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the canary gate for agents must include <i>quality</i> metrics (eval scores, hallucination/guardrail rates), not just 5xx and latency — a fine-tune or prompt change can regress behavior with zero infrastructure errors. Compare blue-green: a second full environment and a 100% traffic flip buys instant rollback at ~2x GPU cost (trap #11).</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <h4><span class="ic">10</span>Where the LangGraph agent fits: a containerized FastAPI agent that calls the NIM via env var<span class="pill b" style="margin-left:auto">PYTHON</span></h4>
+      <pre><code># agent_app.py — CPU pod; the NIM is a separate GPU pod. They scale independently.
+import os
+from fastapi import FastAPI
+from langchain_nvidia_ai_endpoints import ChatNVIDIA   # pip install langchain-nvidia-ai-endpoints
+from langgraph.prebuilt import create_react_agent
+
+llm = ChatNVIDIA(
+    base_url=os.environ["NIM_BASE_URL"],                # e.g. http://nim-llm:8000/v1 (K8s Service DNS)
+    model=os.environ.get("NIM_MODEL", "meta/llama-3.1-8b-instruct"),
+)
+agent = create_react_agent(llm, tools=[])               # your tools here; ChatNVIDIA supports bind_tools
+app = FastAPI()
+
+@app.post("/invoke")
+async def invoke(body: dict):
+    result = await agent.ainvoke({"messages": [("user", body["query"])]})
+    return {"answer": result["messages"][-1].content}
+# Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langgraph langchain-nvidia-ai-endpoints
+# CMD ["uvicorn", "agent_app:app", "--host", "0.0.0.0", "--port", "8080"]</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the agent Deployment scales on CPU/RPS with a vanilla HPA while the NIM Deployment scales on <code>gpu_cache_usage_perc</code> — decoupling them via <code>NIM_BASE_URL</code> is the architectural point (one agent request fans out into many LLM calls, so the two tiers have different scaling curves). Swapping <code>NIM_BASE_URL</code> to <code>https://integrate.api.nvidia.com/v1</code> + an <code>nvapi-</code> key moves the same agent onto build.nvidia.com with zero code change; <code>ChatNVIDIA</code> against a local NIM needs no API key.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ============ PRACTITIONER VOICES ============ -->
+<section id="voices">
+  <div class="kicker">Section 12 · Field notes</div>
+  <h2>What Top Engineers Are Saying (2025–26)</h2>
+  <p class="sub">Public benchmarks, handbooks, and production write-ups from practitioners — each one maps directly onto a theme this domain tests.</p>
+
+  <div class="grid g2">
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">🧪</span>SqueezeBits engineering team<span class="pill g" style="margin-left:auto">BENCHMARKS</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">Yeonjoon Jung et al. · "vLLM vs TensorRT-LLM" 13-part series · blog.squeezebits.com</p>
+      <p><b>The take:</b> the most-cited head-to-head — with default settings TensorRT-LLM generally wins (up to ~2.7x token-generation throughput on long sequences on A100), but vLLM beat it under tight TPOT/latency constraints. They stress that results from defaults or single-knob tweaks don't transfer, so you must benchmark your own traffic shape.</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> this is the exam's "throughput-optimized vs latency-optimized profile" and "always measure with GenAI-Perf" doctrine playing out in public, with parts on KV-cache quantization, weight-only quant, and parallelism strategies that map 1:1 onto section 3.</p>
+      <p style="margin-top:10px"><a href="https://blog.squeezebits.com/vllm-vs-tensorrtllm-1-an-overall-evaluation-30703" target="_blank" rel="noopener">Read the series ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--blue)">
+      <h4><span class="ic">🏭</span>Charles Frye (Modal)<span class="pill b" style="margin-left:auto">GPU ECONOMICS</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">The LLM Engineer's Almanac · announced June 2025 (AI Engineer World's Fair) · modal.com/llm-almanac</p>
+      <p><b>The take:</b> thousands of automated benchmarks (vLLM, SGLang) distilled into GPU economics — Llama 3.1 70B FP8 served in batch mode at ~50¢ per million tokens (~20k tok/s per replica), and "sacrificing interactivity led to an 8x throughput increase." Hence his sequencing advice: <i>build your own batch "token factory" before you run a streaming token service</i>. He also splits workloads into offline / online / semi-online, naming what flat API per-token pricing hides.</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> directly reinforces the throughput-vs-latency tradeoff and "goodput knee" thinking the exam tests.</p>
+      <p style="margin-top:10px"><a href="https://modal.com/llm-almanac/summary" target="_blank" rel="noopener">Read the Almanac ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--cyan)">
+      <h4><span class="ic">📊</span>Jack Cook (Modal)<span class="pill c" style="margin-left:auto">OPEN DATA</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">X thread · June 2025</p>
+      <p><b>The take:</b> companion to the Almanac — published benchmark data comparing vLLM, SGLang, <b>and TensorRT-LLM</b> across DeepSeek, Llama, and Qwen at varying quantization and context lengths; one of the few open apples-to-apples datasets that includes the NVIDIA stack.</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> useful as a sanity check before you size GPUs for an agent workload.</p>
+      <p style="margin-top:10px"><a href="https://x.com/jackcookjack/status/1929623297131720982" target="_blank" rel="noopener">Read the thread ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--amber)">
+      <h4><span class="ic">📖</span>BentoML team<span class="pill a" style="margin-left:auto">HANDBOOK</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">The LLM Inference Handbook · bentoml.com/llm</p>
+      <p><b>The take:</b> the clearest articulation of the own-your-inference debate — serverless APIs have fixed per-token cost that "scales linearly with usage," while self-hosting front-loads infra cost but drops per-token cost with scale, <i>if</i> you accept the operational bill (monitoring/SLAs, failover, DevOps time).</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> its metrics and optimization vocabulary (TTFT, ITL, goodput, prefix caching, KV-cache offloading) is essentially the exam's section 3.3–3.4 written by a serving vendor.</p>
+      <p style="margin-top:10px"><a href="https://bentoml.com/llm/getting-started/serverless-vs-self-hosted-llm-inference" target="_blank" rel="noopener">Read the handbook ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--purple)">
+      <h4><span class="ic">☸️</span>KServe + llm-d + vLLM maintainers<span class="pill p" style="margin-left:auto">K8S ROUTING</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">"Production-Grade LLM Inference at Scale with KServe, llm-d, and vLLM" · llm-d.ai blog · KServe v0.16's LLMInferenceService</p>
+      <p><b>The take:</b> the Kubernetes-for-LLMs crowd has concluded that a plain Deployment + Service with round-robin is obsolete for LLMs — the new pattern is the Gateway API Inference Extension with <b>prefix-cache-aware routing</b> to the replica already holding your KV blocks, plus disaggregated prefill/decode (llm-d, founded 2025 by Red Hat with CoreWeave, Google, IBM, and NVIDIA).</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> this is the same idea as NVIDIA Dynamo's KV-aware router — expect "why is round-robin wrong for LLMs?" energy on the exam.</p>
+      <p style="margin-top:10px"><a href="https://llm-d.ai/blog/production-grade-llm-inference-at-scale-kserve-llm-d-vllm" target="_blank" rel="noopener">Read the post ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--red)">
+      <h4><span class="ic">🧰</span>Microsoft KAITO maintainers<span class="pill r" style="margin-left:auto">OPERATOR CRD</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">Kubernetes AI Toolchain Operator · kaito-project/kaito · AKS managed add-on</p>
+      <p><b>The take:</b> model deployment should be a CRD, not a Helm incantation — a KAITO Workspace CR provisions the right GPU nodes and serves a preset model with production APIs, automating the same lifecycle the NIM Operator's NIMCache/NIMService CRDs automate.</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> knowing that the operator-CRD pattern is industry-wide (KAITO, KServe, NIM Operator) makes the exam's NIM Operator questions feel like recognition, not memorization.</p>
+      <p style="margin-top:10px"><a href="https://github.com/kaito-project/kaito" target="_blank" rel="noopener">View the project ↗</a></p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">⚡</span>Anyscale / Ray Serve team<span class="pill g" style="margin-left:auto">PRODUCTION DATA</span></h4>
+      <p style="font-size:.78rem;color:var(--faint);margin-bottom:8px">"Reduce LLM Inference Latency by 60% with Custom Request Routing" (Sept 2025) · RayTurbo batch-inference announcement (Nov 2025)</p>
+      <p><b>The take:</b> two data points practitioners keep citing — prefix-aware custom routing cut TTFT ~60% and lifted end-to-end throughput &gt;40% on a 32B model (routing, not hardware, was the bottleneck), and purpose-built <b>offline</b> batch inference came in up to 6x cheaper than repurposed online providers like Bedrock.</p>
+      <p style="margin-top:8px"><b>Why it matters:</b> both reinforce domain themes — cache-aware load balancing beats naive LB, and the offline/online workload split drives wholly different deployment choices.</p>
+      <p style="margin-top:10px"><a href="https://www.anyscale.com/blog/ray-serve-faster-first-token-custom-routing" target="_blank" rel="noopener">Read the post ↗</a></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--green)">
+    <h4><span class="ic">∑</span>Synthesis for this domain</h4>
+    <p>The 2025–26 consensus is <b>(a)</b> framework wars are settled per-workload, not globally — benchmark your own ISL/OSL (SqueezeBits, Modal, Jack Cook); <b>(b)</b> self-hosting wins decisively for batch/offline tokens and stays hard for interactive serving (Frye, BentoML); <b>(c)</b> on Kubernetes, the action has moved up a layer from "get a GPU pod running" to KV/prefix-aware routing and operator CRDs (llm-d/KServe, KAITO, Anyscale) — exactly the NIM Operator + Dynamo direction NVIDIA is betting on.</p>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer id="sources">
+  <div class="wrap">
+    <div class="kicker">Sources</div>
+    <h2 style="margin-bottom:18px">References from the notes</h2>
+    <ul>
+      <li><a href="https://docs.nvidia.com/nim/large-language-models/latest/deployment/model-profiles-and-selection.html">NIM for LLMs — model profiles &amp; selection</a></li>
+      <li><a href="https://docs.nvidia.com/nim-operator/latest/index.html">NIM Operator docs</a></li>
+      <li><a href="https://github.com/NVIDIA/nim-deploy">NVIDIA/nim-deploy (Helm/K8s reference)</a></li>
+      <li><a href="https://github.com/NVIDIA/k8s-nim-operator">NVIDIA/k8s-nim-operator</a></li>
+      <li><a href="https://developer.nvidia.com/blog/horizontal-autoscaling-of-nvidia-nim-microservices-on-kubernetes/">Blog — Horizontal autoscaling of NIM on K8s</a></li>
+      <li><a href="https://developer.nvidia.com/blog/enabling-horizontal-autoscaling-of-enterprise-rag-components-on-kubernetes/">Blog — Autoscaling enterprise RAG components</a></li>
+      <li><a href="https://github.com/triton-inference-server/tutorials/blob/main/Conceptual_Guide/Part_2-improving_resource_utilization/README.md">Triton tutorials — dynamic batching &amp; concurrent execution</a></li>
+      <li><a href="https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/ensemble_models.html">Triton docs — ensemble models</a></li>
+      <li><a href="https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/tutorials/Deployment/Kubernetes/TensorRT-LLM_Autoscaling_and_Load_Balancing/README.html">Triton — TRT-LLM autoscaling &amp; load balancing on K8s</a></li>
+      <li><a href="https://nvidia.github.io/TensorRT-LLM/overview.html">TensorRT-LLM overview</a></li>
+      <li><a href="https://developer.nvidia.com/blog/boost-llama-3-3-70b-inference-throughput-3x-with-nvidia-tensorrt-llm-speculative-decoding/">Blog — 3× Llama 3.3 70B throughput with speculative decoding</a></li>
+      <li><a href="https://developer.nvidia.com/blog/llm-benchmarking-fundamental-concepts/">Blog — LLM benchmarking fundamentals (TTFT/ITL/TPS)</a></li>
+      <li><a href="https://developer.nvidia.com/blog/llm-performance-benchmarking-measuring-nvidia-nim-performance-with-genai-perf/">Blog — Measuring NIM performance with GenAI-Perf</a></li>
+      <li><a href="https://developer.nvidia.com/dgx-cloud/serverless-inference">DGX Cloud Serverless Inference / NVCF</a></li>
+      <li><a href="https://blogs.nvidia.com/blog/jetson-agentic-ai-physical-world/">Blog — Jetson brings agentic AI to the physical world</a></li>
+      <li><a href="https://huggingface.co/blog/nvidia/nemotron-3-nano-4b">HF/NVIDIA — Nemotron 3 Nano 4B for local/edge AI</a></li>
+      <li><a href="https://docs.vllm.ai/en/stable/serving/parallelism_scaling/">vLLM docs — parallelism &amp; scaling (TP vs PP)</a></li>
+      <li><a href="https://bentoml.com/llm/inference-optimization/data-tensor-pipeline-expert-hybrid-parallelism">BentoML — parallelism strategies</a></li>
+      <li><a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">NVIDIA NCP-AAI certification page</a></li>
+      <li><a href="https://preporato.com/blog/nvidia-ncp-aai-cheat-sheet-2026">Preporato — NCP-AAI cheat sheet</a></li>
+      <li><a href="https://flashgenius.net/blog-article/your-comprehensive-guide-to-the-nvidia-agentic-ai-llm-professional-certification-ncp-aai">FlashGenius — NCP-AAI exam guide</a></li>
+    </ul>
+    <p style="margin-top:24px;color:var(--faint);font-size:.78rem">NCP-AAI study visual · Domain 4: Deployment and Scaling (13%) · built from notes/domain-04-deployment-scaling.md · <a href="#top">back to top ↑</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
