@@ -199,6 +199,99 @@ Acronyms first (the exam may spell them out): **MCP = Model Context Protocol** (
 - NIM itself speaks OpenAI API (not MCP) — MCP lives at the *agent orchestration* layer, not the inference layer.
 - Newer Blueprints (AI-Q, enterprise RAG) expose retrieval/tools as MCP servers so any MCP-capable agent (Claude, LangGraph, etc.) can call NVIDIA RAG pipelines as tools.
 
+### 3.9 NeMo Agent Toolkit (NAT) — orchestration internals
+
+Section 3.2 establishes *what* NAT is ("not a framework — a profiler/wrapper"). This subsection is the **how it's wired**, which the exam tests directly (NAT is shared between Domain 2 "Agent Development" and Domain 7). Everything in NAT is a **named component referenced by `_type`** in a YAML workflow config, and the same config can also be built programmatically with `nat.builder`.
+
+**Agent (workflow) types.** When you write `agents:`/`workflow:` in NAT YAML, you pick an agent type — these are the exam's named choices:
+
+| `_type` | Pattern | Use when |
+|---|---|---|
+| **`tool_calling`** | Uses the LLM's *native* function-calling API to pick tools — implicit, fewest tokens | Model supports tool calling; you want speed |
+| **`react`** | Explicit **Thought → Action → Observation** loop in text; reasoning is visible in the trace | You want transparent reasoning / models without native tool calling |
+| **`reasoning`** | Plans the whole approach *up front*, then invokes a function — reasons "ahead of time," not between every step | A reasoning model (e.g. Nemotron with thinking on) should plan-then-act |
+| **`rewoo`** | **R**easoning **W**ith**o**ut **O**bservation — plans all tool calls before executing any, to cut LLM round-trips | Token/latency-sensitive multi-tool plans |
+| **`router`** | Classifies the request and routes to the right sub-agent/tool set | One endpoint must serve several specialized agents |
+
+The exam tell: **`tool_calling` = implicit/native, `react` = explicit thought-action-observation trace.** The same workflow swaps between them by changing one line (`type: tool_calling` → `type: react`); the trace changes from `[llm_call]/[tool_call]` to `[thought]/[action]/[observation]/[answer]`.
+
+Minimal NAT workflow (CPU-only, hosted NIM — the canonical "first workflow"):
+
+```yaml
+functions:
+  get_current_time:
+    _type: python          # a Python function becomes a tool; its docstring is the tool description
+llms:
+  nim_llm:
+    _type: nim             # NVIDIA NIM backend (hosted build.nvidia.com or self-hosted)
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.1
+workflow:
+  _type: tool_calling      # swap to react to see the Thought/Action/Observation trace
+  llm_name: nim_llm
+  tool_names: [get_current_time]
+```
+```bash
+nat run    --config_file workflow.yaml --input "What time is it right now?"
+nat serve  --config_file workflow.yaml         # REST endpoint + chat UI
+# nat console / nat chat give an interactive terminal session against the same config
+```
+
+> **Note:** NAT field names shift across releases (e.g. `tools:` vs `tool_names:`, `agents:` vs top-level `workflow:`). Memorize the *concepts and agent-type names*; verify exact YAML keys against the docs for your installed version. Validate a config with `python -c "import yaml; yaml.safe_load(open('workflow.yaml'))"`.
+
+**Middleware chain.** NAT middleware intercepts every request/response (same pattern as HTTP middleware) so cross-cutting concerns are added *without touching agent logic*. Built-in middleware types: **logging, defense, caching, red teaming, dynamic-function dispatch, timeout.** They execute as an ordered chain — request flows down, response flows back up — and **order is a correctness/security property, not a preference**:
+
+```
+request → [logging] → [defense] → [caching] → [dynamic dispatch] → AGENT (LLM+tools)
+                                                                        │
+response ← [logging] ← [defense] ← [caching] ← [dynamic dispatch] ←─────┘
+```
+
+Canonical order and *why*:
+1. **Logging first** — so even *blocked* requests are recorded (audit/compliance).
+2. **Defense before caching** — integrates NeMo Guardrails for input/output safety + PII. If defense ran *after* caching, a cached response would be served to a different user/context **without any safety check** — the classic exam trap.
+3. **Caching** — skip redundant work for already-validated, safe requests. **Cache tool results (stateless), NOT LLM responses** (context-dependent — a cached "what's the status?" answer is wrong in a new context).
+4. **Red teaming** — adversarial probing; staging/testing only, usually off in production.
+5. **Dynamic dispatch** closest to the agent core — route to the chosen sub-agent.
+
+- **defense** middleware = the bridge to NeMo Guardrails inside NAT; **dynamic dispatch** = intent-classified routing to specialized agents; **red teaming** = automated injection/bypass probing.
+
+**Plugin system (framework integrations).** NAT's framework-agnostic claim is *architectural*: each external framework is a **plugin distribution package**, not built into the core. To stay lightweight, first-party plugins ship separately — install via the standalone package (`nvidia-nat-langchain`) **or** an extra (`pip install "nvidia-nat[langchain]"`). Supported: **LangChain/LangGraph, LlamaIndex, CrewAI, AutoGen, Semantic Kernel, Agno, Strands, Google ADK** (`nvidia-nat[adk|agno|crewai|langchain|llama-index|semantic-kernel]`; `nvidia-nat[all]` pulls everything). Each plugin provides four adapters: an **LLM wrapper** (the framework uses NAT's configured LLM), **tool conversion** (framework tool → NAT function), **callback handlers** (framework events → NAT middleware/observability), and **parser adapters** (output format normalization). There is also a **public Plugin API** so third parties register new frameworks without forking NAT — that's exactly how Glantz added Agno (§11). **Exam point:** a plugin adapts *components* (a tool, a retriever) — it does **not** run the external framework's full runtime; orchestration/memory/middleware are still NAT's. So "rewrite your agents in NAT" stays wrong, and so does "a LangChain agent inside NAT behaves identically to native LangChain."
+
+**Authentication (multi-provider).** A production NAT workflow authenticates to *several* services at once (NIM, tool APIs, MCP servers). Providers are declared under an `authentication:` key, each with a name, and credentials are **loaded into memory at runtime, accessed by provider name, and never logged or persisted**. Built-in methods (memorize the set): **API Key, OAuth2 (Authorization Code Grant), Bearer Token, HTTP Basic, and MCP auth** (`mcp_oauth2` built-in provider implementing the MCP OAuth2 spec — and note authenticated MCP needs **streamable-HTTP** transport; SSE can't carry auth). Secrets stay out of YAML via **environment-variable references** (the `_env` / `${VAR}` pattern), populated from Vault/Secrets Manager/K8s secrets at deploy time. Exam mapping: simple service → **API Key**; enterprise SSO/delegated → **OAuth2**; remote MCP tool server → **MCP service account / `mcp_oauth2`**.
+
+**Deterministic testing — `nat_test_llm`.** LLM outputs are non-deterministic, so you can't unit-test an agent against a real model. NAT ships a **mock LLM** that returns pre-scripted responses, letting you assert *exact tool-call sequences and arguments* and test the middleware chain (e.g. "defense blocks this injection") repeatably. Rule the exam likes: **use a real LLM for *evaluation* (quality), `nat_test_llm` for *testing* (correctness).**
+
+**Interactive Workflows & cron.** Beyond request-response, NAT supports **Interactive Workflows** over a bidirectional **WebSocket** — the agent can pause mid-task to ask for clarification or an **approval gate** (e.g. "refund is \$750, exceeds \$500 — approve?") before a sensitive action. Persist conversation state in the memory backend (Redis) so a dropped socket doesn't lose context; configure `ping_interval`/`max_idle`. NAT also has **cron integration** to run a workflow on a schedule (daily reports, periodic data-quality checks) for non-reactive monitoring/maintenance agents.
+
+**`nat.builder` vs YAML.** Same runtime, two authoring styles. **YAML** = declarative, diffable, config-as-code, accessible to non-developers — the default for deployment. **`nat.builder`** (programmatic Python) = needed for *dynamic* behavior YAML can't express (conditional tool registration, runtime-computed middleware) and is natural for pytest. They compile to the **identical internal representation** — choosing one over the other changes *nothing* at runtime (common-misconception bait).
+
+### 3.10 The hands-on path (account → first NIM call → NAT → Guardrails → self-hosted)
+
+The exam's "build the thing" questions follow a fixed ladder; every step below the self-hosted one runs on a **CPU laptop with just an `NVIDIA_API_KEY`** (the `nvapi-...` key from build.nvidia.com). Self-hosting needs a separate **NGC API key**.
+
+1. **Account + API key** — create an NVIDIA account, get an `nvapi-` key at build.nvidia.com → `export NVIDIA_API_KEY=nvapi-...`.
+2. **First NIM call** — `pip install openai`; point the OpenAI client at `https://integrate.api.nvidia.com/v1`. (or `langchain-nvidia-ai-endpoints` for the LangChain path.)
+3. **First NAT workflow** — `pip install nvidia-nat`; write the minimal YAML above; `nat run`. Toggle `tool_calling`↔`react` to compare traces.
+4. **First Guardrails run** — `pip install nemoguardrails langchain-nvidia-ai-endpoints` (the second package is **required** for `engine: nim`/`engine: nvidia_ai_endpoints` to reach hosted models — without it the config loads but model calls fail); build a `config/` folder with `config.yml` + Colang `.co` flows; test with `nemoguardrails chat --config config/`. Server mode (`nemoguardrails server`) needs the `[server]` extra (FastAPI/uvicorn).
+5. **Self-hosted NIM (optional/advanced, GPU required)** — get an **NGC** key at ngc.nvidia.com; `echo $NGC_API_KEY | docker login nvcr.io -u '$oauthtoken' --password-stdin` (username is literally `$oauthtoken`); `docker pull nvcr.io/nim/...`; run with `--gpus all -p 8000:8000`, mount a cache volume so the tens-of-GB engine download persists; check `GET /v1/health/ready` → `{"status":"ready"}`. **For multi-model / autoscaled production, use the NIM Operator on Kubernetes** (a `NIMService` custom resource declares model, replicas, GPU type, autoscaling).
+
+**Feature → install matrix** (base `nvidia-nat` is *not* enough for every feature; extras names are version-dependent — verify in current NAT docs):
+
+| Feature | Install |
+|---|---|
+| NAT core (agent types, YAML, functions, middleware) | `pip install nvidia-nat` |
+| LangChain/LangGraph plugin | `pip install "nvidia-nat[langchain]" langchain-nvidia-ai-endpoints` (or `nvidia-nat-langchain`) |
+| Evaluation / red-teaming / RAG eval | `pip install "nvidia-nat[eval]"` (or `nvidia-nat-eval`) |
+| Profiler + sizing calculator | `pip install "nvidia-nat[profiling]"` (may be folded into eval) |
+| MCP client/server | `pip install "nvidia-nat[mcp]"` |
+| Observability (Phoenix) | `pip install nvidia-nat arize-phoenix` |
+| Everything | `pip install "nvidia-nat[all]"` |
+| Guardrails (library mode, hosted models) | `pip install nemoguardrails langchain-nvidia-ai-endpoints` |
+| Guardrails server mode | `pip install "nemoguardrails[server]"` |
+
+**Top troubleshooting tells (exam-flavored):** `401` → key unset/expired/whitespace; `404`/"model not found" → wrong model id or `api.nvidia.com` instead of `integrate.api.nvidia.com`, and NAT/Guardrails model names need the **provider prefix** (`meta/llama-3.3-70b-instruct`, not `llama-3.3-70b-instruct`); `429` → free-tier rate limit; NGC `unauthorized` → forgot username is `$oauthtoken`; Guardrails "engine not recognized" → version mismatch between `engine: nim` (newer) and `engine: nvidia_ai_endpoints` (older); rail never triggers → flow name in `config.yml` ≠ flow name in `.co`, or missing `colang_version: "2.x"`; self-hosted NIM "CUDA out of memory" → model too big for the GPU (a 70B needs ~140GB FP16 / two H100s).
+
 ## 4. NVIDIA-specific layer
 
 This whole domain *is* the NVIDIA layer; here's the product-to-job map to burn in:
@@ -270,6 +363,13 @@ When to choose NVIDIA pieces over generic alternatives: pick NIM over plain vLLM
 10. **AI Workbench vs DGX Cloud**: Workbench = free local/portable *development environment manager*; DGX Cloud (Lepton) = paid *GPU compute platform/marketplace*. Neither is a model-serving product.
 11. **Hosted endpoints are not production-private.** If the scenario mentions regulated/PII data, the hosted build.nvidia.com endpoint is the wrong answer regardless of convenience — self-host the NIM.
 12. **Blueprints are reference code, not managed services.** You deploy and own them (Docker/Helm); "NVIDIA operates the virtual assistant for you" is false.
+13. **NAT middleware order is a correctness property.** Defense **before** caching, logging **first**. "Order doesn't matter as long as all middleware is present" is wrong: defense-after-caching lets a cached response skip safety checks; logging-after-defense means blocked requests go unlogged. And **cache tool results, never LLM responses**.
+14. **NAT agent types: `tool_calling` (implicit/native) vs `react` (explicit Thought→Action→Observation).** Don't confuse with `reasoning` (plans up front) or `rewoo` (plans all tool calls before any execution). The trick option labels the native-function-calling agent as "ReAct."
+15. **`nat.builder` and YAML produce identical runtime behavior** — they compile to the same internal representation. The choice is authoring style only. "YAML is faster at runtime / behaves differently" is false.
+16. **NAT plugins adapt components, not whole frameworks.** A LangChain tool wrapped as a NAT function does *not* bring LangChain's runtime, memory, or orchestration — those stay NAT's. So "a LangChain agent runs identically inside NAT" is wrong.
+17. **`nat_test_llm` is for *testing* (deterministic correctness), not *evaluation* (quality).** Testing an agent against a real LLM is non-deterministic and flaky; mock the LLM to assert exact tool-call sequences. Reserve the real model for NeMo Evaluator-style quality scoring.
+18. **Two different keys.** `NVIDIA_API_KEY` (`nvapi-...`, from build.nvidia.com) calls *hosted* endpoints; `NGC_API_KEY` (from ngc.nvidia.com) pulls *containers* from `nvcr.io`, and the docker-login username is the literal string `$oauthtoken`. An answer that uses the build.nvidia.com key to `docker pull` is wrong.
+19. **Model ids need the provider prefix in NAT/Guardrails configs.** `meta/llama-3.3-70b-instruct`, not `llama-3.3-70b-instruct` — the bare name yields a 404.
 
 ## 7. Scenario drills
 
@@ -279,6 +379,10 @@ When to choose NVIDIA pieces over generic alternatives: pick NIM over plain vLLM
 4. **You must ingest 2M PDFs full of tables and charts into a vector DB for a multimodal RAG agent.** → *NV-Ingest (NeMo Retriever extraction) → embedding NIM (llama-3.2-nv-embedqa) → Milvus → reranking NIM; start from the multimodal PDF/RAG Blueprint.* Extraction at scale is exactly what NV-Ingest exists for.
 5. **A 70B model powers a routing agent; costs are too high. You have months of production logs and want a smaller model with equal task accuracy, promoted only if it proves out.** → *Data flywheel: NeMo Curator on logs → NeMo Customizer LoRA-tunes Nemotron Nano → NeMo Evaluator gates promotion → deploy as NIM.* Classic distillation flywheel question.
 6. **A developer with no GPUs wants to prototype an agent today and later deploy the exact same model in the company VPC unchanged.** → *Start on build.nvidia.com hosted endpoint (OpenAI-compatible, nvapi key); later pull the same NIM from NGC and just change `base_url`.* The try-hosted-then-self-host path is NIM's core story.
+7. **Order these NAT middleware for production: caching, defense, logging, dynamic dispatch.** → *logging → defense → caching → dynamic dispatch.* Logging first (capture blocked requests too), defense before caching (never serve an unchecked cached response), caching before routing.
+8. **A NAT workflow must call NIM for inference, a corporate SSO for user identity, and a remote MCP tool server.** → *Three auth providers under `authentication:`: API Key (NIM, via `${NVIDIA_API_KEY}`), OAuth2 Authorization-Code (the SSO), and `mcp_oauth2` (the MCP server, over streamable-HTTP). Secrets via `_env`/`${VAR}` references, never in YAML.*
+9. **You need a CI test that asserts your agent calls `order_lookup` with `{order_id:"12345"}` before answering — and it must pass deterministically.** → *Mock the model with `nat_test_llm` (script the tool-call response), assert the tool name and args. Real LLMs are non-deterministic — use them for evaluation, not unit tests.*
+10. **Your support agent must pause and get a human's approval before issuing refunds over \$500, mid-conversation.** → *A NAT Interactive Workflow over WebSocket with an approval gate; persist state in the Redis memory backend so a dropped connection doesn't lose the conversation.*
 
 ## 8. Builder's corner
 
@@ -488,6 +592,43 @@ curl -s http://localhost:8000/v1/chat/completions -H 'Content-Type: application/
 ```
 
 What to notice: one base-model NIM multiplexes many NeMo Customizer (or HF PEFT) LoRA adapters — `NIM_PEFT_SOURCE` points at the adapter directory, each subdirectory name becomes a servable model id, and the client *selects the adapter purely via the `model` field*. Add `NIM_PEFT_REFRESH_INTERVAL` to hot-load new adapters at runtime — that's the deployment endpoint of the data-flywheel loop (Customizer output → drop folder → live traffic).
+
+**8. NAT production surface — middleware chain + multi-provider auth, in one config**
+
+```yaml
+# pipeline.yaml — the production-shaped NAT config (concept-level; verify exact keys per version)
+llm:
+  _type: nim
+  model_name: meta/llama-3.3-70b-instruct
+  api_key: ${NVIDIA_API_KEY}            # secret via env ref — never inline the key
+workflow:
+  _type: tool_calling                   # or react / reasoning / rewoo / router
+  llm_name: llm
+  max_iterations: 10                    # cap the ReAct/tool loop so it can't spin forever
+  middleware:                           # ORDER IS A SECURITY PROPERTY
+    - type: logging                     # 1. first — even blocked requests get audited
+    - type: defense                     # 2. before caching — Guardrails input/output + PII
+      config: { input_guardrail: nemo_guardrails, block_pii: true }
+    - type: caching                     # 3. cache TOOL results, not LLM responses
+      config: { cache_tool_results: true, cache_llm_responses: false, ttl: 3600 }
+    - type: dynamic_dispatch            # 4. closest to the agent — route by intent
+authentication:                         # multiple providers, each named, secrets via _env
+  nvidia_nim:    { type: api_key,  key_env: NVIDIA_API_KEY }
+  enterprise_sso:{ type: oauth2,   client_id_env: OAUTH_CLIENT_ID, client_secret_env: OAUTH_CLIENT_SECRET }
+  mcp_tools:     { type: mcp_oauth2 }   # streamable-HTTP transport (SSE can't carry auth)
+```
+```python
+# Deterministic test — assert the tool-call sequence WITHOUT a real LLM
+mock = nat_test_llm(responses=[
+    {"tool_calls": [{"name": "order_lookup", "args": {"order_id": "12345"}}]},
+    {"text": "Your order #12345 ships March 15th."},
+])
+result = WorkflowTestHarness(config="pipeline.yaml", llm_override=mock).run("Where is order 12345?")
+assert result.tool_calls[0].name == "order_lookup"
+assert result.middleware_logs["defense"].blocked is False
+```
+
+What to notice: this is the orchestration layer the exam tests in Domains 2 + 7. The middleware list order is the answer to "place these middleware correctly" (logging → defense → caching → dispatch). `authentication:` shows three providers coexisting with secrets pulled from env, not hardcoded. `nat_test_llm` makes the agent deterministic so CI can assert the exact tool name + args — testing (correctness), distinct from NeMo Evaluator (quality). Exact YAML keys (`middleware:`, `dynamic_dispatch`) are version-dependent; the *concepts and ordering* are what's stable.
 
 ## 11. What top engineers are saying (2025-26)
 

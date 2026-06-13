@@ -119,6 +119,86 @@ Caveats: set sensible **downscale stabilization** (default 5 min) to avoid flapp
 
 **Throughput vs latency & batch size tuning:** bigger batches = better GPU utilization = higher **tokens/sec per GPU** (cheaper per token) but each request waits longer → worse TTFT/ITL. Key metrics: **TTFT** (time to first token — prefill + queue; what users perceive as responsiveness), **ITL/TPOT** (inter-token latency — streaming smoothness), **end-to-end request latency**, **TPS** (tokens/sec, system throughput), **RPS**. `max_batch_size` caps simultaneous in-flight requests; if concurrency > max_batch_size × replicas, requests queue and TTFT explodes. Method: use **GenAI-Perf** to sweep concurrency, plot throughput-vs-latency curves, pick the knee that meets your SLO ("goodput" = throughput while meeting latency SLO). Interactive chat → latency-optimized profile, small batches, maybe speculative decoding. Offline/batch agent jobs (summarize 1M docs) → throughput-optimized profile, large batches.
 
+### 3.45 NAT (NeMo Agent Toolkit) deployment layer — the agent-serving tier
+
+Everything above (NIM, Triton, TRT-LLM) serves the **model**. NAT serves the **agent** — the orchestration tier that holds the agent graph, tool routing, memory, and guardrails, and calls the model tier over HTTP. The exam's deployment domain is increasingly NAT-specific, and the single most-tested idea is **separation of concerns: NAT orchestrates (CPU), NIM infers (GPU); NAT calls NIM.** They are different containers, scale on different signals, and have different cold-start behavior.
+
+**NAT deployment servers (front ends).** A built NAT workflow is exposed through a *front end* configured under `general.front_end` in the workflow YAML; the CLI launches it. You pick the front end by **who/what consumes the agent**:
+
+| Front end | CLI | Protocol / port | Use when |
+|---|---|---|---|
+| **FastAPI server** | `nat serve --config_file wf.yml` (alias for `nat start fastapi`) | REST + WebSocket, default **:8000** | **Default production choice** — clients call the agent over HTTP/WS |
+| **MCP server** | `nat mcp serve` | Model Context Protocol (MCP SDK runtime) | Agent must be **discoverable/callable as a tool** by other MCP-compatible agents/orchestrators (e.g. a "DB-query agent" other agents invoke) |
+| **FastMCP server** | `nat fastmcp server run` | MCP over streamable-HTTP, default **:9902**, tools at `/mcp` | Lightweight MCP — simpler/lower-overhead MCP scenarios, dev/test of MCP integrations |
+| **A2A server** | `nvidia-nat[a2a]` package, A2A front end | **Agent-to-Agent** protocol (Linux Foundation open standard) | **Distributed multi-agent**: each agent runs as an independent service, discovers peers via **Agent Cards**, delegates tasks. Independent scaling/deployment per agent |
+| **Console front end** | `nat run` (console) | Terminal/interactive | **Dev & debugging only** — never production |
+
+**FastAPI front-end surface (verified against NAT 1.5 docs):** `POST /generate` and `POST /generate/stream`, `POST /chat` and `POST /chat/stream`, an **OpenAI-compatible** `POST /v1/chat/completions`, a `/websocket` endpoint for bidirectional streaming, `GET /health`, and `POST /evaluate`. So a NAT agent is reachable by *the same* OpenAI client pattern you point at a NIM — except `:8000` here serves the *agent*, not the raw model.
+
+> **Selection decision tree (memorize the shape):** dev/debug → **Console**. Else, is the agent consumed by other agents? → no → **FastAPI** (default). → yes → do agents run as separate services? → yes → **A2A**. → no → need full MCP? → yes → **MCP** → no → **FastMCP**.
+
+**NAT async job management (Dask).** Agent runs take seconds to minutes; holding an HTTP connection open invites client timeouts, load-balancer disconnects, and retry storms. NAT's async pattern: client `POST`s a request → server **returns a job ID immediately** (background-queued) → Dask schedules/executes the workflow → client **polls** the job-status/result endpoint (or subscribes via WebSocket) → result is fetched when complete. NAT's `/evaluate` endpoint is the canonical Dask-backed async job (it stores the request for background processing and hands back a job ID). Config knobs: Dask scheduler type (local threads vs distributed), job TTL (how long completed results are kept), execution-history retention for debugging.
+
+*Worked example — which front end + sync vs async?* "A user submits a complex research task that runs ~90 s; other internal agents must also be able to call this researcher as a tool." → Front end: it's consumed by other agents but they're independent services → **A2A** (or **MCP** if they just call it as a tool in one process). Invocation: 90 s exceeds safe HTTP sync limits → **async job submit → job ID → poll** (Dask-backed), *not* a synchronous REST call with a long timeout (that's the trap answer).
+
+**NAT ↔ NIM as two tiers (the architecture the exam draws):**
+
+```
+client ─▶ NAT FastAPI/A2A server (CPU pod)   ── agent graph, tool routing, memory, guardrails
+                     │  OpenAI-compatible HTTP/gRPC
+                     ▼
+              NIM container (GPU pod)          ── optimized model serving, batching, quantization
+                     ▼
+                GPU cluster (H100/A100)
+```
+
+The two tiers **scale independently**: the NAT pod is CPU-bound and cheap → scale **horizontally** (more replicas behind an LB) on RPS/concurrency with a vanilla HPA; the NIM pod is GPU-bound and the real bottleneck → scale **vertically first** (bigger GPUs / TP) then horizontally, on `gpu_cache_usage_perc` / queue depth (§3.4). One agent request **fans out into many LLM calls** (planning, tool selection, reflection), so the two tiers have *different load curves* — over-provisioning the cheap NAT tier won't help when NIM is saturated, and autoscaling the NAT pod on **CPU** is a classic wrong answer (the bottleneck is downstream GPU inference).
+
+### 3.46 Containerization & GPU resource planning for agent stacks
+
+A production agent system is **multi-container by nature** — collapsing it into one image makes independent scaling impossible. Typical stack: **NAT server** (orchestration, CPU) + **NIM** (inference, GPU) + **vector DB** (Milvus/pgvector, stateful) + **cache/job broker** (Redis) + **observability** (Phoenix/Grafana).
+
+**Docker Compose for dev / single node.** GPU is requested via the Compose `deploy.resources.reservations.devices` block (`driver: nvidia`, `count`, `capabilities: [gpu]`); mount a volume on `/opt/nim/.cache` so NIM weights aren't re-pulled each restart; use `depends_on … condition: service_healthy` so the agent waits for Milvus/Redis. A CPU-only laptop can still run the agent by pointing it at a **hosted NIM** on `build.nvidia.com` (`integrate.api.nvidia.com/v1`) instead of a local GPU NIM.
+
+```yaml
+# docker-compose.yml (excerpt) — local NIM with 2 GPUs for a 70B model
+services:
+  nim-llm:
+    image: nvcr.io/nim/meta/llama-3.1-70b-instruct:latest
+    ports: ["8000:8000"]
+    environment: [ "NGC_API_KEY=${NGC_API_KEY}" ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - { driver: nvidia, count: 2, capabilities: [gpu] }   # TP across 2 GPUs
+    volumes: [ "nim-cache:/opt/nim/.cache" ]                       # persist weights
+  agent:                                                          # NAT FastAPI server — CPU only
+    build: { context: .. }
+    ports: ["8080:8080"]
+    environment: [ "NIM_BASE_URL=http://nim-llm:8000/v1" ]         # decouple tiers via env var
+    depends_on: { nim-llm: { condition: service_started } }
+```
+
+**Helm for production.** Structure the chart so each tier is independently versioned/scaled: `nat-deployment.yaml` + `nat-service.yaml` (orchestration), `nim-deployment.yaml` + internal `nim-service.yaml` (inference, not externally exposed), `vectordb-statefulset.yaml`, `configmap.yaml` (guardrails configs, prompts), `secrets.yaml` (NGC/API keys), `hpa.yaml`. **Anti-pattern:** one monolithic Helm chart packing NAT+NIM+DB+observability — it blocks independent scaling and versioning; use subcharts with clear interfaces.
+
+**GPU resource planning (rules of thumb, verify per model/Blueprint):**
+
+| Component | CPU | Memory | GPU | Notes |
+|---|---|---|---|---|
+| **NAT server** | ~4 cores | ~8 GB | **0** | CPU-only orchestration; scale horizontally |
+| **NIM, 7-8B model** | ~4 cores | ~16 GB | **1× A100/H100** | single GPU sufficient |
+| **NIM, 70B model** | ~8 cores | ~32 GB | **2× H100 80 GB** | needs tensor parallelism (TP=2) |
+| **Vector DB** | ~4 cores | ~16 GB | 0 | SSD/NVMe-backed, stateful |
+
+**GPU count is *not* fixed per model** — it depends on quantization, sequence length, **and concurrency**. A 70B serving 1 request fits on 2×H100; serving ~50 concurrent requests may need 8×H100. Always benchmark under realistic load (GenAI-Perf, §3.4) before sizing.
+
+**AI-Q Blueprint reference numbers (current docs, exam-quotable):** the AI-Q research-agent Blueprint's **default** mode runs inference on NVIDIA's **hosted API Catalog → 0 local GPUs**. When you **self-host via NIM**, the documented Docker-Compose footprint is **2× H100 80 GB (or 3× A100 80 GB) for the RAG component**, **plus 2× H100 (or 4× A100) to self-host the Llama 3.3 70B model**, scaling toward ~5× H100 / 8× A100 for a full self-contained stack (plus ~435 GB disk). The reference courseware's "AI-Q minimum = 2× H100" maps to the **RAG-component** figure — always verify the exact number on the specific Blueprint's page/repo, as requirements vary significantly across Blueprints and versions.
+
+**Agent-specific scaling (why request-count autoscaling under-counts).** A classification model is one fixed forward pass; an **agent** plans a multi-step run, makes a *variable* number of LLM + tool calls, and finishes after a *variable* time. A simple Q might be 1 LLM call (~2 s); a research task might be 8 LLM + 15 tool calls (~90 s). So scaling on **request count** badly underestimates real load — two requests can differ 50× in work. Scale instead on the work signals: **in-flight (active) agent executions**, **GPU inference queue depth**, and **token throughput** (tokens/sec consumed vs available). *Token-budget-aware scaling:* if each request can burn a 50K-token budget and you serve 100 concurrent, you need inference capacity for ~5M in-flight tokens — size NIM replicas on token throughput, not RPS. *Multi-model scaling:* an agent using a 70B reasoner + a small classifier + an embedder should scale each **independently** — the reasoner is the bottleneck; don't over-provision the cheap models to match it.
+
+**Backpressure & readiness for agent endpoints.** Because a single complex request can consume 100K+ tokens, agent endpoints need **token-aware rate limiting**, not just request-count limiting, plus **backpressure**: when the inference queue is full, return **HTTP 429** (rate-limit) / **503** (overloaded) with a `Retry-After` header instead of accepting work you can't serve. Two distinct K8s probes matter: **liveness** ("is the process alive?" → restart if not) and **readiness** ("can this instance take traffic?" → pull from the LB if not). NIM readiness is special: the pod can be *running* yet not *ready* for **minutes** while it loads tens of GB into GPU memory — so set a generous `initialDelaySeconds` and gate the LB on `/v1/health/ready`, or a traffic spike routes to cold pods. **Graceful shutdown matters for agents specifically:** agent executions carry state (conversation history, intermediate tool results); killing a pod mid-run loses the whole multi-step execution — drain in-flight executions before terminating.
+
 ### 3.5 Edge deployment (Jetson, Nemotron Nano)
 
 **Why edge:** physical-world agents (robots, inspection, kiosks) need **low latency, privacy/data locality, and offline operation** — no round-trip to a datacenter. **Platform:** NVIDIA **Jetson** modules (Orin Nano/NX/AGX → **Jetson Thor** generation) running **JetPack** (CUDA/TensorRT on aarch64). Frameworks: TensorRT-LLM/llama.cpp/Ollama on-device; some NIMs are supported on Jetson-class devices.
@@ -142,6 +222,8 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 
 | Product | Role in this domain | Choose it when |
 |---|---|---|
+| **NAT deployment server** | The agent-serving tier — exposes a NAT workflow via FastAPI / MCP / FastMCP / A2A / Console front ends; calls NIM for inference | Always for the orchestration layer; pick the front end by who consumes the agent (HTTP clients → FastAPI; agents-as-tools → MCP/FastMCP; distributed multi-agent → A2A) |
+| **NVIDIA Dynamo** (agent angle) | Inference-acceleration framework *beneath* NIM (disaggregated prefill/decode, KV-aware routing) — faster tokens → lower per-step agent latency, which **compounds** over multi-step runs | Very large multi-node LLM serving feeding an agent fleet |
 | **NIM** | Prebuilt optimized inference container + OpenAI API | Fastest path to production-grade LLM serving; enterprise support; standard models |
 | **NIM Operator** | K8s operator (NIMCache/NIMService/NIMPipeline CRDs) | Managing many NIMs at cluster scale; pre-caching; CRD-driven autoscaling |
 | **nim-deploy repo / NGC Helm charts** | Reference Helm deployments for NIM | Single-service Helm installs, customization via values.yaml |
@@ -167,6 +249,17 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 | Preprocess → embed → rerank pipeline with no client round-trips | **Triton ensemble** (BLS if conditional logic) | Server-side DAG |
 | Zero infra ops, spiky traffic, want scale-to-zero | **DGX Cloud Serverless Inference (NVCF)** | Managed autoscaling |
 | Offline robot / privacy-critical on-device agent | **Jetson + quantized Nemotron Nano** | Edge constraints |
+
+**NAT deployment server (front end):**
+
+| Scenario | Best choice | Why |
+|---|---|---|
+| Clients call the agent over HTTP/WebSocket (default production) | **FastAPI server** (`nat serve`, :8000) | REST + streaming + OpenAI-compatible `/v1/chat/completions` |
+| Agent must be callable **as a tool** by other MCP agents | **MCP server** (`nat mcp serve`) | Publishes the workflow + tools as MCP tools |
+| Lightweight / dev MCP integration | **FastMCP server** (`nat fastmcp server run`, :9902 `/mcp`) | Less overhead, streamable-HTTP |
+| Distributed multi-agent, each agent an **independent service** | **A2A server** (`nvidia-nat[a2a]`) | Agent Cards for discovery; independent scaling per agent |
+| Local development / debugging only | **Console front end** (`nat run`) | Interactive terminal — never production |
+| Agent run takes 30 s+ (long research task) | **Async job** (submit → job ID → poll, Dask-backed) | Avoids HTTP timeouts, LB disconnects, retry storms — **not** a long-timeout sync call |
 
 **Parallelism & performance:**
 
@@ -202,6 +295,10 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 12. **Triton ensemble vs BLS** — ensembles are static DAGs; conditional/looping logic (agent-ish control flow) needs BLS (Python backend), not an ensemble.
 13. **NIM profile auto-selection order** — filter to GPU-runnable profiles first, then rank: backend (trtllm > vllm > sglang) → precision (MXFP4 > FP8 > … > INT4_AWQ) → *latency*-optimized default → higher TP. Trap: NIM does NOT default to throughput-optimized (it defaults to **latency**-optimized). Second trap: current docs put **backend before precision** (NIM 1.x's older memory→precision→latency→TP→backend chain has been superseded — but two facts hold across both: latency-optimized is the default and trtllm is the preferred backend).
 14. **Edge sizing** — Jetson Orin Nano (8 GB) cannot run a 70B model; the answer is a quantized small model (Nemotron Nano INT4/Q4), or hybrid edge-cloud where the edge handles fast/local skills.
+15. **NAT vs NIM are not the same thing** — NAT is the **orchestration** tier (agent graph, tool routing, memory, guardrails, CPU); NIM is the **inference** tier (optimized model serving, GPU). **NAT calls NIM.** "Deploy the agent as a single container" is wrong — the stack is multi-container (NAT + NIM + vector DB + Redis + observability) precisely so the tiers scale independently. Autoscaling the **NAT pod on CPU** won't help when NIM is the bottleneck.
+16. **NAT front-end selection** — match the front end to the *consumer*: HTTP clients → **FastAPI** (`nat serve`, :8000); agent-as-a-tool for other MCP agents → **MCP** (`nat mcp serve`) (or **FastMCP**, :9902, for lightweight); each agent an independent service in a multi-agent system → **A2A** (Agent Cards); dev/debug → **Console**. Trap: choosing A2A when the agent is just consumed as a tool by one orchestrator (that's MCP), or choosing Console for production.
+17. **Long-running agent runs need async jobs, not long HTTP timeouts** — a 90 s research task over a synchronous REST call hits client timeouts, LB disconnects, and retry storms. Correct NAT pattern: submit → **return a job ID immediately** → Dask schedules execution → client **polls** status/result (or WebSocket). "Synchronous REST with a 120 s timeout" is the trap distractor.
+18. **Request-count autoscaling under-counts agent load** — agent runs do a *variable* number of LLM/tool calls, so two requests can differ 50× in work. Scale on **token throughput / in-flight executions / inference queue depth**, with **token-aware** rate limiting and **HTTP 429/503 + Retry-After** backpressure — not raw request count. And **graceful-drain** in-flight executions on shutdown (agent runs carry state; a mid-run pod kill loses the whole multi-step execution).
 
 ## 7. Scenario drills
 
@@ -211,6 +308,10 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 4. **Your NIM pods restart and take 20+ minutes to become ready because weights re-download each time.** → Use persistent storage / NIM Operator's NIMCache to pre-cache the model profile to a PVC instead of default emptyDir.
 5. **You must release a new fine-tuned model for a customer-facing agent; leadership demands the ability to revert instantly if quality drops, and budget allows temporary duplicate capacity.** → Blue-green deployment — full parallel environment with instant traffic flip-back; canary would be the answer if the requirement were "minimize users exposed while validating with live metrics."
 6. **An inspection robot must run a reasoning + tool-calling agent fully offline on an 8 GB Jetson Orin Nano.** → Deploy a 4-bit quantized Nemotron Nano (small agentic model) on-device via JetPack/TensorRT-LLM or llama.cpp — cloud NIMs and large models violate the offline/memory constraints.
+7. **Your NAT agent must be discoverable and callable as a tool by other MCP-compatible agents.** → Serve it with the **MCP server** front end (`nat mcp serve`) — it publishes the workflow + its tools as MCP tools. (Use **FastMCP** if you only need a lightweight MCP runtime; use **A2A** if the agents are independent services collaborating peer-to-peer rather than calling one as a tool.)
+8. **A user submits a research task that takes ~90 s; you keep getting 504s and duplicate executions.** → Switch from synchronous REST to **NAT async job management**: return a **job ID** immediately (Dask-backed background execution), have the client poll the status/result endpoint (or use the WebSocket). A 120 s sync timeout is the trap answer — it still breaks under LBs/proxies.
+9. **An agent uses a 70B reasoner + a small classifier + an embedder; how do you scale and where do you autoscale on CPU?** → Scale each model **independently** (the 70B is the bottleneck; don't over-provision the cheap ones). Never autoscale the GPU NIM on CPU — and the **NAT orchestration pod** (CPU) scales horizontally on RPS, while the NIM tier scales on `gpu_cache_usage_perc` / token throughput. They're separate tiers with separate load curves.
+10. **Plan GPU for a customer-support agent: 100 concurrent users, 70B reasoning model, self-hosted.** → NAT server = CPU-only (0 GPU), horizontally scaled; NIM 70B = **2× H100 80 GB minimum for TP**, but 100 concurrent users likely needs more (size from GenAI-Perf token-throughput curves, not the 1-request figure); vector DB stateful on NVMe. If referencing the **AI-Q Blueprint**, the documented self-hosted RAG footprint is **2× H100 (3× A100)** plus **+2× H100** to self-host the 70B — but the *default* AI-Q mode uses hosted API Catalog (0 local GPUs).
 
 ## 8. Builder's corner
 
@@ -224,6 +325,12 @@ NVIDIA's managed AI platform: reserved clusters of NVIDIA GPUs hosted in partner
 
 - NVIDIA NIM for LLMs docs — model profiles & selection: https://docs.nvidia.com/nim/large-language-models/latest/deployment/model-profiles-and-selection.html
 - NVIDIA NIM Operator docs: https://docs.nvidia.com/nim-operator/latest/index.html
+- NeMo Agent Toolkit (NAT) — CLI & front ends: https://docs.nvidia.com/nemo/agent-toolkit/latest/reference/cli.html
+- NeMo Agent Toolkit — FastAPI API server endpoints: https://docs.nvidia.com/nemo/agent-toolkit/1.5/reference/rest-api/api-server-endpoints.html
+- NeMo Agent Toolkit — FastMCP server (port 9902, /mcp): https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/fastmcp-server.html
+- NeMo Agent Toolkit — A2A server (Agent Cards, Linux Foundation A2A): https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/a2a-server.html
+- NeMo Agent Toolkit — Evaluate API (Dask-backed async jobs, job IDs): https://docs.nvidia.com/nemo/agent-toolkit/1.5/reference/rest-api/evaluate-api.html
+- NVIDIA AI-Q Blueprint (hardware footprint; default hosted API Catalog): https://build.nvidia.com/nvidia/aiq · https://docs.nvidia.com/aiq-blueprint/latest/
 - NVIDIA/nim-deploy (Helm/K8s reference implementations): https://github.com/NVIDIA/nim-deploy
 - NVIDIA/k8s-nim-operator: https://github.com/NVIDIA/k8s-nim-operator
 - NVIDIA Tech Blog — Horizontal Autoscaling of NIM on Kubernetes: https://developer.nvidia.com/blog/horizontal-autoscaling-of-nvidia-nim-microservices-on-kubernetes/
@@ -465,6 +572,36 @@ async def invoke(body: dict):
 ```
 
 *What to notice:* the agent Deployment scales on CPU/RPS with a vanilla HPA while the NIM Deployment scales on `gpu_cache_usage_perc` — decoupling them via `NIM_BASE_URL` is the architectural point (one agent request fans out into many LLM calls, so the two tiers have different scaling curves). Swapping `NIM_BASE_URL` to `https://integrate.api.nvidia.com/v1` + an `nvapi-` key moves the same agent onto build.nvidia.com with zero code change; `ChatNVIDIA` against a local NIM needs no API key.
+
+**11. Serve a NAT workflow as a FastAPI front end (the agent tier on :8000) — config-driven, no glue code**
+
+```yaml
+# workflow.yml — the NAT FastAPI front end is selected/configured under general.front_end.
+# `nat serve --config_file workflow.yml` (alias for `nat start fastapi`) exposes:
+#   POST /generate · /generate/stream · /chat · /chat/stream · /v1/chat/completions (OpenAI-compatible)
+#   /websocket (streaming) · GET /health · POST /evaluate (Dask-backed async job)
+general:
+  front_end:
+    _type: fastapi          # other choices: mcp (nat mcp serve) · fastmcp (:9902) · a2a · console
+    host: 0.0.0.0
+    port: 8000
+llms:
+  default:
+    _type: nim              # the agent tier calls the NIM inference tier — separate concern
+    model_name: meta/llama-3.1-70b-instruct
+    base_url: http://nim-llm:8000/v1
+workflow:
+  _type: react_agent        # your agent graph, tools, memory, guardrails go here
+```
+
+```bash
+nat serve --config_file workflow.yml          # FastAPI agent server on :8000
+# point an OpenAI client at the AGENT (not the raw model):
+curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model":"default","messages":[{"role":"user","content":"Research NVIDIA NIM and cite sources"}]}'
+```
+
+*What to notice:* the front end is **declarative** — switching `_type` from `fastapi` to `mcp`/`fastmcp`/`a2a` re-exposes the *same* agent to a different consumer (HTTP client → other MCP agents → peer A2A agents) with no agent-logic change. `:8000` here serves the **agent**, while the NIM at `http://nim-llm:8000/v1` serves the **model** — the NAT↔NIM separation the exam tests. For a 90 s research task, prefer `POST /evaluate` (or async generation): it returns a **job ID** for background Dask execution instead of holding the HTTP connection open and timing out.
 
 ## 11. What top engineers are saying (2025-26)
 

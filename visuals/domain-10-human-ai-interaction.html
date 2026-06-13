@@ -327,6 +327,30 @@
       </tr>
     </table>
 
+    <h3>The finer-grained ladder — and "human-in-command"</h3>
+    <p class="sub">The 3-tier split is the coarse view. A 7-rung ladder runs from max autonomy / min oversight to min autonomy / max oversight — each rung maps to an NVIDIA primitive. The exam may ask you to <b>place a described system on this ladder and name the primitive</b>.</p>
+    <div class="svgbox">
+      <svg viewBox="0 0 1040 250" width="1040" height="250">
+        <defs><linearGradient id="ladderGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--green)"/><stop offset="0.5" stop-color="var(--amber)"/><stop offset="1" stop-color="var(--red)"/></linearGradient></defs>
+        <rect x="20" y="20" width="1000" height="8" rx="4" style="fill:url(#ladderGrad)"/>
+        <text x="20" y="14" font-size="11" style="fill:var(--green)">◀ max autonomy / min oversight</text>
+        <text x="1020" y="14" font-size="11" text-anchor="end" style="fill:var(--red)">min autonomy / max oversight ▶</text>
+        <g font-size="11" text-anchor="middle">
+          <!-- 7 rungs -->
+          <g><rect x="20" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="86" y="64" font-weight="bold" style="fill:var(--green)">Fully</text><text x="86" y="78" font-weight="bold" style="fill:var(--green)">automated</text><text x="86" y="100" font-size="10" style="fill:var(--muted)">no human</text><text x="86" y="114" font-size="10" style="fill:var(--muted)">awareness</text></g>
+          <g><rect x="160" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="226" y="64" font-weight="bold" style="fill:var(--green)">Automated</text><text x="226" y="78" font-weight="bold" style="fill:var(--green)">+ logging</text><text x="226" y="100" font-size="9.5" style="fill:var(--muted)">post-hoc review</text><text x="226" y="113" font-size="9.5" style="fill:var(--blue)">NAT audit/OTel</text></g>
+          <g><rect x="300" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--amber) 12%, var(--bg2));stroke:var(--amber)"/><text x="366" y="64" font-weight="bold" style="fill:var(--amber)">Automated</text><text x="366" y="78" font-weight="bold" style="fill:var(--amber)">+ alerts</text><text x="366" y="100" font-size="9.5" style="fill:var(--muted)">pings a monitor</text><text x="366" y="113" font-size="9.5" style="fill:var(--blue)">NAT observability</text></g>
+          <g><rect x="440" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--amber) 12%, var(--bg2));stroke:var(--amber)"/><text x="506" y="64" font-weight="bold" style="fill:var(--amber)">Approval</text><text x="506" y="78" font-weight="bold" style="fill:var(--amber)">required</text><text x="506" y="100" font-size="9.5" style="fill:var(--muted)">blocks per action</text><text x="506" y="113" font-size="9" style="fill:var(--blue)">exec rail + NAT WS/HTTP</text></g>
+          <g><rect x="580" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="646" y="64" font-weight="bold" style="fill:var(--red)">HITL</text><text x="646" y="84" font-size="9.5" style="fill:var(--muted)">acts after</text><text x="646" y="97" font-size="9.5" style="fill:var(--muted)">approval</text><text x="646" y="113" font-size="9" style="fill:var(--blue)">NAT interactive wf</text></g>
+          <g><rect x="720" y="44" width="132" height="78" rx="8" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="786" y="64" font-weight="bold" style="fill:var(--red)">HOTL</text><text x="786" y="84" font-size="9.5" style="fill:var(--muted)">monitor +</text><text x="786" y="97" font-size="9.5" style="fill:var(--muted)">intervene</text><text x="786" y="113" font-size="9" style="fill:var(--blue)">WS streaming</text></g>
+          <g><rect x="860" y="44" width="160" height="78" rx="8" style="fill:color-mix(in srgb, var(--red) 18%, var(--bg2));stroke:var(--red)"/><text x="940" y="64" font-weight="bold" style="fill:var(--red)">Human-in-</text><text x="940" y="78" font-weight="bold" style="fill:var(--red)">command (HIC)</text><text x="940" y="98" font-size="9.5" style="fill:var(--muted)">agent drafts only</text><text x="940" y="113" font-size="9" style="fill:var(--blue)">NAT structured output</text></g>
+        </g>
+        <text x="520" y="158" font-size="12.5" text-anchor="middle" style="fill:var(--text)"><tspan font-weight="bold" style="fill:var(--red)">Human-in-command</tspan> = EU AI Act term: agent only <tspan font-style="italic">recommends/drafts</tspan>; human makes every decision <tspan font-style="italic">and</tspan> decides whether to use the system at all.</text>
+        <text x="520" y="180" font-size="12" text-anchor="middle" style="fill:var(--muted)">Distinguish <tspan font-weight="bold" style="fill:var(--red)">HIC</tspan> ("agent drafts, human acts") from <tspan font-weight="bold" style="fill:var(--red)">HITL</tspan> ("agent acts after the human approves the specific step").</text>
+        <text x="520" y="214" font-size="11.5" text-anchor="middle" style="fill:var(--muted)">"Let it run but make sure we can review / get pinged" ⇒ the <tspan font-weight="bold" style="fill:var(--amber)">automated + logging / + alerts</tspan> rungs (HOOTL-with-teeth / HOTL-lite).</text>
+      </svg>
+    </div>
+
     <h3>Latency cost vs human involvement (qualitative)</h3>
     <div class="card">
       <div class="bar-row"><span style="color:var(--red)"><b>HITL</b> — blocks on human</span><div class="bar-track"><span class="bar-fill" style="width:92%;background:linear-gradient(90deg,var(--red),color-mix(in srgb, var(--red) 60%, black))"></span></div><span class="bar-val">High</span></div>
@@ -460,6 +484,18 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
       </svg>
     </div>
 
+    <h3>The five canonical escalation triggers (and the NVIDIA wiring)</h3>
+    <div class="grid g3">
+      <div class="card accent-blue"><span class="tag tag-blue">1 · Confidence threshold</span><h4>Below τ ⇒ escalate</h4><p>Output-parse a confidence score; an <b>execution rail</b> gates on it.</p></div>
+      <div class="card accent-blue"><span class="tag tag-blue">2 · Domain boundary</span><h4>Out-of-domain request</h4><p>An <b>input-classification rail</b> detects "not my domain."</p></div>
+      <div class="card accent-blue"><span class="tag tag-blue">3 · Safety trigger</span><h4>A guardrail fires</h4><p>NeMo Guardrails <b>content/input rails</b> route to escalation.</p></div>
+      <div class="card accent-blue"><span class="tag tag-blue">4 · Repeated failure</span><h4>Step retried &gt; N times</h4><p><b>NAT step counting</b> + an execution rail.</p></div>
+      <div class="card accent-blue"><span class="tag tag-blue">5 · User request</span><h4>"Let me talk to a person"</h4><p>Explicit hand-off the agent must honor.</p></div>
+      <div class="trap"><h4>Anti-pattern: single escalation queue</h4><p>One inbox for everything bottlenecks and wastes domain experts on out-of-domain cases. Route by <b>domain · severity · expertise</b>.</p></div>
+    </div>
+
+    <div class="note"><b>Feedback loops — corrections are free labels.</b> A human <i>rejecting</i> an action, <i>editing</i> an argument, or <i>correcting</i> a draft is training signal. Log the reason and the original-vs-edited pair, then feed them into the <b>NAT evaluation framework as regression tests</b> (low-rated turns = "must not regress"; high-rated = golden cases). This is the data flywheel. Not capturing corrections ⇒ the agent repeats the same mistake forever. Bias caution: users over-rate so-so answers 4–5 and only 1–2 when angry — pair the star rating with a structured "was this correct? Y/N".</div>
+
     <h3>Confidence signals (calibrated, not vibes)</h3>
     <div class="grid g3">
       <div class="card accent-cyan"><h4>Token log-probabilities</h4><p>Predictive probability from the model itself.</p></div>
@@ -571,7 +607,7 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
       <div class="card accent-amber"><span class="tag tag-amber">Allowlists / denylists</span><h4>Allowlist = default-deny = strictly safer</h4><p>Denylist (default-allow: block known-bad) can't enumerate unknown attacks. Exam answer: prefer <b>allowlist / deny-by-default</b> for production agents; denylists are a supplementary layer. Granularity matters: allow <code>git status</code>, not "git *"; allow POST to one endpoint, not the whole API.</p></div>
       <div class="card accent-blue"><span class="tag tag-blue">Audit logs</span><h4>Append-only, tamper-evident records of every action</h4><p>Who/which agent, what tool, what arguments, what result, timestamp, correlation/trace ID, and <b>who approved</b> gated actions. Enables HOOTL after-the-fact oversight, incident forensics, compliance (e.g., EU AI Act human-oversight expectations). In practice: OTel traces to an observability store + immutable application logs.</p></div>
       <div class="card accent-red"><span class="tag tag-red">Kill switches</span><h4>Out-of-band, instant halt — agent, workflow, or fleet</h4><p>Revoke credentials, cut tool/network access, pause the queue. Must live <b>outside the agent's control plane</b> (an agent must not be able to disable its own kill switch). Pair with anomaly triggers (spend rate, action rate, error spikes) for automatic tripping. Graceful design: checkpoint state on halt so work resumes after investigation.</p></div>
-      <div class="card accent-purple"><span class="tag tag-purple">Sandboxing</span><h4>Bad actions break the sandbox, not the host</h4><p>Execute agent-generated code/commands in isolated, disposable environments (containers, microVMs, network-egress-restricted). Essential for code-execution tools, browser agents, self-modifying agents. NVIDIA's <b>OpenShell</b> is the NVIDIA-stack instantiation: out-of-process policy enforcement + sandboxed execution + deny-by-default permissions.</p></div>
+      <div class="card accent-purple"><span class="tag tag-purple">Sandboxing</span><h4>Bad actions break the sandbox, not the host</h4><p>Execute agent-generated code/commands in isolated, disposable environments (containers, microVMs, network-egress-restricted). Essential for code-execution tools, browser agents, self-modifying agents. NVIDIA's <b>OpenShell</b> is the NVIDIA-stack instantiation (standalone Apache-2.0 runtime, per-sandbox container isolation): out-of-process policy enforcement + sandboxed execution + deny-by-default permissions.</p></div>
     </div>
 
     <h3>Defense-in-depth ordering</h3>
@@ -626,7 +662,7 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
         <p>Models: <b>Llama 3.1 NemoGuard 8B Content Safety</b>, <b>NemoGuard 8B Topic Control</b>, <b>NemoGuard Jailbreak Detect</b>; plus <b>garak</b> LLM vulnerability scanner pre-deployment. Recipe results: content safety <b>88% → 94%</b>, security resilience <b>56% → 63%</b>, with no measurable accuracy loss. Use so human oversight focuses on <i>actions</i>, not every utterance.</p>
       </div>
       <div class="card accent-purple" style="grid-column:1/-1">
-        <span class="tag tag-purple">NVIDIA OpenShell (Agent Toolkit component, Apache 2.0)</span>
+        <span class="tag tag-purple">NVIDIA OpenShell (standalone agent runtime, Apache 2.0)</span>
         <h4>The oversight-engineering runtime: kill-switch / sandbox / allowlist topics made concrete</h4>
         <div class="grid g3" style="margin-top:10px">
           <p>• <b>Out-of-process policy enforcement</b> — controls live outside the agent's reach</p>
@@ -638,6 +674,92 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
         </div>
       </div>
     </div>
+
+    <h3>NAT interactive workflows: WebSocket <i>and</i> HTTP</h3>
+    <div class="grid g2">
+      <div class="card accent-green"><span class="tag tag-green">Primary transport</span><h4>WebSocket (<code>nat serve</code>)</h4><p>Real-time, bidirectional. Carries the <b>full interaction-model set</b> (text prompts, approval/choice widgets) and streams intermediate steps/tokens for HOTL monitoring.</p></div>
+      <div class="card accent-blue"><span class="tag tag-blue">Fallback transport</span><h4>HTTP interactive execution</h4><p>For WebSocket-limited environments, NAT runs HITL/OAuth <b>over plain HTTP</b>: server returns a pending-interaction response with a request ID; client POSTs the answer back to resume. Same approve/clarify pattern, polling instead of a live socket.</p></div>
+    </div>
+    <div class="trap"><h4>Exam framing: NAT HITL is WebSocket <i>or</i> HTTP</h4><p>"WebSocket is the only way" is wrong. WebSocket is preferred (live streaming + richer prompt widgets); HTTP is the fallback for restricted deployments.</p></div>
+
+    <h3>NAT authentication &amp; per-user functions (least privilege, NVIDIA-specific)</h3>
+    <p class="sub">Auth providers are configured under the <code>authentication</code> key in the workflow YAML; each declares a <code>_type</code>. Know this list — the exam likes "which auth methods does NAT support?"</p>
+    <table>
+      <tr><th><code>_type</code></th><th>Method</th><th>Typical use</th></tr>
+      <tr><td><code>api_key</code></td><td>API key</td><td>Simple token-based access</td></tr>
+      <tr><td><code>oauth2_auth_code_flow</code></td><td><b>OAuth2 Authorization Code Grant Flow</b> (<code>OAuth2AuthCodeFlowProviderConfig</code>)</td><td class="good">Delegated user access; works over WebSocket <i>and</i> HTTP; NAT acts as OAuth2 client (token lifecycle + consent)</td></tr>
+      <tr><td><code>http_basic_auth</code></td><td>HTTP Basic (user/password)</td><td>Simple setups</td></tr>
+      <tr><td>bearer / credential validator</td><td>Bearer-token / JWT validation</td><td>Service-to-service calls</td></tr>
+      <tr><td>MCP service account</td><td>MCP service-account auth</td><td>Agent-to-agent auth in MCP deployments</td></tr>
+    </table>
+    <div class="grid g2">
+      <div class="card accent-purple"><span class="tag tag-purple">OAuth2 gotcha + per-user isolation</span><h4><code>redirect_uri</code> must match</h4><p>The config's <code>redirect_uri</code> must match the registered redirect URI in the provider's console, or auth fails. With per-user OAuth, <b>each user gets their own workflow instance + MCP client</b>, prompted on first request, with <b>per-user token isolation</b> (encrypted at rest; backends in-memory / Redis / MySQL / S3; auto-refresh).</p></div>
+      <div class="card accent-green"><span class="tag tag-green">Per-user functions = oversight</span><h4>Different tool sets per role</h4><p>Regular user → read-only (search/lookup); power user → + write (send_email, create_ticket); admin → + destructive (delete_record). <b>Least privilege at the agent level</b>: an agent for a regular user <i>literally lacks</i> <code>delete_record</code>, so it can't call it — capability isolation by authority.</p></div>
+    </div>
+    <div class="trap"><h4>Filtering tools ≠ enough</h4><p>The LLM may still <i>attempt</i> a removed tool. Back per-user filtering with an <b>execution-rail permission check</b> before any tool executes, so an out-of-list call is blocked at runtime, not just hidden.</p></div>
+
+    <h3>NeMo Guardrails execution rail as an automated approval gate</h3>
+    <p class="sub">A rail intercepts a tool call, decides whether it needs approval (by tool name / args / risk), and pauses for human review — composing with NAT's interactive workflow (the rail asks; NAT carries the prompt over WebSocket/HTTP; the answer flows back to the rail).</p>
+<pre><code><span class="c"># gate financial actions over $500 — requires human approval</span>
+<span class="pre-k">define flow</span> check_financial_action
+  <span class="pre-k">when</span> tool_call "issue_refund" <span class="pre-k">or</span> tool_call "process_payment"
+    <span class="pre-k">if</span> $amount > 500
+      $approval = <span class="pre-k">await</span> request_human_approval(
+        action=$tool_name, details=$tool_input,
+        reason="Amount exceeds $500 threshold")
+      <span class="pre-k">if not</span> $approval
+        bot refuse action "Action requires approval and was denied."
+        <span class="pre-k">stop</span></code></pre>
+<pre><code><span class="c"># the action the rail calls — bridges to the active NAT interactive session</span>
+<span class="pre-k">async def</span> request_human_approval(action, details, risk_level) -&gt; bool:
+    wf = get_active_workflow()                 <span class="c"># the live WebSocket/HTTP session</span>
+    <span class="pre-k">if</span> wf <span class="pre-k">is None</span>:                             <span class="c"># no human attached:</span>
+        <span class="pre-k">return False</span>                           <span class="c"># fail CLOSED (deny by default)</span>
+    <span class="pre-k">return await</span> wf.request_approval(action=action, details=details)
+
+rails.register_action(request_human_approval, name="request_human_approval")</code></pre>
+    <div class="note"><b>Exam point:</b> an execution rail gating a tool <b>intercepts and can require approval before execution</b> — it does not silently auto-reject (that's a denylist) and does not just log-and-run (that's middleware/logging). The "fail closed" default when no approver is available is the safe design.</div>
+
+    <h3>Synchronous vs asynchronous approval + graceful degradation</h3>
+    <table>
+      <tr><th></th><th>Synchronous approval</th><th>Asynchronous approval</th></tr>
+      <tr><td><b>Behavior</b></td><td>Agent <b>blocks</b> until the human responds</td><td>Agent <b>queues</b> the action and releases resources</td></tr>
+      <tr><td><b>Pros</b></td><td class="good">Simple, deterministic, human always in the loop</td><td class="good">Human reviews at leisure; no held resources</td></tr>
+      <tr><td><b>Cons</b></td><td class="warn">Human availability is the bottleneck; resources held during wait</td><td class="warn">More state management; must handle "human never responds"</td></tr>
+      <tr><td><b>NAT impl.</b></td><td>Interactive workflow (WebSocket/HTTP) <b>with a timeout</b></td><td>NAT async job mgmt (<b>Dask</b>) + notification + approval queue</td></tr>
+    </table>
+    <div class="trap"><h4>Graceful degradation is mandatory — never "execute anyway"</h4><p>On approver-unavailable timeout, the safe fallbacks are <b>queue for review</b> or <b>inform the user it's pending</b>. "Timeout → execute anyway" defeats the gate. (NAT prompt timeouts raise <code>TimeoutError</code> — catch it and degrade.) And <b>blocking without a timeout</b> is its own anti-pattern: an agent waiting forever holds resources if the human is in a meeting.</p></div>
+
+    <h3>The compliance / auditability stack</h3>
+    <p class="sub">Regulators (EU AI Act human-oversight duties; SOX/MiFID II; HIPAA) demand <b>traceability, accountability, reviewability</b>. On NVIDIA these come from <i>composing</i> primitives — not one feature.</p>
+    <div class="svgbox">
+      <svg viewBox="0 0 760 320" width="760" height="320">
+        <defs><marker id="arrC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--muted)"/></marker></defs>
+        <g font-size="12.5">
+          <rect x="40" y="16" width="290" height="46" rx="9" style="fill:color-mix(in srgb, var(--purple) 12%, var(--bg2));stroke:var(--purple)"/><text x="56" y="36" font-weight="bold" style="fill:var(--purple)">Authentication (NAT auth)</text><text x="56" y="53" font-size="11" style="fill:var(--muted)">WHO requested this? — user identity, role</text>
+          <line x1="185" y1="62" x2="185" y2="80" stroke-width="2" marker-end="url(#arrC)" style="stroke:var(--muted)"/>
+          <rect x="40" y="82" width="290" height="46" rx="9" style="fill:color-mix(in srgb, var(--amber) 12%, var(--bg2));stroke:var(--amber)"/><text x="56" y="102" font-weight="bold" style="fill:var(--amber)">Execution rail (Guardrails)</text><text x="56" y="119" font-size="11" style="fill:var(--muted)">SHOULD this be allowed? — policy / gate</text>
+          <line x1="185" y1="128" x2="185" y2="146" stroke-width="2" marker-end="url(#arrC)" style="stroke:var(--muted)"/>
+          <rect x="40" y="148" width="290" height="46" rx="9" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="56" y="168" font-weight="bold" style="fill:var(--green)">Agent execution (NAT)</text><text x="56" y="185" font-size="11" style="fill:var(--muted)">WHAT did the agent do? — full action trace</text>
+          <line x1="185" y1="194" x2="185" y2="212" stroke-width="2" marker-end="url(#arrC)" style="stroke:var(--muted)"/>
+          <rect x="40" y="214" width="290" height="46" rx="9" style="fill:color-mix(in srgb, var(--blue) 12%, var(--bg2));stroke:var(--blue)"/><text x="56" y="234" font-weight="bold" style="fill:var(--blue)">Audit log + redaction</text><text x="56" y="251" font-size="11" style="fill:var(--muted)">RECORD — logged, PII-redacted, queryable</text>
+          <line x1="185" y1="260" x2="185" y2="278" stroke-width="2" marker-end="url(#arrC)" style="stroke:var(--muted)"/>
+          <rect x="40" y="280" width="290" height="40" rx="9" style="fill:color-mix(in srgb, var(--cyan) 12%, var(--bg2));stroke:var(--cyan)"/><text x="56" y="305" font-weight="bold" style="fill:var(--cyan)">Observability (NAT OTel) — HOW did it perform?</text>
+          <!-- three guarantees -->
+          <rect x="400" y="60" width="330" height="68" rx="9" style="fill:var(--panel2);stroke:var(--green)"/><text x="416" y="84" font-weight="bold" style="fill:var(--green)">Traceability</text><text x="416" y="104" font-size="11" style="fill:var(--muted)">every action → a specific user request</text><text x="416" y="120" font-size="11" style="fill:var(--muted)">(trace/correlation IDs in spans + entries)</text>
+          <rect x="400" y="136" width="330" height="60" rx="9" style="fill:var(--panel2);stroke:var(--purple)"/><text x="416" y="160" font-weight="bold" style="fill:var(--purple)">Accountability</text><text x="416" y="180" font-size="11" style="fill:var(--muted)">tied to an authenticated user + approver id</text>
+          <rect x="400" y="204" width="330" height="78" rx="9" style="fill:var(--panel2);stroke:var(--blue)"/><text x="416" y="228" font-weight="bold" style="fill:var(--blue)">Reviewability</text><text x="416" y="248" font-size="11" style="fill:var(--muted)">human-readable, queryable/indexed,</text><text x="416" y="264" font-size="11" style="fill:var(--muted)">PII-redacted, append-only hash-chained</text><text x="416" y="280" font-size="10.5" style="fill:var(--red)">unsearchable JSONL = compliance theater</text>
+        </g>
+      </svg>
+    </div>
+    <div class="note"><b>Hash-chain + single-writer:</b> make the log tamper-evident — <code>entry_hash = sha256(prev_hash + entry)</code>; a broken chain reveals after-the-fact edits. Concurrent sessions writing one chain corrupt ordering — funnel audit writes through one queue/lock.</div>
+
+    <h3>NVIDIA-documented vs inferred (likely meta-question)</h3>
+    <div class="grid g2">
+      <div class="card accent-green"><span class="tag tag-green">NVIDIA-documented primitives</span><h4>The real features</h4><p>WebSocket/HTTP interactive workflows · NeMo Guardrails execution rails · per-user functions + authentication providers · observability/tracing · structured output.</p></div>
+      <div class="card accent-amber"><span class="tag tag-amber">Inferred design patterns</span><h4>NVIDIA gives primitives, not the pattern</h4><p>Approval-workflow design (sync/async) · escalation paths with confidence thresholds · async approval <i>queues</i> · feedback loops · graceful degradation.</p></div>
+    </div>
+    <div class="trap"><h4>The trap option</h4><p>"Escalation paths with confidence thresholds — NVIDIA-documented" is wrong: the <i>trigger</i> is a design pattern; only the implementation primitives (execution rail, output parsing, step counting) are NVIDIA features.</p></div>
   </div>
 </section>
 
@@ -689,7 +811,7 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
 <section id="traps">
   <div class="wrap">
     <div class="kicker">Section 6 · Exam traps &amp; gotchas</div>
-    <h2>14 traps the exam loves</h2>
+    <h2>19 traps the exam loves</h2>
     <div class="grid g2">
       <div class="trap"><h4>1 · HITL vs HOTL confusion</h4><p>HITL = agent <b>waits</b> for approval before acting; HOTL = agent acts, human monitors and can intervene/override. "Reviews outcomes on a dashboard and can pause the agent" is <b>HOTL, not HITL</b>.</p></div>
       <div class="trap"><h4>2 · "Gate everything" is wrong</h4><p>Approval gates on every step cause approval fatigue and rubber-stamping. Correct: gate only high-risk/irreversible actions; the rest is monitored or autonomous.</p></div>
@@ -705,6 +827,11 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
       <div class="trap"><h4>12 · NAT HITL details</h4><p>Interaction models are Pydantic (<code>HumanPromptText</code> etc.); full set supported under <code>nat serve</code> (WebSocket), while <code>nat run</code> supports only <code>HumanPromptText</code>; HITL prompts can carry a timeout (server raises <code>TimeoutError</code> on expiry; default is no timeout).</p></div>
       <div class="trap"><h4>13 · Undo ≠ confirmation</h4><p>Confirmation is <i>pre-action</i> friction for irreversible ops; undo is <i>post-action</i> reversal for reversible ones. Irreversible actions need confirmation precisely because undo is impossible — "undo" for a sent wire transfer is a trap.</p></div>
       <div class="trap"><h4>14 · Audit logging is not optional in HOOTL</h4><p>Removing the human from the loop <b>raises</b> the bar for logging, rate limits, and after-the-fact review. "Fully autonomous, so no logging needed" is always wrong.</p></div>
+      <div class="trap"><h4>15 · HIC ≠ HITL</h4><p>Human-in-command = agent only <b>recommends/drafts</b>, human makes every decision (EU AI Act term, via NAT structured output). HITL = agent <b>acts after</b> per-step approval. "Agent generates a report for the human to send" is HIC, not HITL.</p></div>
+      <div class="trap"><h4>16 · NAT HITL is WebSocket <i>or</i> HTTP</h4><p>Primary transport is WebSocket, but NAT also supports HITL/OAuth interactive execution <b>over plain HTTP</b> for WebSocket-limited environments. "WebSocket is the only way" is wrong.</p></div>
+      <div class="trap"><h4>17 · Per-user functions are oversight, not just security</h4><p>Limiting an agent's tool set by user role is capability control: the agent for a regular user <b>cannot</b> call admin tools — they aren't in its set. And tool-list filtering alone isn't enough — back it with an execution-rail permission check (the LLM may still try a removed tool).</p></div>
+      <div class="trap"><h4>18 · Graceful degradation on timeout — never "execute anyway"</h4><p>When the approver is unavailable: <b>queue for review</b> or <b>inform the user it's pending</b>. Auto-executing on timeout defeats the gate. Also: blocking <i>without</i> a timeout is its own anti-pattern (resources held forever).</p></div>
+      <div class="trap"><h4>19 · Auditability is a <i>composition</i>, not one feature</h4><p>"Which NAT features give a complete audit trail?" → <b>authentication (who) + audit/middleware logging (what) + observability (how)</b> — not NIM, Dynamo, or Helm. And an audit log nobody can query is compliance theater.</p></div>
     </div>
   </div>
 </section>
@@ -713,7 +840,7 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
 <section id="quiz">
   <div class="wrap">
     <div class="kicker">Section 7 · Scenario drills</div>
-    <h2>Quiz yourself: 6 "best design" scenarios</h2>
+    <h2>Quiz yourself: 10 "best design" scenarios</h2>
     <p class="sub">Read the scenario, decide your answer, then reveal.</p>
 
     <details class="drill"><summary><span class="qnum">Q1</span>A finance agent drafts and executes vendor payments. Payments over $10k must be human-approved before execution; the reviewer may not respond for hours. Best design?</summary>
@@ -744,6 +871,26 @@ graph.invoke(Command(resume={"approve": <span class="pre-k">True</span>}),
     <details class="drill"><summary><span class="qnum">Q6</span>On the NVIDIA stack, a NeMo Agent Toolkit ReAct agent hits its <code>max_iterations</code> mid-task. The team wants the user to decide whether it continues. Which mechanism?</summary>
       <div class="answer"><div class="verdict">→ NAT HITL: acquire user_interaction_manager from Context, call prompt_user_input with an approval prompt (per the hitl_approval_function / simple_calculator_hitl pattern); continue and raise iterations only on "yes".</div>
       <p>This is NAT's built-in, config-driven approval-gate pattern — no custom pause logic or framework switch needed.</p></div>
+    </details>
+
+    <details class="drill"><summary><span class="qnum">Q7</span>A NAT support agent has tools <code>search</code>, <code>send_email</code>, <code>issue_refund</code>, <code>delete_record</code>. Regular users must never trigger refunds or deletions, even via prompt injection. How, on the NVIDIA stack?</summary>
+      <div class="answer"><div class="verdict">→ Per-user functions via NAT authentication: map the regular-user role to a tool set of {search} only, so issue_refund / delete_record are not in the agent's tool set for that user. Back it with an execution-rail permission check so a removed tool is also blocked at runtime.</div>
+      <p>Capability isolation by authenticated role is least privilege at the agent level — the agent literally cannot call what it can't see.</p></div>
+    </details>
+
+    <details class="drill"><summary><span class="qnum">Q8</span>A refund agent needs manager approval for refunds over $500, but the manager is often in meetings for an hour. The team wants the agent to keep serving other users meanwhile. Sync or async, and what on timeout?</summary>
+      <div class="answer"><div class="verdict">→ Asynchronous approval: execution rail gates issue_refund &gt; $500, queues the action (NAT async/Dask + notification), agent releases resources. On timeout, degrade gracefully — keep queued for later review and inform the user it's pending; never auto-execute.</div>
+      <p>Sync approval would block resources for an hour; auto-execute-on-timeout defeats the gate.</p></div>
+    </details>
+
+    <details class="drill"><summary><span class="qnum">Q9</span>A compliance officer asks: "Which NVIDIA features prove who did what and let us reconstruct any decision?" Which combination?</summary>
+      <div class="answer"><div class="verdict">→ NAT authentication (who/identity + approver) + audit logging with PII redaction (what, append-only, queryable) + NAT observability/OTel (how/traces, cost) — giving traceability, accountability, reviewability.</div>
+      <p>Not NIM / Dynamo / Helm. Auditability is a composition of auth + logging + observability, hash-chained and searchable.</p></div>
+    </details>
+
+    <details class="drill"><summary><span class="qnum">Q10</span>The product team wants the agent to draft investment recommendations, but a licensed advisor must make and place every trade decision. Where on the oversight ladder, and how on NVIDIA?</summary>
+      <div class="answer"><div class="verdict">→ Human-in-command (HIC): the agent uses NAT structured output to produce a recommendation/draft only; execution is entirely the advisor's.</div>
+      <p>HIC (EU AI Act term) is "agent recommends, human commands" — stronger than HITL, where the agent would act after approval. Regulated, high-stakes judgment ⇒ keep the human in command.</p></div>
     </details>
   </div>
 </section>

@@ -177,8 +177,11 @@
   <a href="#fortress">3D Fortress</a>
   <a href="#mental">Mental Model</a>
   <a href="#rails">5 Rails</a>
-  <a href="#colang">Colang</a>
+  <a href="#lifecycle">Lifecycle &amp; Auditor</a>
+  <a href="#colang">Colang 2.0</a>
+  <a href="#deploy">Deploy &amp; CLI</a>
   <a href="#jailbreak">Jailbreak &amp; Topics</a>
+  <a href="#pii">PII</a>
   <a href="#contentsafety">Content Safety</a>
   <a href="#owasp">OWASP Top 10</a>
   <a href="#garak">Garak</a>
@@ -760,6 +763,38 @@ completion = rails.generate(
   </div>
 </section>
 
+<!-- ============================== LIFECYCLE & AUDITOR ============================== -->
+<section id="lifecycle">
+  <h2 class="sec"><span class="chip">03b</span>The 4-Stage Safety Lifecycle &amp; NeMo Auditor</h2>
+  <p class="lede">NVIDIA frames agentic safety as a <b>lifecycle</b>, not a single runtime filter. Memorize the four stages and which tool owns each — the exam asks you to <b>map the NVIDIA tool to the stage</b>.</p>
+
+  <div class="svgbox">
+    <svg viewBox="0 0 1040 200" width="1040" height="200" font-family="Segoe UI, Arial, sans-serif">
+      <defs><marker id="lcar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--green)"/></marker></defs>
+      <rect x="20" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="130" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--red)">1 · EVALUATE</text><text x="130" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">offline vuln scan + benchmarks</text>
+      <rect x="280" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--purple) 12%, var(--bg2));stroke:var(--purple)"/><text x="390" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--purple)">2 · POST-TRAIN</text><text x="390" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">safety SFT/DPO into the model</text>
+      <rect x="540" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 12%, var(--bg2));stroke:var(--blue)"/><text x="650" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--blue)">3 · DEPLOY</text><text x="650" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">trusted model via NIM</text>
+      <rect x="800" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="910" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--green)">4 · RUNTIME</text><text x="910" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">inference-time guardrails</text>
+      <line x1="240" y1="87" x2="278" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
+      <line x1="500" y1="87" x2="538" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
+      <line x1="760" y1="87" x2="798" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
+      <text x="130" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--red)">NeMo Auditor</text>
+      <text x="390" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--purple)">Customizer + Safe Synthesizer</text>
+      <text x="650" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--blue)">NIM containers</text>
+      <text x="910" y="142" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--green)">NeMo Guardrails + Safety NIMs</text>
+      <text x="910" y="158" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--green)">+ NAT defense middleware</text>
+    </svg>
+  </div>
+
+  <div class="callout"><b>Exam-critical history:</b> the <strong>Safety for Agentic AI Blueprint</strong> (the original integrated build→deploy→run pipeline) was <strong>deprecated April 22, 2026</strong>. NVIDIA now recommends the modular <strong>NeMo Microservices</strong> trio — <strong>NeMo Auditor</strong> (pre-deployment scanning) + <strong>NeMo Guardrails</strong> (runtime) + <strong>Safe Synthesizer</strong> (privacy-preserving synthetic data). If a question cites the "Safety Blueprint," answer "deprecated → use the trio." The lifecycle <i>model</i> is still a valid conceptual frame.</div>
+
+  <div class="grid g3">
+    <div class="card accent-red"><h4>🔍 NeMo Auditor <span class="tag pl-r">Stage 1 · offline</span></h4><p>NeMo Microservice that probes an LLM/agent <b>offline, in batch</b> with automated attacks to find safety/security holes <b>before</b> shipping. <b>Built on the Garak library</b> — the productized, CI-gateable wrapper around Garak-style scanning. Pieces: <b>audit jobs</b>, <b>vulnerability scanning</b>, <b>safety scoring</b>. Use as a <b>CI/CD gate</b> (fail the audit → no deploy). Replaces the Blueprint's evaluate stage.</p></div>
+    <div class="card accent-purple"><h4>🧪 Safe Synthesizer <span class="tag pl-p">Stage 2 · Early Access</span></h4><p>Generates <b>privacy-protected synthetic tabular data</b> from sensitive datasets — PII replacement + optional <b>differential privacy</b> — preserving statistical patterns so you can train/eval <b>without exposing real records</b>. <b>Not a runtime guardrail.</b></p></div>
+    <div class="card accent-green"><h4>🔗 The relationship</h4><p><b>Garak</b> = the scanning engine · <b>NeMo Auditor</b> = the managed microservice / CI gate built on it · <b>NeMo Guardrails</b> = the runtime rails. Auditor + Garak are <b>offline</b>; Guardrails is <b>inference-time</b>. Don't conflate.</p></div>
+  </div>
+</section>
+
 <!-- ============================== COLANG ============================== -->
 <section id="colang">
   <h2 class="sec"><span class="chip">04</span>Colang — The Dialog-Rail Language</h2>
@@ -793,6 +828,50 @@ completion = rails.generate(
     </table>
   </div>
   <div class="callout"><b>Exam-level takeaway:</b> Colang = how you write dialog rails and topic control; <strong>canonical forms = the intent abstraction layer</strong>, matched semantically via embeddings.</div>
+
+  <h3 class="sub">Colang 2.0 — what's actually new</h3>
+  <p class="lede" style="margin-bottom:16px">Colang 2.0 is a fuller event-driven language: a <code class="inline">flow</code> can <code class="inline">match</code> / <code class="inline">send</code> events, use real control flow (<code class="inline">if/else/while</code>), scope local <code class="inline">$variables</code>, and use the <code class="inline">when</code> keyword for <b>event-triggered</b> logic (the key construct for execution rails). Set it with <code class="inline">colang_version: "2.x"</code>. New projects should use 2.0.</p>
+  <div class="grid g2">
+    <div>
+      <pre><span class="c"># Colang 2.0: input content-safety rail as control flow</span>
+<span class="k">define flow</span> content safety check input
+  $is_safe = execute content_safety_check(text=$user_message)
+  <span class="k">if</span> not $is_safe
+    bot refuse unsafe content
+    <span class="k">stop</span>          <span class="c"># main LLM never runs</span></pre>
+    </div>
+    <div>
+      <pre><span class="c"># Colang 2.0: EXECUTION rail — validate a tool call</span>
+<span class="k">define flow</span> validate tool call
+  <span class="k">when</span> tool_call                       <span class="c"># fires on tool-call event</span>
+    <span class="k">if</span> $tool_call.name == <span class="s">"execute_sql"</span>
+      <span class="k">if</span> contains($tool_call.parameters.query, <span class="s">"DROP"</span>)
+        bot refuse dangerous operation
+        <span class="k">stop</span>
+    execute tool_call
+    <span class="k">when</span> tool_result                    <span class="c"># post-call check</span>
+      <span class="k">if</span> $tool_result.status == <span class="s">"error"</span>
+        bot report tool error gracefully</pre>
+    </div>
+  </div>
+  <div class="callout"><b>The <code class="inline">when tool_call</code> / <code class="inline">when tool_result</code> pattern is the canonical Colang 2.0 execution rail</b> — validate params <i>before</i> the tool fires, inspect results <i>after</i>. Colang 2.0 is whitespace-sensitive; a stray blank line breaks the flow at parse time (test with <code class="inline">nemoguardrails chat --config ./config --verbose</code>).</div>
+</section>
+
+<!-- ============================== DEPLOY & CLI ============================== -->
+<section id="deploy">
+  <h2 class="sec"><span class="chip">04b</span>Deployment Tiers, CLI &amp; FastAPI Server</h2>
+  <p class="lede">NeMo Guardrails runs in two modes — know the distinction, and the CLI verbs (the exam may ask "which command starts the server").</p>
+
+  <div class="grid g2">
+    <div class="card accent-top"><h4>📦 Library mode <span class="tag pl-g">light · CPU laptop</span></h4><p><code class="inline">pip install nemoguardrails langchain-nvidia-ai-endpoints</code> + <code class="inline">NVIDIA_API_KEY</code> + NVIDIA-hosted models. Gives the <b>Python API and CLI</b>. Default for dev and most labs.</p></div>
+    <div class="card accent-purple"><h4>🐳 Microservice mode <span class="tag pl-p">heavy · NGC/K8s</span></h4><p>NGC container <code class="inline">nvcr.io/nvidia/nemoguardrails</code> — needs NGC API key, Docker, possibly GPU for Safety NIM models, Kubernetes for prod. Use for a standalone, centrally-governed guardrails service.</p></div>
+  </div>
+
+  <pre style="margin-top:16px"><span class="f">nemoguardrails</span> chat     --config ./config            <span class="c"># interactive chat (--verbose to debug Colang parse errors)</span>
+<span class="f">nemoguardrails</span> evaluate --config ./config            <span class="c"># run eval tasks (e.g. fact-checking) against a dataset</span>
+<span class="f">nemoguardrails</span> server   --config ./config --port 8000   <span class="c"># FastAPI server (needs: pip install nemoguardrails[server])</span></pre>
+
+  <div class="callout">The <b>FastAPI server exposes an OpenAI-compatible <code class="inline">/v1/chat/completions</code> endpoint</b> (pick a config with <code class="inline">config_id</code> in the request body) — so guardrails become a <strong>drop-in replacement</strong> for an existing LLM API call.</div>
 </section>
 
 <!-- ============================== JAILBREAK + TOPIC ============================== -->
@@ -870,6 +949,53 @@ completion = rails.generate(
   <span class="k">output</span>:
     <span class="k">flows</span>:
       - content safety check output $model=content_safety</pre>
+</section>
+
+<!-- ============================== PII ============================== -->
+<section id="pii">
+  <h2 class="sec"><span class="chip">06b</span>PII Detection &amp; Redaction + Fact-Checking Rails</h2>
+  <p class="lede">NeMo Guardrails ships a <code class="inline">sensitive data detection</code> capability (input, output, <b>and</b> retrieval flows) that wires to multiple PII engines — know the provider names.</p>
+
+  <div class="tblwrap">
+    <table>
+      <tr><th>Provider</th><th>What it is</th></tr>
+      <tr><td class="cell-b"><b>Presidio</b></td><td>Microsoft's open-source PII detect + anonymize engine (needs a spaCy model, e.g. <code>en_core_web_lg</code>); the default community integration</td></tr>
+      <tr><td class="cell-g"><b>GLiNER</b></td><td>Open-source NER for PII; NVIDIA fine-tuned it on its <b>Nemotron-PII</b> dataset → <b>GLiNER-PII</b>. <i>Presidio + GLiNER combined = best accuracy.</i></td></tr>
+      <tr><td class="cell-p"><b>Private AI</b></td><td>Commercial detect/mask — broader entity set, multi-file-format support, higher accuracy</td></tr>
+      <tr><td class="cell-y"><b>AutoAlign</b></td><td>AutoAlign's commercial "Sidecar" guardrails — PII detect/redact with configurable entity types (community integration)</td></tr>
+    </table>
+  </div>
+  <p style="margin-top:12px;font-size:.85rem;color:var(--muted)">Outside Guardrails, <b style="color:var(--ink)">NAT redaction processors</b> (the <code class="inline">nvidia-nat[pii-defense]</code> extra) redact PII at the <b>agent-framework</b> level — across inputs, tool parameters, and outputs.</p>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card accent-blue"><h4>🎭 Mask / redact</h4><p>Replace PII with placeholders (<code class="inline">[EMAIL]</code>, <code class="inline">[SSN]</code>) when the request is still answerable without the real values — the standard choice for logging/analytics and most user PII.</p></div>
+    <div class="card accent-red"><h4>🚫 Block</h4><p>Refuse the whole request when PII presence <b>itself</b> signals a violation — e.g., a user pasting <b>someone else's</b> SSN.</p></div>
+  </div>
+
+  <pre style="margin-top:16px"><span class="c"># config.yml — Presidio-backed input PII masking</span>
+<span class="k">rails</span>:
+  <span class="k">input</span>:
+    <span class="k">flows</span>:
+      - mask sensitive data on input
+<span class="k">sensitive_data_detection</span>:
+  <span class="k">input</span>:
+    <span class="k">entities</span>: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, US_SSN, CREDIT_CARD, IP_ADDRESS]
+    <span class="k">provider</span>: presidio</pre>
+
+  <div class="trap"><span class="tno">!</span><b>Anti-pattern:</b> redacting PII from the <strong>response</strong> but logging the <strong>original un-redacted</strong> content for debugging — your logs become the PII leak. <strong>Redact before logging</strong> (log the entity <i>type</i> + score, never the raw value).</div>
+
+  <h3 class="sub">Fact-checking &amp; hallucination rails</h3>
+  <div class="grid g2">
+    <div class="card accent-top"><h4>Retrieval rail (before)</h4><p>Filter/repair RAG chunks <b>before</b> generation — drop irrelevant / contradictory / poisoned context.</p></div>
+    <div class="card accent-yellow"><h4>Fact-check output rail (after)</h4><p>Verify the answer is grounded in retrieved context <b>after</b> generation. Built-in <code class="inline">self check facts</code> rail; <code class="inline">nemoguardrails evaluate fact-checking</code> scores it.</p></div>
+  </div>
+  <pre style="margin-top:14px"><span class="k">define flow</span> check output hallucination
+  <span class="k">when</span> bot_message
+    $grounded = execute check_hallucination(response=$bot_message, context=$relevant_chunks)
+    <span class="k">if</span> not $grounded
+      bot warn about uncertainty
+      <span class="k">stop</span></pre>
+  <div class="callout"><b>Full stack:</b> retrieval rails filter chunks → system prompt "use only provided context" → output fact-check rail → confidence threshold triggers <b>human escalation</b>. <b>Tuning:</b> too strict a grounding check flags <i>every</i> response as ungrounded — fire only when a claim clearly contradicts or is absent from the context.</div>
 </section>
 
 <!-- ============================== OWASP ============================== -->
@@ -1093,8 +1219,16 @@ garak --list_probes</pre>
       <tr><td><b>Aegis dataset</b> (Nemotron Content Safety Dataset V2)</td><td>~30–35k human-annotated safety samples powering NemoGuard ContentSafety</td><td>Fine-tuning/evaluating your own safety classifiers</td></tr>
       <tr><td><b>NIM microservices</b> generally</td><td>Self-hosted, containerized inference → data residency + auditability story</td><td>Regulated industries; data cannot leave region/VPC</td></tr>
       <tr><td><b>Model Card++</b></td><td>NVIDIA's enhanced model documentation (bias, safety, privacy, explainability subcards)</td><td>Governance evidence for models pulled from NGC / build.nvidia.com</td></tr>
-      <tr><td><b>NeMo Agent Toolkit (AIQ)</b></td><td>Profiling/observability/evaluation for agent workflows — feeds auditability</td><td>You need traces of agent tool-call chains for audit</td></tr>
+      <tr><td><b>NeMo Auditor</b> (NeMo Microservice)</td><td>Pre-deployment / CI <b>offline</b> safety + vuln scanning (Garak-based); audit jobs, vuln scanning, safety scoring</td><td>Stage 1 gate: block deploys that fail a safety audit; replaces the deprecated Safety Blueprint's evaluate stage</td></tr>
+      <tr><td><b>NAT Safety &amp; Security Engine</b> (NeMo Agent Toolkit)</td><td>In-workflow <b>defense middleware</b> (intercept + mitigate inline), <b>red-teaming middleware</b> (simulate injection/jailbreak/tool-poisoning vs the whole workflow), <b>redaction processors</b> (<code>nvidia-nat[pii-defense]</code>), <b>Profiler</b></td><td>Guardrails/red-teaming <b>inside</b> a NAT agent workflow (not just one LLM call) + token/tool-call profiling</td></tr>
+      <tr><td><b>Safe Synthesizer</b> (NeMo Microservice, <i>Early Access</i>)</td><td>Generates <b>privacy-protected synthetic tabular data</b> — PII replacement + optional <b>differential privacy</b></td><td>Train/eval on sensitive-data patterns without exposing real records (Stage 2); <b>not</b> a runtime control</td></tr>
+      <tr><td><b>NeMo Agent Toolkit (AIQ) Profiler</b></td><td>Profiling/observability/evaluation for agent workflows — feeds auditability; measures per-rail latency</td><td>You need traces of agent tool-call chains for audit + to tune the guardrail latency budget</td></tr>
     </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card accent-blue"><h4>🧩 NAT middleware vs NeMo Guardrails — don't conflate</h4><p>NeMo Guardrails wraps a <b>single LLM interaction</b> (input→dialog→retrieval→execution→output). <b>NAT defense middleware</b> sits in the <b>agent workflow's</b> pipeline applying fast rule-based checks (prompt-injection / input-length / encoding-attack on input; PII redaction + toxic filter on output) across the whole multi-agent chain. Production layers <b>both</b>: NAT (fast, rule-based) → Guardrails (LLM- + NIM-based). <b>NAT red-teaming middleware</b> is the dev-time counterpart — simulated attack campaigns against the live workflow to catch regressions.</p></div>
+    <div class="card accent-red"><h4>🔒 Fail-closed, not fail-open</h4><p>When a safety dependency (e.g., the ContentSafety NIM) is unreachable, degrade to a <b>more restrictive mode (fail closed)</b> — block or fall back to heuristics — <b>never silently bypass (fail open)</b>, which lets attacks through. A fallback that returns "safe" by default has disabled the rail. Production policy: fail closed, documented.</p></div>
   </div>
 
   <h3 class="sub">The canonical NVIDIA safety pipeline</h3>
@@ -1189,6 +1323,10 @@ garak --list_probes</pre>
     <div class="trap"><span class="tno">10</span><b>Watermarking vs provenance metadata.</b> C2PA = signed <strong>metadata</strong> (strippable but tamper-evident); SynthID = signal <strong>inside</strong> the pixels/tokens (survives metadata stripping). Robust deployments use both. Neither is an "AI detector."</div>
     <div class="trap"><span class="tno">11</span><b>Colang flows are matched semantically (embeddings), not by exact string/regex.</b> Example utterances under <code>define user</code> are training examples for intent matching.</div>
     <div class="trap"><span class="tno">12</span><b>Training data poisoning (LLM04) happens at build time; prompt injection at run time.</b> A backdoored fine-tune dataset = poisoning; a malicious RAG document = indirect injection (runtime). Poisoning the <strong>embedding store</strong> is LLM04/LLM08 territory — ask whether the artifact is persisted into the model/index or transient in the prompt.</div>
+    <div class="trap"><span class="tno">13</span><b>NeMo Auditor (pre-deployment) ≠ NeMo Guardrails (runtime).</b> Auditor is the Garak-based <strong>offline</strong> CI scanner (Stage 1); Guardrails is <strong>inference-time</strong> enforcement (Stage 4). "Scan/audit before launch" → Auditor; "block at request time" → Guardrails. The <strong>Safety Blueprint is deprecated (Apr 22, 2026)</strong> → answer with the Auditor + Guardrails + Safe Synthesizer trio.</div>
+    <div class="trap"><span class="tno">14</span><b>Fail closed, not open.</b> If a Safety NIM is down, degrade to <strong>more</strong> restrictive (block / heuristic fallback), never bypass. A fallback that returns "safe" by default silently disables the rail.</div>
+    <div class="trap"><span class="tno">15</span><b>Safe Synthesizer is a data/privacy tool, not a runtime guardrail.</b> It makes privacy-protected synthetic tabular data (optionally with differential privacy) for training/eval — it does not intercept requests. Early Access.</div>
+    <div class="trap"><span class="tno">16</span><b>Execution rail in Colang 2.0 = <code>when tool_call</code>.</b> The event-driven <code>when</code> keyword signals a flow validating a tool call before/after it fires — distinct from output rails (<code>when bot_message</code>) and input rails (<code>$user_message</code>).</div>
   </div>
 </section>
 
@@ -1220,6 +1358,26 @@ garak --list_probes</pre>
   <details class="drill">
     <summary><span class="qno">6</span><span class="q">The model's answer is inserted directly into your web UI's HTML, and a tester got <code class="inline">&lt;script&gt;</code> to execute. Which OWASP item and fix?</span><span class="hintreveal">REVEAL ▾</span></summary>
     <div class="ans"><span class="verdict">→ Improper Output Handling (LLM05)</span>Treat LLM output as <b>untrusted</b>: encode/sanitize before rendering (and add an output rail) — regardless of how "safe" the model seems.</div>
+  </details>
+  <details class="drill">
+    <summary><span class="qno">7</span><span class="q">Your team wants a CI gate that batch-scans the agent's LLM for jailbreak/toxicity/leakage and emits a safety score, blocking deploys that fail. Which NVIDIA tool — and is it runtime?</span><span class="hintreveal">REVEAL ▾</span></summary>
+    <div class="ans"><span class="verdict">→ NeMo Auditor (offline, Stage 1)</span>Garak-based pre-deployment scanner; <b>not</b> runtime (that's NeMo Guardrails). If the prompt cites the "Safety for Agentic AI Blueprint," note it's <b>deprecated (Apr 22, 2026)</b> → use the NeMo Microservices trio.</div>
+  </details>
+  <details class="drill">
+    <summary><span class="qno">8</span><span class="q">A SQL tool runs <code class="inline">DROP TABLE</code> before the output rail can act. Which rail type was missing, and what Colang 2.0 keyword triggers it?</span><span class="hintreveal">REVEAL ▾</span></summary>
+    <div class="ans"><span class="verdict">→ Execution rail · <code class="inline">when tool_call</code></span>It validates the tool call <b>before</b> execution: <code class="inline">when tool_call</code> → check <code class="inline">$tool_call.parameters.query</code> for <code class="inline">DROP</code>/<code class="inline">DELETE</code> → <b>refuse + stop</b>. Output rails fire too late — the damage is done.</div>
+  </details>
+  <details class="drill">
+    <summary><span class="qno">9</span><span class="q">The ContentSafety NIM is unreachable in production. What should the system do?</span><span class="hintreveal">REVEAL ▾</span></summary>
+    <div class="ans"><span class="verdict">→ Fail closed</span>Block or fall back to heuristic/self-check, degrading to a <b>more</b> restrictive mode. Never fail open (silently bypass), which lets attacks through.</div>
+  </details>
+  <details class="drill">
+    <summary><span class="qno">10</span><span class="q">You must fine-tune a safety classifier on support transcripts containing real SSNs/emails, but compliance forbids the raw records. Which NVIDIA tool?</span><span class="hintreveal">REVEAL ▾</span></summary>
+    <div class="ans"><span class="verdict">→ Safe Synthesizer</span>Generates privacy-protected synthetic tabular data (PII replacement + optional differential privacy) preserving statistical patterns, so you train without exposing real PII. (Early Access — a data tool, <b>not</b> a runtime guardrail.)</div>
+  </details>
+  <details class="drill">
+    <summary><span class="qno">11</span><span class="q">You want red-teaming that attacks the <b>whole multi-agent NAT workflow</b> (tool poisoning, cross-agent injection) during development. What do you use?</span><span class="hintreveal">REVEAL ▾</span></summary>
+    <div class="ans"><span class="verdict">→ NAT red-teaming middleware</span>The Safety &amp; Security Engine exercises the full agent workflow inline. Garak/Auditor scan a model endpoint; NAT red-teaming targets the workflow.</div>
   </details>
 </section>
 

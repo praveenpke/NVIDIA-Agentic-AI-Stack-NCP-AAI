@@ -83,6 +83,22 @@ Stay single-agent when subtasks are **tightly coupled** and every decision depen
 
 Memorize the **communication axis**: supervisor = hub-and-spoke messages; peer-to-peer = direct messages; blackboard = *no* messages, shared memory; pipeline = one-way baton pass.
 
+**Fifth topology — competitive (judge/merger):** N agents independently produce an answer to the *same* query, then a **judge/merger agent** picks the best or fuses them. This is the multi-agent twin of the **voting** workflow (§3.1) and the **evaluator-optimizer** loop. Strength: higher quality on ambiguous/high-stakes decisions (diversity + adjudication). Weakness: **multiplies cost** (N full solves + a judge) — reserve it for decisions worth the spend. *Trap:* "several agents each answer and a judge selects" → competitive, not supervisor (the supervisor *delegates different* subtasks; competitive runs the *same* task in parallel).
+
+**Multi-agent coordination failure modes (failure-diagnosis questions).** When you do go multi-agent, the exam tests whether you can name the pathology and its fix:
+
+| Failure | Symptom | Fix |
+|---|---|---|
+| **Cascading failure** | A→B→C; C fails, so B fails, so A fails | **Circuit breakers + timeouts + fallback** at every agent boundary |
+| **Infinite delegation loop** | A delegates to B, B delegates back to A, forever ("telephone") | **Max delegation depth counter**; loop detection via request/correlation IDs |
+| **Conflicting outputs** | Two agents return contradictory answers | Explicit **conflict-resolution rule**: a judge agent, priority ranking, or domain-authority ("billing agent wins on billing") |
+| **State synchronization bug** | Agent reads *stale* shared state before another's write propagates | **Version numbers / optimistic locking**, read-after-write consistency, or a **single-writer** per data domain |
+| **Over-decomposition** | 15 agents where 3 would do — every boundary adds latency + failure surface | Start with **fewer, larger** agents; split only on evidence (tool-set size, domain confusion) |
+| **God Router** | The router accreted so much logic it's a single agent with extra hops | **Router routes only**; business logic lives in sub-agents |
+| **Missing observability** | Can't trace which agent did what | **Distributed tracing** — propagate request/correlation IDs through every hop (NAT's profiler/telemetry) |
+
+**Shared-state strategies** (how multi-agents share context, cheapest→most robust): **message passing** (each message self-contains context — simple, but messages bloat) → **shared key-value store** (Redis-style — fast, but race-condition-prone) → **event sourcing** (append-only event log, replay to reconstruct — auditable, complex) → **CQRS** (split read/write models). The Warehouse Blueprint uses the **shared-data-layer** approach (§4.3).
+
 ### 3.5 Orchestration frameworks
 
 | Framework | Core abstraction | Statefulness / control | Distinctives | When |
@@ -129,13 +145,58 @@ A tool = **name + description + JSON Schema parameters** (function calling). The
 
 | NVIDIA piece | Role in this domain | Key facts |
 |---|---|---|
-| **NeMo Agent Toolkit** (`pip install nvidia-nat`, CLI `nat`) | THE NVIDIA answer for agent architecture: framework-agnostic library to **build, connect, profile, and optimize teams of agents**. Core idea: *every agent, tool, and workflow is a function call* → composable and reusable across frameworks | Declarative **workflow YAML** with `functions:` (tools *and* sub-agents), `llms:`, `embedders:`, `workflow:` sections; `_type` selects the component. Built-in agent `_type`s: **`react_agent`**, **`tool_calling_agent`**, **`rewoo_agent`**, **`reasoning_agent`**, plus a **router**. CLI: `nat run` (execute), `nat serve` (REST/UI endpoint), `nat eval` (Domain 3). Plugins for LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, Google ADK. **MCP**: can act as MCP *client* (consume remote tools) and MCP *server* (publish any workflow function as a tool). **A2A**: serve workflows as A2A agents and call remote A2A agents — distributed teams with auth. Profiler captures per-step latency/tokens/bottlenecks |
+| **NeMo Agent Toolkit** (`pip install nvidia-nat`, CLI `nat`) | THE NVIDIA answer for agent architecture: framework-agnostic library to **build, connect, profile, and optimize teams of agents**. Core idea: *every agent, tool, and workflow is a function call* → composable and reusable across frameworks | Declarative **workflow YAML** with `functions:` (tools *and* sub-agents), `llms:`, `embedders:`, `workflow:` sections; `_type` selects the component. Built-in agent `_type`s (see §4.1). CLI: `nat run` (execute), `nat serve` (REST/UI endpoint), `nat eval` (Domain 3). Plugins for LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, Google ADK. **MCP**: can act as MCP *client* (consume remote tools) and MCP *server* (publish any workflow function as a tool). **A2A**: serve workflows as A2A agents and call remote A2A agents — distributed teams with auth. Profiler captures per-step latency/tokens/bottlenecks |
 | **NIM (NVIDIA Inference Microservices)** | The model-serving substrate agents call; **OpenAI-API-compatible** endpoints (`base_url=.../v1`) locally or via build.nvidia.com | In NAT YAML: `_type: nim` with `model_name:`; agent nodes are model-agnostic — swap NIMs without changing the graph |
 | **Nemotron models** | NVIDIA's agent-tuned open model family (reasoning toggles, tool calling) | Typical orchestrator/executor choices in NVIDIA examples (e.g., Nemotron Nano for sub-agents, larger for supervisors) |
 | **NVIDIA AI Blueprints** | Reference *architectures*: prebuilt, customizable agentic workflows (e.g., **AI-Q research assistant** — a NAT-based multi-agent deep-research blueprint; customer-service assistant; vulnerability analysis) | Exam angle: Blueprints = validated starting designs combining NIM + NeMo + NAT, not a runtime component |
 | **NeMo microservices** (Customizer, Evaluator, Guardrails, Data Store) | The platform around the architecture: tune the models inside nodes, evaluate workflows, add runtime rails | Architecture domain hook: Guardrails wrap agent I/O; Evaluator/`nat eval` close the loop (Domain 3) |
 
 **Positioning sentence to memorize:** NAT is *not* another agent framework and doesn't replace LangGraph/CrewAI — it's the **connective, observability, and packaging layer** ("framework-agnostic… agents as composable function calls") that lets heterogeneous agents interoperate, get profiled, and be served over MCP/A2A.
+
+### 4.1 NAT built-in agent types (the exam-dense list)
+
+This is where the exam concentrates: NAT ships the reasoning patterns of §3.2 as **concrete, named architecture choices** you select with a single `_type:` line. Memorize the exact `_type` string, the strategy, and the one-line "pick when." A scenario question is usually "given these constraints, which NAT agent type?" — match requirements (latency / accuracy / cost / how dynamic the path is) to the row.
+
+| Agent type | `_type:` | Strategy (one LLM call vs many) | Pick when |
+|---|---|---|---|
+| **Tool Calling Agent** | `tool_calling_agent` | Single-turn: model reads tool schemas, emits 0-or-more tool calls, returns. No loop. **1 LLM call.** | Task is one step; the query→tool mapping is clear; latency must be minimal. The baseline — start here |
+| **ReAct Agent** | `react_agent` | Interleaved **Thought→Action→Observation** loop; re-prompts the model with the full trace each step. **N LLM calls for N steps.** | Multi-step task where each step depends on the *last result*; path is exploratory and must adapt. Set `max_iterations` (default cap) or it loops forever |
+| **ReWOO Agent** | `rewoo_agent` | Plan-then-execute, **three-node graph** (planner → worker → solver): planner writes the whole plan with placeholder vars (#E1→#E2), worker fills them, solver synthesizes. **~1-2 LLM calls** regardless of step count. | Plan is knowable upfront, no conditional branching; you want to cut LLM calls/latency. Cost: no mid-course correction after a bad/failed step |
+| **Reasoning Agent** | `reasoning_agent` | **Wraps another function/agent** and adds an explicit up-front reasoning/plan layer on top of it — it plans *ahead of time* rather than reasoning between steps. | High-accuracy / deep-analysis tasks where a richer plan before acting beats step-by-step reaction. Pairs with reasoning-tuned models (Nemotron). More tokens per turn |
+| **Router Agent** | `router_agent` | **Dispatch only:** classify the request, hand off to the matching sub-agent, *done* — no return loop, no synthesis. Routing can be **LLM-based or rule-based**. | Multi-domain / intent-based systems: send billing→billing agent, code→code agent. Router adds *indirection, not intelligence* — the smarts live in the sub-agents |
+| **Sequential Executor** | `sequential_executor` | **Fixed linear pipeline:** runs the listed functions in order, each output feeding the next; **no decision-making between steps**, always the same order. | Deterministic multi-stage workflows (extract→validate→enrich→store). Use a Router/ReAct instead if any step should be skipped or branched |
+| **Parallel Executor** | `parallel_executor` | Fan-out independent branches **concurrently**, then fan-in/merge, with partial-failure handling. | Independent subtasks you can run at once to cut latency (Anthropic's "parallel tool calls cut research time up to 90%" expressed as a NAT primitive) |
+| **Responses API Agent** | `responses_api_agent` | **Deployment wrapper, not an execution strategy:** exposes a NAT agent behind the **OpenAI Responses API** format. | Interop with OpenAI-native clients/tooling. *Trap:* it is not a new reasoning pattern — it wraps another agent type |
+
+**Worked example — same task, three different `_type`s.** Task: "Find France's and Germany's populations, say which is larger, and write a one-paragraph summary."
+- `tool_calling_agent` → likely **under-calls**: one round-trip, may answer from parametric memory without doing all the lookups. Cheapest, least reliable for this multi-step task.
+- `react_agent` → lookup France → observe → lookup Germany → observe → compute difference → observe → write summary. ~4-5 LLM calls; adapts if a lookup fails; highest token bill.
+- `rewoo_agent` → planner emits `#E1=country_lookup(France)`, `#E2=country_lookup(Germany)`, `#E3=calculator(#E1−#E2)`, `#E4=write_summary(#E3)` in *one* call, then executes. ~2 LLM calls. **But** the classic ReWOO failure shows up here: the calculation step depends on prior lookups, so a weak planner may wire placeholders wrong — and ReWOO can't re-plan. That trade (cheap+rigid vs expensive+adaptive) is exactly the exam's point.
+
+### 4.2 NAT pattern decision framework
+
+The reference's decision ladder, in our voice — walk it top-down and stop at the first match:
+
+1. **One tool call enough?** → `tool_calling_agent`.
+2. **Full plan knowable before execution?** → yes, and you *don't* need error recovery mid-run → `rewoo_agent`; yes, but later steps may fail/branch → `react_agent`.
+3. **Fixed, non-branching multi-stage pipeline?** → `sequential_executor`.
+4. **Independent subtasks runnable at once?** → `parallel_executor`.
+5. **Multiple distinct domains to dispatch between?** → `router_agent` + specialized sub-agents.
+6. **Needs deep up-front reasoning for accuracy?** → `reasoning_agent`.
+7. **Default multi-step otherwise** → `react_agent`.
+
+**Single agent w/ many tools vs split into sub-agents (NAT framing):** keep one agent until tool-selection accuracy degrades — empirically that's around **~15-20 tools**, past which the model picks wrong tools. Then put a `router_agent` in front of domain-scoped sub-agents (each a small, focused `react_agent`/`tool_calling_agent`). This is the same single↔multi call as §3.3, expressed in NAT components.
+
+### 4.3 NVIDIA Blueprints — reference architectures (know which patterns each uses)
+
+Blueprints are **validated reference *designs*** (NIM + NeMo + NAT/LangChain wired into a working system), **not a runtime component** — you customize them, you don't "call" them. The exam names specific ones and asks which agents/patterns they combine:
+
+| Blueprint | What it is | Architecture / patterns to remember |
+|---|---|---|
+| **AI-Q (Enterprise Research Assistant)** | Deep-research agent over enterprise data; built with **LangChain, optimized via NAT** | Orchestrator coordinating **planner + researcher subagents**, each with its own prompt/middleware; **two-tier routing** — common queries take a single tool-calling loop, complex ones enter multi-phase deep-research loops; RAG via **NeMo Retriever**; Guardrails to stop hallucinated citations. The canonical *supervisor/orchestrator-worker* Blueprint |
+| **Multi-Agent Intelligent Warehouse** | Warehouse-ops automation with real-time monitoring + NL interface | **LangGraph-orchestrated Planner/Router + 5 specialized agents** (equipment/asset operations, operations coordination, safety compliance, forecasting, document processing); **MCP for dynamic tool discovery**; agents share state through a **common data layer** (PostgreSQL/TimescaleDB + Milvus), not by passing full context in messages; runs **Llama-3.3 Nemotron Super 49B** (primary) + **Nemotron Nano**. The canonical *router→domain-bounded sub-agents* Blueprint |
+| **Data Flywheel** | System-level *continuous-improvement* pattern, not an agent topology | Logs production traffic → **NeMo Curator** preps data → **NeMo Customizer** fine-tunes candidates (LoRA/p-tuning/SFT) → **NeMo Evaluator** benchmarks (incl. LLM-as-judge) → auto-surfaces the cheapest model meeting latency/cost/accuracy targets → redeploys. Closes the loop with Domain 3/8 |
+| **Retail Agentic Commerce** | Reference impl. of two commerce protocols for shopping agents ↔ merchants | **ACP (Agentic Commerce Protocol)** = shopping-agent↔merchant checkout handshake; **UCP (Universal Commerce Protocol)** = cross-platform standardization so any compliant agent can transact with any compliant merchant. Key idea: **asymmetric trust** — the customer agent *proposes*, the merchant agent *disposes* (accepts/declines, is merchant-of-record); MCP carries the merchant's context bundles. The "agent↔agent across orgs" Blueprint |
 
 ## 5. Decision frameworks
 
@@ -190,6 +251,12 @@ A tool = **name + description + JSON Schema parameters** (function calling). The
 13. **NAT is not a framework competitor** — it *wraps* LangGraph/CrewAI/etc. agents as function calls, profiles them, and serves them over MCP/A2A. "Which NVIDIA component lets a CrewAI agent and a LangGraph agent compose into one workflow?" → NeMo Agent Toolkit.
 14. **CrewAI process modes** — `sequential` = fixed task order (pipeline); `hierarchical` = auto-created **manager** LLM delegates (supervisor). AutoGen's signature is **GroupChat** (conversation, manager picks next speaker). Swapping these is a classic distractor.
 15. **Autonomy is a dial, not a virtue** — for regulated/high-stakes steps the right answer slides *toward* workflows, approval gates, and step budgets, even though "fully autonomous agent" sounds more advanced.
+16. **NAT agent type ≠ reasoning pattern label** — the exam wants the exact `_type:` string. "Plan upfront, one planner call, no observation feedback" → `rewoo_agent`; "loop reasoning each step" → `react_agent`; "single tool round-trip" → `tool_calling_agent`; "fixed pipeline, no branching" → `sequential_executor`; "classify and dispatch once" → `router_agent`. **`responses_api_agent` is a deployment wrapper, not a reasoning pattern** — never the answer to "which reasoning strategy."
+17. **Sequential Executor ≠ ReAct** — Sequential Executor runs a *predetermined* chain with **no decisions between steps**; using it for a workflow where a step must be skipped/branched is an anti-pattern (use Router or ReAct). "Some steps should be conditional" rules Sequential Executor out.
+18. **Router adds indirection, not intelligence** — the task-solving smarts live in the *sub-agents*. A misclassifying router makes the whole system worse, and a router stuffed with business logic is the **God Router** anti-pattern. Also: routing can be **rule-based**, not only LLM-based.
+19. **Competitive ≠ supervisor** — competitive runs the *same* task across N agents and a **judge** adjudicates (expensive, for ambiguous/high-stakes calls); a supervisor *delegates different* subtasks. "N agents answer, a judge merges" → competitive/voting.
+20. **Blueprint ≠ runtime component** — Blueprints (AI-Q, Multi-Agent Warehouse, Data Flywheel, Retail Agentic Commerce) are reference *designs* you customize, not something the agent "calls." Know each one's signature: AI-Q = orchestrator + planner/researcher deep-research (RAG); Warehouse = router + 5 domain agents (LangGraph + MCP, shared data layer); Data Flywheel = Curator→Customizer→Evaluator continuous improvement; Retail Commerce = ACP/UCP with merchant-controlled **asymmetric trust**.
+21. **Multi-agent failure diagnosis** — match the symptom to the named pathology + fix (§3.4): requests cycling forever → infinite delegation loop (depth counter); one failure topples the chain → cascading failure (circuit breakers); stale reads → state-sync bug (versioning/single-writer); can't tell who did what → missing observability (distributed tracing).
 
 ## 7. Scenario drills
 
@@ -211,6 +278,21 @@ A tool = **name + description + JSON Schema parameters** (function calling). The
 6. **A procurement agent must pause for human approval before any purchase >$10k, possibly resuming days later after a crash. Which capability/framework feature?**
    → **LangGraph with a durable checkpointer + interrupt (HITL)** — state persists per `thread_id`, the graph pauses at the approval node and resumes exactly where it left off.
 
+7. **A document-processing job must always run extract → validate → enrich → store in that exact order, no branching, for audit. Which NAT agent type?**
+   → **`sequential_executor`** — fixed linear pipeline, no decisions between steps. ReAct would add unneeded variance and cost; ReWOO's planning is wasted when the order is hard-coded.
+
+8. **A support system handles billing, technical, and account queries, each needing different tools and a different safety policy. A single agent now has 30 tools and keeps calling the wrong one. Fix?**
+   → **`router_agent` in front of three domain-scoped sub-agents** — splitting past ~15-20 tools restores tool-selection accuracy and lets each domain carry its own policy/model. Keep the router thin (route only) to avoid the God-Router anti-pattern.
+
+9. **A high-stakes triage decision is ambiguous; you want several independent takes and one final call. Architecture?**
+   → **Competitive (voting) multi-agent** — N agents solve the same query in parallel, a judge/merger picks or fuses. Accept the N× cost because the decision is high-value; this is the multi-agent twin of the voting workflow / evaluator-optimizer.
+
+10. **A NAT multi-agent app cycles forever — agent A keeps handing the task to B and B back to A — and you can't tell from the logs which agent stalled. Two fixes?**
+    → **(1)** a **max delegation-depth counter + loop detection** via request/correlation IDs stops the infinite delegation loop; **(2)** **distributed tracing** (propagate correlation IDs / use NAT's profiler) gives the per-hop visibility you're missing.
+
+11. **Which NVIDIA Blueprint demonstrates continuous improvement of an agent system from production traffic, and what three NeMo microservices drive it?**
+    → **Data Flywheel** — production logs flow through **NeMo Curator** (data prep) → **NeMo Customizer** (fine-tune candidates) → **NeMo Evaluator** (benchmark, incl. LLM-as-judge), auto-surfacing the cheapest model that still hits latency/cost/accuracy, then redeploying.
+
 ## 8. Builder's corner
 
 - **Climb the autonomy ladder, never jump it:** prompt → workflow → single agent → multi-agent. Anthropic's core advice is to find the *simplest* solution and only add agency when it measurably wins; every rung multiplies tokens, latency, and failure modes.
@@ -231,6 +313,8 @@ A tool = **name + description + JSON Schema parameters** (function calling). The
 - A2A protocol specification (v1.0): https://a2a-protocol.org/latest/specification/
 - MCP spec & Python SDK: https://modelcontextprotocol.io/specification/ ; https://github.com/modelcontextprotocol/python-sdk
 - NeMo Agent Toolkit: https://github.com/NVIDIA/NeMo-Agent-Toolkit ; https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html ; workflow config: https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/workflow-configuration.html
+- NAT agent types (react/reasoning/rewoo/tool_calling/router/responses/sequential/parallel): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html ; Sequential Executor: https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/about/sequential-executor.html
+- NVIDIA AI Blueprints — AI-Q research assistant: https://docs.nvidia.com/aiq-blueprint/latest/architecture/overview.html ; Multi-Agent Intelligent Warehouse: https://build.nvidia.com/nvidia/multi-agent-intelligent-warehouse ; Data Flywheel: https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel ; Retail Agentic Commerce (ACP/UCP): https://github.com/NVIDIA-AI-Blueprints/Retail-Agentic-Commerce
 - ReAct paper: https://arxiv.org/abs/2210.03629 ; Reflexion paper: https://arxiv.org/abs/2303.11366 ; ReWOO paper: https://arxiv.org/abs/2305.18323
 - NCP-AAI exam framing: https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/
 
@@ -446,6 +530,62 @@ workflow:                           # top-level supervisor
 ```
 
 *What to notice:* this is NAT's "agents as function calls" thesis made concrete (§4) — the sub-agents sit in `functions:` right beside plain tools, and their `description` is what the top-level `react_agent` reads to delegate, so a supervisor/worker hierarchy needs zero orchestration code. The same file drives `nat run`, `nat serve` (REST endpoint), `nat eval` (Domain 3), and can be exposed over MCP or A2A.
+
+**8) Same task, three NAT `_type`s — pick the architecture by changing one line**
+
+```yaml
+# All three share the SAME functions: block; only workflow._type changes. (§4.1)
+# Run: nat run --config_file <file>.yml --input "France vs Germany population + summary"
+functions:
+  country_lookup: { _type: country_lookup }      # custom @register_function tools
+  calculator:     { _type: calculator }
+  write_summary:  { _type: write_summary }
+
+# (a) cheapest, single round-trip — may under-call on a multi-step task
+workflow:
+  _type: tool_calling_agent
+  llm_name: nim_llm
+  tool_names: [country_lookup, calculator, write_summary]
+
+# (b) adaptive, ~1 LLM call/step — MUST cap the loop
+workflow:
+  _type: react_agent
+  llm_name: nim_llm
+  tool_names: [country_lookup, calculator, write_summary]
+  max_iterations: 10            # without this, a confused agent loops until tokens run out
+
+# (c) plan-first, ~2 LLM calls total — cheap but no mid-run correction
+workflow:
+  _type: rewoo_agent
+  llm_name: nim_llm
+  tool_names: [country_lookup, calculator, write_summary]
+```
+
+*What to notice:* the architecture decision (§4.1-4.2) reduces to **one `_type:` line** over an unchanged tool set — that's NAT's "agents/workflows as composable function calls" thesis paying off. `max_iterations` on the ReAct agent is the autonomy-vs-controllability dial (trap #16/#2 of module): the single most common NAT production bug is a ReAct agent with no iteration cap. Profile all three with `nat eval` / the profiler to make the latency/token/accuracy trade-off data-driven instead of a guess.
+
+**9) NAT Router → domain-scoped sub-agents (split a 30-tool agent)**
+
+```yaml
+functions:
+  billing_agent:                  # each sub-agent is itself a small focused agent
+    _type: tool_calling_agent
+    llm_name: nim_llm
+    tool_names: [get_invoice, issue_refund]
+    description: "Billing, invoices, refunds, charges."
+  tech_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names: [search_kb, run_diagnostic]
+    description: "Technical troubleshooting and diagnostics."
+
+workflow:
+  _type: router_agent             # routes ONCE; smarts live in the sub-agents
+  llm_name: nim_llm
+  tool_names: [billing_agent, tech_agent]
+  # routing is LLM-based here; rule-based dispatch is also supported
+```
+
+*What to notice:* the router's only job is classify-and-dispatch (§4.1) — keep it thin or you build a **God Router** (trap #18). Each sub-agent carries its *own* small tool set, which is the fix for the ~15-20-tool accuracy cliff (§4.2). Different domains can even run different NIMs / safety policies behind the same router.
 
 ## 11. What top engineers are saying (2025-26)
 

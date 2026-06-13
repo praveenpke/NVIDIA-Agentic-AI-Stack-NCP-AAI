@@ -27,6 +27,10 @@
     { href: 'domain-08-run-monitor-maintain.html', label: 'D8 · Run & Monitor', wt: '5%' },
     { href: 'domain-09-safety-ethics-compliance.html', label: 'D9 · Safety & Compliance', wt: '5%' },
     { href: 'domain-10-human-ai-interaction.html', label: 'D10 · Human-AI Oversight', wt: '5%' },
+    { group: 'Practice & reference' },
+    { href: 'hands-on-labs.html', label: '🧪 Hands-On Labs' },
+    { href: 'mock-exam.html', label: '📝 Mock Exam' },
+    { href: 'glossary.html', label: '📖 Glossary' },
   ];
 
   function syncIcon() {

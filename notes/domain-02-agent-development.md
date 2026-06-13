@@ -128,11 +128,109 @@ The intended flow: **build.nvidia.com (hosted, free dev credits) → same code �
 | **NIM (VLM)** | Multimodal agents | OpenAI content-parts spec; image as URL or base64 data URI; image-before-text; Llama 3.2 Vision, Nemotron Nano VL on the catalog |
 | **Riva NIMs** | Audio I/O | Parakeet/Canary ASR, Magpie TTS — the speech bookends of a voice agent |
 | **NVIDIA AI Workbench** | Rapid prototyping environment | Free client app; containerized, GPU-aware, reproducible projects; develop locally → migrate to any infra; hybrid pattern (local embedding + cloud NIM inference) |
-| **NeMo Agent Toolkit** | Framework-agnostic agent layer | Workflows in YAML over LangGraph/CrewAI/etc.; **MCP client and server** support (consume external MCP tools; publish workflow functions as MCP tools); plus the profiling/eval from Domain 3 |
+| **NeMo Agent Toolkit (NAT)** | Framework-agnostic agent layer | `nvidia-nat` (ex-AgentIQ/AIQ). **YAML workflow** (`llms:`/`functions:`/`function_groups:`/`workflow:`, each by `_type`) over LangGraph/LlamaIndex/CrewAI/AutoGen/Semantic Kernel; agent types incl. **`tool_calling_agent`** (native function-calling, `handle_tool_errors`, `max_iterations=15`); custom **NAT Functions** (`@register_function` + `FunctionBaseConfig`), **Function Groups**, **Per-User Functions**; **MCP client** (`_type: mcp_client`) **and server** (`nat mcp serve`, :9901/mcp); **auth providers** (`api_key`/`oauth2`/`http_basic_auth`/`mcp_oauth2`); **middleware** (cache/log/defense/red-team); **`nat optimize`** Parameter Optimizer. **See §4.1.** Plus profiling/eval from Domain 3 |
 | **NeMo Guardrails** | Guarded generation | Programmable rails (input/dialog/output/execution) around any LLM; pairs with, not replaces, schema-constrained decoding |
 | **LangChain NVIDIA integration** | Glue | `langchain-nvidia-ai-endpoints`: `ChatNVIDIA` (supports `bind_tools`, `with_structured_output`), `NVIDIAEmbeddings`, `NVIDIARerank` — drop NIM into LangGraph graphs |
 
 **When NVIDIA vs generic:** the *mechanisms* (tool calling, guided decoding, streaming) are OpenAI-spec generic — NIM's value is serving them identically hosted and self-hosted (no code change, data sovereignty when local). NVIDIA-specific syntax worth memorizing: `nvext.guided_json`, `integrate.api.nvidia.com/v1`, and the Workbench/catalog prototyping story.
+
+### 4.1 NeMo Agent Toolkit (NAT) — the build-it layer (exam-dense)
+
+The §3 mechanisms are *what* an agent does; **NAT is how NVIDIA wants you to assemble it**. NAT (the `nvidia-nat` package, formerly *AgentIQ* then *AIQ/aiqtoolkit* — old docs and imports say `aiq.*`; the `nat.*` module landed with the v1.2 rename and the `aiq` compatibility aliases were dropped by v1.5, so current releases are `nat.*` only) is **framework-agnostic** (wraps LangChain/LangGraph, LlamaIndex, CrewAI, AutoGen, Semantic Kernel) and **declarative**: a workflow is a **YAML file** that names the LLMs, functions, and the top-level agent. The exam concentrates here because it's NVIDIA's own product surface.
+
+**The YAML workflow config — the spine.** Every NAT app is one YAML with these top-level sections, each entity selected by a `_type` discriminator:
+
+```yaml
+llms:                                   # named model endpoints (referenced by name elsewhere)
+  agent_llm:
+    _type: nim                          # NIM provider; also openai, aws_bedrock, etc.
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+functions:                             # individual tools (custom or built-in), keyed by name
+  current_datetime:
+    _type: current_datetime             # a built-in tool, selected by its registered _type
+  query_inventory:
+    _type: query_inventory              # a CUSTOM function (see @register_function below)
+    db_path: ./data/sample.db           # config fields become constructor args
+workflow:                              # the TOP-LEVEL entrypoint (an agent or a single fn)
+  _type: tool_calling_agent
+  tool_names: [current_datetime, query_inventory]
+  llm_name: agent_llm
+  verbose: true
+  handle_tool_errors: true              # default true: tool exceptions → ToolMessage, not a crash
+  max_iterations: 15                    # default 15: cap on tool-call rounds
+```
+
+Run it with `nat run --config_file config.yml --input "..."` or serve it with `nat serve`. The mental rule: **`llms:` and `functions:` define the parts by name; `workflow:` wires the entrypoint.** Changing models, swapping tools, or re-pointing to self-hosted NIM is a YAML edit, not a code change.
+
+**Tool Calling Agent — and structured outputs.** `_type: tool_calling_agent` is the agent type the exam centers on: it uses the model's **native function-calling** (the §3.3 OpenAI tool spec NIM serves) rather than ReAct-style text parsing, so it's the right pick when the model supports tool calls and you want **reliable, schema-true tool invocation**. Its knobs: `tool_names` (functions/function-groups it may call), `llm_name`, `verbose` (default `False`), `handle_tool_errors` (default `True` — catches a tool exception and feeds it back as a `ToolMessage` so the agent self-corrects, the §3.3 error-as-tool-result pattern built in), and `max_iterations` (default `15`). To get a **structured final answer**, you constrain the agent's output to a Pydantic/JSON schema — the Tool Calling Agent is the standard NAT path for "agent that returns a typed object," because tool-calling models emit schema-conformant JSON. (NAT also ships `react_agent`, `reasoning_agent`, and `rewoo_agent` workflow types; Tool Calling is the default for function-capable models.)
+
+**NAT Functions — custom tools.** A NAT function is registered with `@register_function`, paired with a `FunctionBaseConfig` subclass whose `name=` is the `_type` you reference in YAML. The registration coroutine receives the parsed `config` and a `Builder` (for pulling other entities, e.g. an LLM), and **yields** a `FunctionInfo`:
+
+```python
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+
+class QueryInventoryConfig(FunctionBaseConfig, name="query_inventory"):  # name == YAML _type
+    db_path: str
+
+@register_function(config_type=QueryInventoryConfig)
+async def query_inventory(config: QueryInventoryConfig, builder: Builder):
+    async def _run(sku: str) -> str:                 # type hints -> JSON schema the LLM sees
+        """Look up current stock for a product SKU, e.g. 'PRD-12345'."""  # docstring -> tool description
+        ...                                          # return a string/struct; catch errors, don't raise
+    yield FunctionInfo.from_fn(_run, description="Get current stock level for a product SKU.")
+```
+
+NAT derives the tool's **JSON schema from the type hints** and its **description from the docstring + `description=`** — so the §3.3 "description is prompt engineering" rule is enforced by the toolkit. Built-in functions follow the same `_type` mechanism: `current_datetime`, `code_generation`/code-execution sandbox (local *or* remote container — remote is required for untrusted input), `wikipedia_search` and document/RAG search, GitHub tools, a `memory` store, and **text-to-SQL via Vanna** (`vanna` is RAG-trained on your schema/sample queries — vector-store few-shot, not weight fine-tuning — so non-technical users query in natural language).
+
+**Function Groups — compose related tools.** A **function group** is one config entry that exposes *many* related tools under a shared `_type`, with `include`/`exclude` filters and `tool_overrides` (rename/redescribe a tool). Grouping gives the model domain context before it picks a specific tool, and lets you enable/disable a whole domain per agent role:
+
+```yaml
+function_groups:
+  inventory_db:
+    _type: inventory_tools              # a group registered with @register_function_group
+    include: [search_products, get_stock_level]   # expose a subset
+workflow:
+  _type: tool_calling_agent
+  tool_names: [inventory_db]            # the group name appears alongside individual functions
+```
+
+**Per-User Functions — multi-tenant tool isolation.** In NAT's **per-user workflow** pattern each user gets **isolated function instances and state**, so the tool set (and any per-user credentials) vary by authenticated identity — a finance user sees reporting tools, an engineer sees deploy tools, neither sees the other's. This is the production answer to "different tools per user from one codebase" (vs. building N agents or one over-permissioned agent). User identity flows in via `user_id` / the auth providers below.
+
+**Authentication.** Credentials live under an `authentication:` section as named **providers**, each with a `_type`: `api_key`, `oauth2` (Authorization-Code grant — `client_id`/`client_secret`/`authorization_url`/`token_url`/`scopes`), and `http_basic_auth`. Credentials are loaded into memory at runtime by provider name, never logged or persisted. For protected MCP servers specifically, NAT adds the **`mcp_oauth2`** provider (Bearer-token / OAuth2 introspection):
+
+```yaml
+authentication:
+  providers:
+    crm_oauth:
+      _type: oauth2
+      client_id: ${CRM_CLIENT_ID}
+      client_secret: ${CRM_CLIENT_SECRET}
+      authorization_url: https://auth.crm.example/authorize
+      token_url: https://auth.crm.example/token
+      scopes: [read, write]
+```
+
+**Tool registry + MCP client.** The **tool registry** (`nat registry`) is how tools are discovered/shared across three handler types: **local** (Python files in a dir), **PyPI** (tools packaged as wheels), and **REST** (a remote registry endpoint). The **MCP client** (package `nvidia-nat[mcp]`) consumes any MCP server's tools as a NAT function group — `_type: mcp_client`, a `server.transport` of **`streamable-http`** (default/recommended), **`sse`** (legacy), or **`stdio`** (local subprocess via `command`/`args`), with `include`/`exclude`/`tool_overrides`:
+
+```yaml
+function_groups:
+  remote_tools:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: http://localhost:9901/mcp
+    include: [get_weather, search_docs]
+```
+
+NAT is **also an MCP *server***: `nat mcp serve` publishes your workflow's functions as MCP tools (default `localhost:9901`, path `/mcp`, streamable-http) so other agents can consume them. `nat mcp serve` currently runs **without built-in auth** (server-side auth is roadmap); FastMCP-served workflows *can* validate Bearer tokens via OAuth2 introspection.
+
+**Middleware — the cross-cutting wrapper layer.** NAT lets you wrap functions/agents with **middleware** that intercepts calls for: **caching** (skip repeat tool/LLM calls; the profiler even identifies common prompt prefixes worth caching), **logging/observability** (`@track_function` captures inputs/outputs/timing; OpenTelemetry-style export to Phoenix/W&B), **defense** (NeMo Guardrails middleware + PII redaction via `nvidia-nat[pii-defense]`), and **red-teaming** (adversarial probes to assess an agent's security posture — see the `retail_agent` safety example). The exam framing: middleware is *where* you bolt reliability/safety onto a workflow without editing the tools themselves.
+
+**Parameter Optimizer.** `nat optimize` runs NAT's **config optimizer** against an eval dataset, automatically tuning a search space and reporting the best `config.yml`. Two modes: **numeric optimization** (many NIM/LLM providers ship *pre-configured optimizable parameters* like `temperature`/`top_p`, plus `max_tokens` and model selection — enable it in the `optimizer:` section with no extra wiring) and **prompt optimization** (auto-rephrase system prompts / tool descriptions). It optimizes for **accuracy, latency, cost, or a custom/weighted metric** and can render a Pareto frontier. The **Agent Hyperparameter Optimizer** is the same machinery applied to the whole config space (model + temperature + prompts, and structurally retrieval top-K, retry policy, middleware order). Exam rule: **optimization refines a working agent; it never fixes broken tool design or a missing tool** — fix design first.
 
 ## 5. Decision frameworks
 
@@ -192,6 +290,11 @@ The intended flow: **build.nvidia.com (hosted, free dev credits) → same code �
 13. **MCP primitives** — *tools* are model-controlled actions, *resources* are app-controlled context, *prompts* are user-controlled templates. Transports: stdio (local) and streamable HTTP (remote). It standardizes the tool *interface*; it does not vet servers (security/tool-bloat costs are yours).
 14. **VLM payload shape** — content is a *list of parts*; image as `image_url` (web URL or base64 **data URI**), image part **before** text; hosted catalog caps inline base64 (~180 KB) — bigger images via the assets API.
 15. **Few-shot vs fine-tune boundary** — a handful of examples fixing format/style → few-shot (free, instant); consistent skill gap surviving good examples at scale → Domain 3's fine-tuning. Exam answers prefer the cheapest sufficient fix.
+16. **NAT entities are selected by `_type`, not by class import** — in YAML, a function/agent/LLM/auth-provider is chosen by its registered `_type` discriminator (e.g. `_type: tool_calling_agent`, `_type: mcp_client`, `_type: api_key`). The custom function's `_type` *is* the `name=` you gave its `FunctionBaseConfig`. "How do I swap the model/tool/agent?" → edit YAML, not Python.
+17. **`handle_tool_errors` defaults to True** — NAT's Tool Calling Agent already converts a tool exception into a `ToolMessage` the agent can recover from (the §3.3 pattern, built in). The trap: assuming a raised tool exception kills a NAT agent — by default it doesn't. (And `max_iterations` defaults to **15**, capping tool-call rounds.)
+18. **Function Groups & Per-User Functions are different "scoping" answers** — *Function Group* = compose related tools under one `_type` for the model's benefit + bulk enable/disable per role; *Per-User Functions* = isolate tool set **and state per authenticated user** (multi-tenant). "Different departments, one codebase" → both, but the per-*user* isolation answer is Per-User Functions.
+19. **NAT is both MCP client and server** — `_type: mcp_client` *consumes* remote tools (transport `streamable-http`/`sse`/`stdio`); `nat mcp serve` *publishes* your functions on `:9901/mcp`. Don't confuse the direction. `nat mcp serve` ships **without built-in auth** today (protect it yourself / use FastMCP OAuth2 introspection).
+20. **Optimizer refines, never repairs** — `nat optimize` (numeric: temperature/top_p/max_tokens/model; prompt: rephrasing; objectives accuracy/latency/cost) tunes a *working* agent. A wrong/missing tool or a vague tool description is a *design* bug optimization can't fix; over-fitting to a tiny eval set is the classic failure. Fix design, then optimize on ≥100 diverse examples.
 
 ## 7. Scenario drills
 
@@ -212,6 +315,15 @@ The intended flow: **build.nvidia.com (hosted, free dev credits) → same code �
 
 6. **Team hard-codes prompts in Python; a prompt tweak shipped in a hotfix regressed production and nobody can say what changed. What practice was missing?**
    → **Prompt versioning/management** — prompts in a registry (git or Langfuse-style) with versions and `production`/`staging` labels, fetched at runtime, rolled back independently of code, and pinned to eval runs so every change is diffable and gated (Domain 3 CI gates).
+
+7. **(NAT) You built a NAT agent and need to add a tool the model picks automatically, swap the model from Llama 70B to Nemotron, and connect a third-party weather tool already exposed over MCP. Where do those changes live?**
+   → **All in the YAML.** Register the custom tool with `@register_function` + a `FunctionBaseConfig(name="...")`, add it under `functions:` by its `_type` and list it in the agent's `tool_names`. Swap the model by editing the `llms:` entry's `model_name`. Add the remote tool as a `function_groups:` entry of `_type: mcp_client` (`server.transport: streamable-http`, `url: ...`) and reference the group name in `tool_names`. No Python edits to the agent itself — `_type` selection + name references are the whole point of the declarative spine.
+
+8. **(NAT) A single agent serves finance, engineering, and support users; each must only see and act with their own tools, and one user's session state must never leak into another's. Which NAT feature, and how do tool errors get handled?**
+   → **Per-User Functions** — NAT's per-user workflow pattern gives each authenticated user isolated function *instances and state*, with the tool set resolved from identity (via the `authentication:` providers — `api_key`/`oauth2`/`http_basic_auth`). A Function Group alone scopes tools for the model but doesn't isolate per-user state. Tool failures are already handled by the Tool Calling Agent's `handle_tool_errors: true` (default) — exceptions return as a `ToolMessage` the agent can recover from, bounded by `max_iterations` (default 15).
+
+9. **(NAT) Your NAT agent works but is slow and sometimes over-spends tokens; a teammate wants to "just crank temperature to 0 and add more tools." Better move?**
+   → **Run `nat optimize`** against an eval set (≥100 diverse cases): numeric optimization tunes temperature/top_p/max_tokens and model selection, prompt optimization rephrases the system prompt and tool descriptions, optimizing for your chosen objective (latency/cost/accuracy or a weighted blend). Adding tools usually *hurts* (more wrong-tool selection). And remember optimization **refines a working agent** — if a tool is missing or mis-described, fix that first; no temperature value rescues bad tool design.
 
 ## 8. Builder's corner
 
@@ -241,6 +353,14 @@ The intended flow: **build.nvidia.com (hosted, free dev credits) → same code �
 - Tenacity (retry/backoff/jitter): https://tenacity.readthedocs.io/
 - Langfuse prompt management (versions, labels, compile): https://langfuse.com/docs/prompt-management/get-started
 - LangChain NVIDIA endpoints (`ChatNVIDIA`): https://python.langchain.com/docs/integrations/chat/nvidia_ai_endpoints/
+- NAT workflow configuration (llms/functions/workflow YAML): https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/workflow-configuration.html
+- NAT Tool Calling Agent (tool_names, handle_tool_errors, max_iterations=15): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/tool-calling-agent/tool-calling-agent.html
+- NAT custom functions (`@register_function`, `FunctionBaseConfig`, `FunctionInfo.from_fn`): https://docs.nvidia.com/nemo/agent-toolkit/latest/extend/functions.html
+- NAT Function Groups: https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/functions-and-function-groups/function-groups.html
+- NAT MCP client (`_type: mcp_client`, transports) & server (`nat mcp serve`, :9901/mcp): https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/mcp-client.html ; https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/mcp-server.html
+- NAT authentication providers (`api_key`/`oauth2`/`http_basic_auth`/`mcp_oauth2`): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/auth/api-authentication.html
+- NAT Optimizer (`nat optimize`, numeric + prompt, accuracy/latency/cost): https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/optimizer.html
+- NAT GitHub (package `nvidia-nat`, examples incl. retail_agent defense middleware): https://github.com/NVIDIA/NeMo-Agent-Toolkit
 - NCP-AAI exam framing: https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/
 
 ## 10. Code Companion
@@ -418,6 +538,57 @@ def get_prompt(name: str, version: str = "v3") -> str:
 ```
 
 *What to notice:* both implement the same contract — prompts live *outside* application code, addressed by name + version/label, so a prompt rollback never requires a code deploy and every trace/eval can record exactly which version ran (scenario 6). Langfuse adds UI editing, `production`/`staging` label promotion, and caching; the git registry is 12-factor Factor 2 ("own your prompts") with zero dependencies.
+
+**8) NeMo Agent Toolkit — a custom function + the YAML that assembles a Tool Calling Agent**
+
+```python
+# tools.py — register a custom NAT function (the name= becomes its YAML _type)
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+
+class StockConfig(FunctionBaseConfig, name="get_stock_level"):   # _type the YAML will reference
+    db_path: str
+
+@register_function(config_type=StockConfig)
+async def get_stock_level(config: StockConfig, builder: Builder):
+    async def _run(sku: str) -> str:                  # type hint -> JSON schema the LLM sees
+        """Return current stock for a product SKU, e.g. 'PRD-12345'."""  # -> tool description
+        try:
+            return query_db(config.db_path, sku)      # catch + return errors; never raise into the agent
+        except Exception as e:
+            return f"Error: {e}. Check the SKU format (PRD-NNNNN)."
+    yield FunctionInfo.from_fn(_run, description="Get current stock level for a product SKU.")
+```
+
+```yaml
+# config.yml — llms/functions/function_groups define parts by name; workflow wires the entrypoint
+llms:
+  agent_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+functions:
+  get_stock_level:
+    _type: get_stock_level            # == the FunctionBaseConfig name= above
+    db_path: ./data/inventory.db
+function_groups:
+  remote_tools:
+    _type: mcp_client                 # consume a third-party MCP server's tools (nvidia-nat[mcp])
+    server: {transport: streamable-http, url: http://localhost:9901/mcp}
+    include: [get_weather]
+workflow:
+  _type: tool_calling_agent           # native function-calling agent
+  tool_names: [get_stock_level, remote_tools]
+  llm_name: agent_llm
+  handle_tool_errors: true            # default: tool exception -> ToolMessage, agent self-corrects
+  max_iterations: 15                  # default cap on tool-call rounds
+```
+
+Run: `nat run --config_file config.yml --input "How many PRD-12345 are in stock and what's the weather in Tokyo?"`. Tune later: `nat optimize --config_file config.yml ...`. Publish these tools to other agents: `nat mcp serve --config_file config.yml` (→ `localhost:9901/mcp`).
+
+*What to notice:* the Python file only *registers* a tool; the **YAML assembles the agent**. The custom tool, the model choice, and the remote MCP tools are all selected by `_type` and referenced by name — swapping any of them (trap #16) never touches the agent code. `handle_tool_errors`/`max_iterations` (trap #17) give you the §3.3 error-as-tool-result loop and iteration cap for free.
 
 ## 11. What top engineers are saying (2025-26)
 

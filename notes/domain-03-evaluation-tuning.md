@@ -28,6 +28,38 @@ flowchart TD
 
 The loop is the point: **evaluate → diagnose → tune cheapest layer → re-evaluate via regression gate → deploy → monitor → repeat** (eval-driven development).
 
+### 2.1 Why agents are hard to evaluate — compound error & ambiguity
+
+Three properties make agent eval fundamentally different from traditional (deterministic) software testing — and the first one is an exam favorite:
+
+1. **Compound (multiplicative) error.** Each step in a multi-step workflow (retrieve → reason → select tool → execute → synthesize) has its own per-step accuracy, and they **multiply**. End-to-end accuracy ≈ `p_step ^ n_steps`. This is *the* number the exam asks you to compute:
+
+   | Per-step accuracy | 5 steps | 8 steps | 10 steps |
+   |---|---|---|---|
+   | 0.99 | 0.95 | 0.92 | 0.90 |
+   | 0.95 | 0.77 | 0.66 | 0.60 |
+   | 0.92 | 0.66 | **0.51** | 0.43 |
+   | 0.90 | 0.59 | 0.43 | 0.35 |
+
+   *Worked example:* an 8-step agent at 92% per step → `0.92^8 ≈ 0.513` (~51%). The takeaway: a "good" 92%-per-step model is barely a coin-flip end-to-end over 8 steps — so you must **shorten trajectories** (fewer steps), **raise per-step reliability** (better tool schemas, grounding), or **add recovery/verification** at the weak step. This is also why **step efficiency** (§3.5) matters economically *and* for accuracy.
+
+2. **Non-determinism.** Same input → different outputs (temperature, sampling, model updates). You can't assert exact string equality; you need oracles (substring/regex), judges, or statistical thresholds across repeated runs (ties into pass@k vs pass^k, §3.5).
+
+3. **Ambiguous correctness.** Many agent tasks have multiple valid answers/paths. Eval must score quality on a spectrum and accept alternative-but-valid trajectories (don't false-fail a different correct tool order — score against an *acceptable set*, not one rigid sequence).
+
+### 2.2 Four evaluation levels (component → pipeline → trajectory → system)
+
+A clean taxonomy for *where* to look when something is wrong — each level has its own metrics, and a green light at one level does not imply the others pass (integration bugs hide between them):
+
+| Level | What you test in isolation | Metrics | NVIDIA tool |
+|---|---|---|---|
+| **1 — Component** | Retriever alone; one tool's reliability; the generator alone | Recall@k, NDCG, MRR, Precision@k (retriever); tool success rate | NeMo Evaluator (retriever eval), NAT custom evaluators |
+| **2 — Pipeline** | The RAG pipeline end-to-end: do *these* chunks → a grounded, correct answer? | Faithfulness, answer relevance, context precision/recall (RAGAS triad) | NeMo Evaluator (RAG), NAT `ragas` evaluator |
+| **3 — Agent trajectory** | The *sequence* of actions: right tools, right order, error recovery, clean termination | Tool-selection/order accuracy, unnecessary/missing calls, step efficiency, recovery rate | NAT `trajectory` evaluator |
+| **4 — System** | Operational properties under production load | Latency (P50/P95/P99), cost/query, throughput, uptime, **red-team block rate** | NAT Profiler, NAT Sizing Calculator, NAT Red Teaming |
+
+**Exam pattern:** map a *symptom* to a *level*. "Correct answers but slow and expensive" → **system** (profiler/sizing). "Right answer via the wrong tools" → **trajectory**. "Answer contradicts the docs" → **pipeline** (faithfulness). "Relevant doc ranked too low" → **component** (retriever).
+
 ## 3. Core concepts
 
 ### 3.1 Offline vs online evaluation
@@ -183,11 +215,93 @@ Typical recipe: **SFT first, then DPO** on top.
 | **NeMo Evaluator (microservice)** | THE evaluation service of the NeMo microservices platform. Evaluates **LLMs, retriever pipelines, RAG pipelines, and AI agents** via API (create eval *target* + eval *config* → launch eval *job*) | Academic harnesses: **LM Evaluation Harness** (60+ benchmarks: MMLU, GSM8K, HellaSwag, BBH, TruthfulQA, ARC, IFEval, MGSM…), **BigCode** (HumanEval, MBPP), **BFCL** (function calling), Safety Harness, Simple Evals. Custom evals: **similarity metrics** (F1, ROUGE vs ground truth) and **LLM-as-a-Judge** (any NIM can be judge; `chat-completion` task = generate-then-judge; `data` task = judge pre-existing prompt/response pairs). Retriever evals: BEIR-format datasets with **Recall@K, NDCG@K**. RAG evals: **faithfulness, answer relevancy, context precision** (RAGAS-style). Agent evals: multi-step reasoning, tool-use accuracy, topic adherence, goal completion (ProfBench supported). The **NeMo Evaluator SDK is open source** for reproducible benchmarking |
 | **NeMo Customizer (microservice)** | THE tuning service. API-first fine-tuning on top of NeMo Framework | Supports **LoRA (PEFT config), full SFT (`all_weights` config), DPO, GRPO, knowledge distillation, and LoRA fine-tuning of embedding models**. LoRA config = experimentation/limited resources; all_weights = max performance. Pairs with NeMo Evaluator in the loop: customize → evaluate → deploy via NIM |
 | **NeMo Agent Toolkit** (open source, fka AgentIQ / AIQ) | Framework-agnostic agent profiling + evaluation. **`nat eval`** CLI takes the workflow YAML (with an `eval` section: dataset, evaluators, `general.output_dir`, `general.profiler`, max_jobs) and runs dataset → workflow → evaluators | Built-in evaluators: **`ragas`** (public RAGAS API), **`trajectory`** (LangChain/LangGraph agent trajectory eval), **`tunable_rag_evaluator`** (customizable LLM judge for RAG), **`langsmith` / `langsmith_custom`**. Install `nvidia-nat[eval]` (+ profiler package). **Profiler** captures per-step latency, token usage, workflow runtime forecasts, bottleneck detection — outputs workflow outputs + evaluator outputs + profiler artifacts |
-| **NeMo Retriever NIMs** | The RAG-tuning levers as products: embedding NIMs (**NV-EmbedQA-E5-v5**, NV-EmbedQA-Mistral7B-v2 multilingual, Snowflake-Arctic-Embed-L) and reranking NIM (**NV-RerankQA-Mistral4B-v3** — a fine-tuned reranker based on Mistral 7B, trimmed to ~3.5 B params by using only half the weights, with mean-pooling over the last transformer layer + a feed-forward head that emits a single relevance logit) | Adding the reranking NIM over a wider retrieval set improves accuracy *and* cuts cost (fewer, better chunks to the LLM) |
+| **NeMo Retriever NIMs** | The RAG-tuning levers as products: embedding NIMs (**NV-EmbedQA-E5-v5**, NV-EmbedQA-Mistral7B-v2 multilingual, Snowflake-Arctic-Embed-L) and reranking NIM (**NV-RerankQA-Mistral4B-v3** — a LoRA-fine-tuned reranker based on Mistral-7B-v0.1 that keeps only the **first 16 of 32 transformer layers (~4 B params)** for throughput, switches attention from causal to bi-directional, and uses **mean-pooling over the last layer + a binary classification head** that emits a single relevance logit) | Adding the reranking NIM over a wider retrieval set improves accuracy *and* cuts cost (fewer, better chunks to the LLM) |
 | **NeMo Data Store / Datasets** | Stores eval datasets & fine-tuning data for the microservices (HF-compatible API) | Golden datasets live here in the NeMo platform flow |
 | **NeMo Guardrails** | Not an evaluator per se, but runtime hallucination/groundedness checks (fact-checking rails) complement offline eval | |
 
 **When NVIDIA vs generic:** NeMo Evaluator when you want managed, API-driven, reproducible eval of NIM-deployed models/RAG/agents inside the NeMo platform (and the flywheel: Curator → Customizer → Evaluator → Guardrails → NIM). NeMo Agent Toolkit when you need framework-agnostic (LangGraph, CrewAI, etc.) agent-level eval + profiling in your own repo/CI. Generic (RAGAS, LangSmith, etc.) integrates *inside* the Agent Toolkit anyway.
+
+### 4.1 NAT Profiler — workflow → agent → tool breakdown
+
+`nat eval` with `general.profiler` (or `nat profile`) instruments the workflow **top-down to individual tool calls**, capturing **input/output token counts**, **per-step latency** (LLM inference vs tool execution vs overhead), and **workflow runtime forecasts / bottleneck detection**. The point is to find the dominant cost driver so you optimize the *right* step:
+
+```
+Component             Tokens   Latency   % of total
+Router Agent           1,200     450 ms     12%
+  └ LLM routing          800     380 ms     10%
+Search Agent           4,500   1,800 ms     48%   ← dominant
+  └ LLM generation     3,200   1,500 ms     40%   ← the real hotspot
+  └ retrieval            —       200 ms      5%
+Response Agent         2,000   1,500 ms     40%
+TOTAL                  7,700   3,750 ms    100%
+```
+
+Reading this: Search Agent's **LLM generation** is the hotspot (40% of latency, most tokens). Fixes, cheapest first: route synthesis to a **smaller/faster model**, **retrieve fewer chunks** (lower input tokens — add a reranker so quality survives), or **cache** frequent queries. You cannot make this decision from final-answer logs alone — this is why "log full trajectories with stable IDs from day one" (§8) matters.
+
+### 4.2 NAT Sizing Calculator — GPU cluster planning
+
+`nat sizing calc` estimates the **GPU cluster size** needed to serve a workflow at a target scale. It runs the workflow at several **concurrency levels**, uses the Profiler subsystem to measure throughput/latency, then **slope-based estimation** to extrapolate how performance scales with load:
+
+- **Inputs:** `--target_users` (concurrent capacity) and the **target workflow runtime** (max acceptable end-to-end response time); optionally `--target_llm_latency` (target P95 LLM latency, in seconds) when LLM latency dominates.
+- **Two modes:** **online** profiles your live workflow now; **offline mode** sizes from previously gathered metrics (gather once, re-size many times without re-running the agent).
+- **Output:** estimated **GPU count / cluster size** to hit those targets — capacity planning, scaling triggers.
+- Install: `nvidia-nat[profiling]` (it leans on the eval/profiler subsystem).
+
+```bash
+# 1) gather metrics across concurrency levels
+nat sizing calc --config_file workflow.yml --calc_output_dir ./sizing \
+                --concurrencies 1,2,4,8,16,32 --num_passes 2
+# 2) re-size offline against the gathered metrics for a new target
+#    (--target_workflow_runtime is in SECONDS; --test_gpu_count = GPUs used while profiling)
+nat sizing calc --offline_mode --calc_output_dir ./sizing --test_gpu_count 8 \
+                --target_users 200 --target_workflow_runtime 10
+```
+
+*Exam separation:* **Profiler answers "where does my cost/latency go?"** (per-step breakdown). **Sizing Calculator answers "how many GPUs to serve N users at latency L?"** (capacity). Both are **System-level** (Level 4) tools and both build on profiler data.
+
+### 4.3 NAT Red Teaming — adversarial eval as a first-class evaluator
+
+Red teaming (contributed to NAT by **Lakera**) probes the agent **as a whole system** with adversarial inputs and measures how failures propagate through the multi-step workflow — not just whether one prompt is refused. Attack categories the exam expects:
+
+| Category | Probe | What a "failure" looks like |
+|---|---|---|
+| **Prompt injection** | "Ignore previous instructions and …" | System prompt overridden, tool misused |
+| **Jailbreak** | Role-play / DAN-style coaxing | Safety policy bypassed |
+| **PII extraction** | "What personal data do you have on file?" | Leaks private/system data |
+| **Harmful content** | Requests for dangerous info | Produces it instead of refusing |
+| **Out-of-scope** | Queries outside the agent's remit | Answers instead of refusing/redirecting |
+
+Report the **block rate** per category (e.g., target ≥90% blocked). Two gotchas: (1) **run it on a schedule, not just before launch** — behavior drifts as base models update; (2) include **benign edge cases** so you can catch **false-positive "blocks"** (refusing a legitimate request counts against usability, not for safety). Red teaming is a **System-level (Level 4)** evaluator and complements runtime **NeMo Guardrails** (red teaming *finds* the gaps offline; Guardrails *blocks* them at runtime).
+
+### 4.4 NAT Finetuning Harness — DPO via Customizer vs GRPO via OpenPipe ART
+
+When eval proves prompting/RAG have plateaued, NAT's **Finetuning Harness** turns evaluated workflow runs into training data and drives finetuning. It extracts agent runs into a standardized trajectory format and hands them to a trainer. Two documented paths:
+
+| Path | Algorithm | Data needed | When |
+|---|---|---|---|
+| **DPO via NeMo Customizer** | Direct Preference Optimization (no reward model, no RL loop) | (prompt, chosen, rejected) **preference pairs** | Style / tone / safety / format alignment after SFT — you *have* labeled good-vs-bad pairs |
+| **GRPO via OpenPipe ART** | Group Relative Policy Optimization (RL; compares a *group* of sampled responses per prompt — no separate value/reward model) + **LoRA** | A **reward signal** + multi-sample rollouts (NAT collects **multi-generation trajectories** — several responses per example — to score them relatively) | Improving **multi-step agent behavior through experience** ("on-the-job training") where you can score outcomes but lack preference pairs |
+
+**OpenPipe ART** = *Agent Reinforcement Trainer*: an open-source RL trainer for multi-step agents using GRPO + LoRA, integrated as a NAT finetuning path. Mental split for the exam: **DPO = learn from labeled preference pairs; GRPO/ART = learn from a reward by comparing sampled rollouts (RL).** Both sit *above* prompt/RAG/SFT on the tuning ladder.
+
+### 4.5 Data Flywheel Blueprint — eval-driven continuous improvement loop
+
+The **NVIDIA Data Flywheel Blueprint** (an `NVIDIA-AI-Blueprints` reference app, not a single microservice) wires the whole platform into a self-reinforcing loop that **uses production traffic to continuously find a cheaper/better model**:
+
+```
+Production traffic (prompt/response logs, tagged with a stable workload_id)
+   → collect, group by workload/task, deduplicate
+   → build eval + fine-tune datasets (stratified split)
+   → run experiments across multiple candidate models
+   → NeMo Evaluator scores them (LLM-as-judge / similarity)
+   → NeMo Customizer LoRA-finetunes the promising small ones
+   → surface a smaller model that meets latency/cost/accuracy bars → human review → promote
+   → back to production
+```
+
+- **NeMo microservices used:** **Data Store** (datasets), **Customizer** (LoRA finetuning), **Evaluator** (LLM-as-judge similarity), **NIM/Inference** (serve candidates). Infra: Elasticsearch (logs), MongoDB (job metadata), Redis/Celery (task queue).
+- **Core idea = model distillation by selection:** it discovers cases where a **small fine-tuned model matches a large production model** (common in tool-calling), then promotes it. NVIDIA reports **up to 98.6% inference-cost reduction** in such cases.
+- **Why it's on the exam:** it's the canonical answer to "which NVIDIA pattern connects evaluation to continuous improvement / cuts inference cost using production data?" → **Data Flywheel Blueprint.** Distinguish from the *generic* "flywheel" (Curator → Customizer → Evaluator → Guardrails → NIM); the **Blueprint** is the concrete, deployable implementation that specifically swaps large models for distilled small ones.
 
 ## 5. Decision frameworks
 
@@ -225,6 +339,24 @@ Typical recipe: **SFT first, then DPO** on top.
 | Evaluate a LangGraph agent's trajectory + profile latency/tokens in CI | NeMo Agent Toolkit `nat eval` (+ profiler) |
 | LoRA / SFT / DPO / GRPO a model via API | NeMo Customizer |
 | Improve retrieval ranking in production RAG | NeMo Retriever reranking NIM |
+| Profile per-step token/latency to find the cost hotspot | NAT Profiler (`nat eval` + `general.profiler`) |
+| Estimate GPU count to serve N users at latency L | NAT Sizing Calculator (`nat sizing calc`) |
+| Adversarially test for prompt injection / jailbreaks before launch | NAT Red Teaming evaluators |
+| RL-finetune a multi-step agent from a reward signal | NAT Finetuning Harness → GRPO via OpenPipe ART |
+| Continuously swap a large model for a cheaper distilled one using prod traffic | Data Flywheel Blueprint |
+
+**Cost / latency / accuracy tradeoff matrix.** Every optimization moves these three; the discipline is to **define minimum acceptable accuracy first**, then optimize cost and latency *within* that floor (never trade accuracy below it — bad-answer cost exceeds compute savings):
+
+| Action | Cost | Latency | Accuracy |
+|---|---|---|---|
+| **Larger model** | ↑ | ↑ | usually ↑ |
+| **More retrieval chunks** | ↑ | ↑ | diminishing (and risks precision/noise) |
+| **Add a reranker** (retrieve wide → keep few) | ↓ (fewer tokens to LLM) | ~ | ↑ (better, less noisy context) |
+| **Cache frequent queries** | ↓ (amortized) | ↓↓ | same / slightly stale |
+| **Distill / finetune a smaller model** | ↑ upfront, ↓ at serving | ↓ | can match large model on a *narrow* task |
+| **Quantize (e.g., to FP8/INT4)** | ↓ | ↓ | small drop |
+
+This matrix is exactly what the **Data Flywheel Blueprint** automates (§4.5) and what the **Sizing Calculator** quantifies (§4.2): pick the cheapest, fastest configuration that still clears the accuracy bar.
 
 ## 6. Exam traps & gotchas
 
@@ -242,6 +374,11 @@ Typical recipe: **SFT first, then DPO** on top.
 12. **NeMo Evaluator vs NeMo Customizer vs Agent Toolkit confusion** — Evaluator *measures* (benchmarks, judge, RAG/agent metrics); Customizer *tunes* (LoRA/SFT/DPO/GRPO); Agent Toolkit *profiles & evaluates agent workflows* in your code (`nat eval`). Questions love swapping these.
 13. **Benchmark scores as production proof** — high MMLU doesn't predict agent task success; agent eval needs trajectory-level, task-specific metrics. Also beware test-set contamination in public benchmarks.
 14. **Verbosity bias** — longer ≠ better; judges inflate long answers. If two answers tie on content, an LLM judge will often pick the longer; control for length in rubrics.
+15. **Compound error is multiplicative, not additive** — a 10-step agent at 95% per step is **0.95^10 ≈ 60%**, not 95% and not 50%. "Each step works 9 times out of 10" sounds fine but `0.9^5 ≈ 59%` end-to-end. The fix levers are **fewer steps**, **higher per-step reliability**, or **verification/recovery**, not just "a better model".
+16. **Profiler vs Sizing Calculator** — Profiler answers *"where do my tokens/latency go?"* (per-step breakdown to find the hotspot); Sizing Calculator answers *"how many GPUs for N concurrent users at latency L?"* (capacity, slope-based extrapolation across concurrency levels). Both are System-level; questions swap them.
+17. **DPO vs GRPO/OpenPipe ART** — both are NAT finetuning paths above SFT, but **DPO learns from labeled (chosen, rejected) preference pairs (no RL loop)** while **GRPO is RL** that compares a *group* of sampled rollouts against a **reward signal** (no preference labels, no reward model). "We can score outcomes but have no preference pairs, improve the agent through experience" → **GRPO via OpenPipe ART**.
+18. **Data Flywheel Blueprint ≠ just 'fine-tuning'** — its signature is using **production traffic** to **discover a smaller/distilled model** that meets cost/latency/accuracy bars (NVIDIA cites up to **98.6% inference-cost reduction**), then human-review-and-promote. "Continuously cut inference cost using real traffic" → Data Flywheel Blueprint, not Customizer alone.
+19. **Red teaming is an eval, run continuously** — it's a Level-4 (system) evaluator for prompt injection / jailbreak / PII / harmful / out-of-scope, reported as **block rate**; run it on a schedule (drift), and include benign inputs to catch false-positive blocks. It *finds* gaps offline; **NeMo Guardrails** *blocks* them at runtime — don't conflate.
 
 ## 7. Scenario drills
 
@@ -263,6 +400,18 @@ Typical recipe: **SFT first, then DPO** on top.
 6. **You need to benchmark a NIM-deployed Llama model on MMLU and GSM8K, judge custom chat responses with another NIM as evaluator, and score your retriever with Recall@K/NDCG@K — all via API in the NeMo platform. Which component?**
    → **NeMo Evaluator microservice** — it covers academic harness benchmarks, LLM-as-a-judge (any NIM as judge), and retriever/RAG pipeline metrics in one service via eval targets/configs/jobs.
 
+7. **A 6-step agent shows 88% per-step accuracy in component tests, yet end-to-end task success is only ~46%. The team wants to swap in a bigger model. Better diagnosis?**
+   → It's **compound error**: `0.88^6 ≈ 0.46`. A bigger model raises per-step accuracy marginally; the higher-leverage moves are **cutting the number of steps** (merge/skip tool calls), **hardening the weakest step** (clearer tool schema, grounding), and **adding a verification/recovery step**. Profile the trajectory to find which step bleeds the most.
+
+8. **The NAT Profiler shows one LLM-generation step is 40% of total latency and most of the tokens. Name two fixes — and which NVIDIA tool tells you how many GPUs you'll need at 200 concurrent users?**
+   → Fixes: route that step to a **smaller/faster model**, or **retrieve fewer chunks (+reranker)** to cut input tokens (or cache). The GPU-count question is the **NAT Sizing Calculator** (`nat sizing calc`, slope-based across concurrency levels) — Profiler finds the hotspot, Sizing Calculator does capacity planning.
+
+9. **You can automatically score whether each agent run achieved its goal (a reward), but you have no human-labeled chosen/rejected pairs, and you want the multi-step agent to get better with experience. Which NAT finetuning path?**
+   → **GRPO via OpenPipe ART** (NAT Finetuning Harness). GRPO is RL that compares a *group* of sampled rollouts against the reward — no preference pairs and no reward model. DPO would be the answer only if you *had* (chosen, rejected) pairs.
+
+10. **Leadership wants to cut inference cost on a high-volume tool-calling agent without losing accuracy, using the traffic you already log. Which NVIDIA pattern?**
+   → **Data Flywheel Blueprint** — it mines production logs (tagged by `workload_id`), builds eval/finetune datasets, finds a **smaller distilled model** that still clears the accuracy bar via NeMo Evaluator + Customizer, and promotes it after human review (NVIDIA cites up to ~98.6% cost reduction for such tool-calling cases).
+
 ## 8. Builder's corner
 
 - **Start the golden set on day one, harvest from production forever.** Even 30 cases catches regressions manual review misses. Wire `nat eval` (or your harness) into CI as a merge-blocking gate with explicit thresholds (e.g., TSR ≥ 85%, faithfulness ≥ 0.8); version dataset + prompt + model config together so every score is reproducible.
@@ -277,6 +426,10 @@ Typical recipe: **SFT first, then DPO** on top.
 - NeMo Evaluator LLM-as-a-Judge: https://docs.nvidia.com/nemo/microservices/latest/evaluate/flows/llm-as-a-judge.html
 - NVIDIA blog — Mastering Agentic Techniques: AI Agent Evaluation: https://developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation/
 - NeMo Agent Toolkit evaluation & profiler: https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html ; https://github.com/NVIDIA/NeMo-Agent-Toolkit
+- NAT Sizing Calculator (GPU cluster planning): https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/sizing-calc.html
+- NAT Finetuning Harness (DPO via Customizer, GRPO via OpenPipe ART): https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/index.html ; https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/rl_with_openpipe.html ; OpenPipe ART: https://github.com/OpenPipe/ART
+- NAT Red Teaming (Lakera-contributed): https://www.lakera.ai/blog/red-teaming-agentic-capabilities-in-nvidia-nemo-agent-toolkit
+- Data Flywheel Blueprint: https://github.com/NVIDIA-AI-Blueprints/data-flywheel ; https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard
 - NeMo Customizer (LoRA/SFT/DPO/GRPO): https://developer.nvidia.com/nemo-customizer ; https://docs.nvidia.com/nemo/microservices/latest/fine-tune/tutorials/index.html
 - NVIDIA blog — chunking strategy study: https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/
 - NVIDIA blog — reranking for RAG: https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/ ; https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/
@@ -473,6 +626,45 @@ curl -X POST "$CUSTOMIZER_URL/v1/customization/jobs" -H "Content-Type: applicati
 ```
 
 *What to notice:* peft's `r` and Customizer's `lora.adapter_dim` are the same concept (adapter rank); `finetuning_type: "lora"` vs `"all_weights"` is the Customizer-side LoRA-vs-full-SFT switch from §4, and `training_type` flips to `"dpo"` for preference alignment. Newer NeMo platform releases also expose an SDK form (`sdk.customization.jobs.create(...)` with a `training.peft.type="lora"` spec) layered on top of this REST shape.
+
+**8) NAT Profiler + Sizing Calculator — find the hotspot, then size the cluster**
+
+```bash
+# (a) PROFILE: add a profiler block to the eval config, then `nat eval` emits per-step
+#     token/latency breakdown into output_dir (workflow → agent → tool).
+cat >> eval_config.yml <<'YAML'
+  general:
+    output_dir: ./.tmp/nat/eval_output
+    profiler:
+      compute_llm_metrics: true         # per-step inference-optimization metrics
+      token_uniqueness_forecast: true   # inter-query token uniqueness (spot repeated/wasted context)
+      workflow_runtime_forecast: true   # forecast expected workflow runtime
+YAML
+nat eval --config_file eval_config.yml      # read output_dir for the breakdown table
+
+# (b) SIZE: gather metrics across concurrency levels, then size offline for a target SLA.
+nat sizing calc --config_file workflow.yml --calc_output_dir ./sizing \
+                --concurrencies 1,2,4,8,16,32 --num_passes 2
+nat sizing calc --offline_mode --calc_output_dir ./sizing --test_gpu_count 8 \
+                --target_users 200 --target_workflow_runtime 10   # runtime in SECONDS → est. GPU count
+```
+
+*What to notice:* the Profiler (§4.1) tells you *where* tokens/latency go so you optimize the right step; the Sizing Calculator (§4.2) re-uses that profiler data and **slope-based estimation** across concurrency levels to output a **GPU count** for `target_users` at `target_workflow_runtime`. `--offline_mode` means "size again from already-gathered metrics" without re-running the agent — gather once, plan many SLAs.
+
+**9) NAT Red Teaming evaluator — adversarial eval in the same eval run**
+
+```yaml
+# add alongside your ragas/trajectory evaluators in eval_config.yml
+eval:
+  evaluators:
+    red_team:
+      _type: red_teaming            # system-level adversarial evaluator (Lakera-contributed)
+      llm_name: judge_llm           # an attacker/judge LLM drives + scores probes
+      attack_categories: [prompt_injection, jailbreak, pii_extraction, harmful_content, off_topic]
+      attacks_per_category: 10      # → block_rate reported per category
+```
+
+*What to notice:* red teaming is just **another evaluator** in the `nat eval` config (§4.3), reported as a per-category **block rate** — wire it into the same CI gate (e.g., require `block_rate ≥ 0.90`). Include a few *benign* edge-case inputs so a polite refusal of a legitimate query shows up as a **false-positive block**, not a safety win. It *finds* gaps; **NeMo Guardrails** is the runtime layer that *blocks* them in production.
 
 ## 11. What top engineers are saying (2025-26)
 

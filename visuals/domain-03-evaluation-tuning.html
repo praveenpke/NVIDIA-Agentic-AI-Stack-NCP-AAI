@@ -295,6 +295,27 @@
     </svg>
     <div class="caption">The loop is the point: <b>evaluate → diagnose → tune cheapest layer → re-evaluate via regression gate → deploy → monitor → repeat</b> (eval-driven development).</div>
   </div>
+
+  <h3>Why agents are hard to evaluate — compound error</h3>
+  <p class="lede">Each step in a multi-step workflow has its own accuracy, and they <b>multiply</b>: end-to-end ≈ <code>p_step ^ n_steps</code>. This is <b>the</b> number the exam asks you to compute — a "good" 92%-per-step agent is barely a coin-flip over 8 steps.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Per-step accuracy</th><th>5 steps</th><th>8 steps</th><th>10 steps</th></tr>
+    <tr><td><b>0.99</b></td><td class="good">0.95</td><td class="good">0.92</td><td class="good">0.90</td></tr>
+    <tr><td><b>0.95</b></td><td class="mid">0.77</td><td class="mid">0.66</td><td class="bad">0.60</td></tr>
+    <tr><td><b>0.92</b></td><td class="mid">0.66</td><td class="bad">0.51</td><td class="bad">0.43</td></tr>
+    <tr><td><b>0.90</b></td><td class="bad">0.59</td><td class="bad">0.43</td><td class="bad">0.35</td></tr>
+  </table></div>
+  <div class="callout warn"><b>⚠ Worked example:</b> 8 steps × 92% → <code>0.92<sup>8</sup> ≈ 0.51</code> (~51%). The fix levers are <b>fewer steps</b>, <b>higher per-step reliability</b> (better tool schemas, grounding), or <b>verification/recovery at the weak step</b> — not just "a bigger model". This is also why <b>step efficiency</b> matters for accuracy, not just cost. Two more properties make agent eval hard: <b>non-determinism</b> (no exact-string asserts; use oracles/judges/statistical thresholds) and <b>ambiguous correctness</b> (accept alternative-but-valid trajectories — score against an <i>acceptable set</i>, not one rigid sequence).</div>
+
+  <h3>Four evaluation levels <span class="tag">where to look when it breaks</span></h3>
+  <p class="lede">A green light at one level does <b>not</b> imply the others pass — integration bugs hide between them. Map a <b>symptom</b> to a <b>level</b>.</p>
+  <div class="grid c4">
+    <div class="card cyan"><h4><span class="icon">①</span>Component</h4><p>Retriever / one tool / generator <b>in isolation</b>.</p><p style="margin-top:6px"><b>Metrics:</b> Recall@k, NDCG, MRR, Precision@k; tool success rate.</p><p style="margin-top:6px"><span class="pill b">NeMo Evaluator retriever eval · NAT custom evaluators</span></p></div>
+    <div class="card blue"><h4><span class="icon">②</span>Pipeline</h4><p>RAG end-to-end: do <b>these chunks → a grounded, correct answer?</b></p><p style="margin-top:6px"><b>Metrics:</b> faithfulness, answer relevance, context precision/recall (RAGAS triad).</p><p style="margin-top:6px"><span class="pill b">NeMo Evaluator RAG · NAT <code>ragas</code></span></p></div>
+    <div class="card purple"><h4><span class="icon">③</span>Agent trajectory</h4><p>The <b>sequence</b> of actions: right tools, right order, error recovery, clean termination.</p><p style="margin-top:6px"><b>Metrics:</b> tool selection/order accuracy, unnecessary/missing calls, step efficiency.</p><p style="margin-top:6px"><span class="pill p">NAT <code>trajectory</code></span></p></div>
+    <div class="card amber"><h4><span class="icon">④</span>System</h4><p>Operational properties under <b>production load</b>.</p><p style="margin-top:6px"><b>Metrics:</b> latency P50/P95/P99, cost/query, throughput, uptime, red-team block rate.</p><p style="margin-top:6px"><span class="pill a">NAT Profiler · Sizing Calculator · Red Teaming</span></p></div>
+  </div>
+  <div class="callout"><b>Exam pattern:</b> "Correct answers but slow &amp; expensive" → <b>System</b>. "Right answer via the wrong tools" → <b>Trajectory</b>. "Answer contradicts the docs" → <b>Pipeline</b> (faithfulness). "Relevant doc ranked too low" → <b>Component</b> (retriever).</div>
 </section>
 
 <!-- ============ OFFLINE VS ONLINE ============ -->
@@ -610,7 +631,7 @@
       <p>The RAG-tuning levers as products.</p>
       <ul>
         <li><b>Embedding NIMs:</b> NV-EmbedQA-E5-v5, NV-EmbedQA-Mistral7B-v2 (multilingual), Snowflake-Arctic-Embed-L</li>
-        <li><b>Reranking NIM:</b> NV-RerankQA-Mistral4B-v3 — a fine-tuned reranker based on <b>Mistral 7B, trimmed to ~3.5 B params (half the weights)</b>, with mean-pooling over the last layer + a feed-forward head emitting a single relevance logit</li>
+        <li><b>Reranking NIM:</b> NV-RerankQA-Mistral4B-v3 — a LoRA-fine-tuned reranker based on <b>Mistral-7B-v0.1 that keeps only the first 16 of 32 layers (~4 B params)</b> for throughput, switches attention causal → bi-directional, with mean-pooling over the last layer + a binary classification head emitting a single relevance logit</li>
         <li>Adding the reranking NIM over a wider retrieval set <b>improves accuracy and cuts cost</b> (fewer, better chunks to the LLM)</li>
       </ul>
     </div>
@@ -623,6 +644,88 @@
   </div>
 
   <div class="callout"><b>When NVIDIA vs generic:</b> NeMo Evaluator for managed, API-driven, reproducible eval of NIM-deployed models/RAG/agents inside the NeMo platform (the flywheel: <b>Curator → Customizer → Evaluator → Guardrails → NIM</b>). NeMo Agent Toolkit for framework-agnostic (LangGraph, CrewAI, etc.) agent-level eval + profiling in your own repo/CI. Generic tools (RAGAS, LangSmith…) integrate <b>inside</b> the Agent Toolkit anyway.</div>
+
+  <h3>NAT Profiler — workflow → agent → tool breakdown <span class="tag">find the hotspot</span></h3>
+  <p class="lede"><code>nat eval</code> with <code>general.profiler</code> instruments the workflow <b>top-down to individual tool calls</b> — input/output tokens, per-step latency (LLM vs tool vs overhead), bottleneck detection. Optimize the <b>right</b> step:</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Component</th><th>Tokens</th><th>Latency</th><th>% of total</th></tr>
+    <tr><td>Router Agent</td><td>1,200</td><td>450 ms</td><td>12%</td></tr>
+    <tr><td style="padding-left:24px">└ LLM routing</td><td>800</td><td>380 ms</td><td>10%</td></tr>
+    <tr><td><b>Search Agent</b></td><td>4,500</td><td>1,800 ms</td><td class="bad">48% ← dominant</td></tr>
+    <tr><td style="padding-left:24px">└ LLM generation</td><td>3,200</td><td>1,500 ms</td><td class="bad">40% ← real hotspot</td></tr>
+    <tr><td style="padding-left:24px">└ retrieval</td><td>—</td><td>200 ms</td><td>5%</td></tr>
+    <tr><td>Response Agent</td><td>2,000</td><td>1,500 ms</td><td>40%</td></tr>
+    <tr><td><b>TOTAL</b></td><td><b>7,700</b></td><td><b>3,750 ms</b></td><td><b>100%</b></td></tr>
+  </table></div>
+  <div class="callout"><b>Reading it:</b> Search Agent's <b>LLM generation</b> is the hotspot (40% latency, most tokens). Fixes cheapest-first: route synthesis to a <b>smaller/faster model</b>, <b>retrieve fewer chunks</b> (+ reranker so quality survives), or <b>cache</b>. You cannot decide this from final-answer logs — hence "log full trajectories with stable IDs from day one".</div>
+
+  <div class="grid c2">
+    <div class="card amber"><h4><span class="icon">📐</span>NAT Sizing Calculator <span class="pill a">how many GPUs?</span></h4>
+      <p><code>nat sizing calc</code> estimates the <b>GPU cluster size</b> to serve a workflow at scale. Runs at several <b>concurrency levels</b>, uses the Profiler subsystem, then <b>slope-based estimation</b> to extrapolate.</p>
+      <ul>
+        <li><b>Inputs:</b> <code>--target_users</code> + target workflow runtime (max acceptable response time); optionally <code>--target_llm_latency</code> (P95 LLM latency, seconds)</li>
+        <li><b>Modes:</b> <b>online</b> profiles live; <b>offline_mode</b> re-sizes from previously gathered metrics (gather once, plan many SLAs)</li>
+        <li><b>Output:</b> estimated <b>GPU count / cluster size</b> · install <code>nvidia-nat[profiling]</code></li>
+      </ul>
+      <p style="margin-top:6px"><b>Profiler vs Sizing:</b> Profiler = <i>where do tokens/latency go?</i> · Sizing = <i>how many GPUs for N users at latency L?</i> Both System-level.</p>
+    </div>
+    <div class="card red"><h4><span class="icon">🛡️</span>NAT Red Teaming <span class="pill r">adversarial eval</span></h4>
+      <p>Contributed by <b>Lakera</b>; probes the agent <b>as a whole system</b> with adversarial inputs and tracks how failures propagate across the multi-step workflow. Reported as <b>block rate</b> per category (target ≥90%).</p>
+      <ul>
+        <li><b>Categories:</b> prompt injection · jailbreak · PII extraction · harmful content · out-of-scope</li>
+        <li><b>Run on a schedule</b>, not just pre-launch (behavior drifts as base models update)</li>
+        <li>Include <b>benign edge cases</b> → catch false-positive "blocks" (refusing a legit query hurts usability)</li>
+        <li>It <b>finds</b> gaps offline; <b>NeMo Guardrails</b> <b>blocks</b> them at runtime</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>NAT Finetuning Harness — DPO vs GRPO/OpenPipe ART <span class="tag">when prompting + RAG plateau</span></h3>
+  <p class="lede">NAT's Finetuning Harness turns evaluated workflow runs into training data and drives finetuning. Two documented paths — the exam split is <b>preference pairs (DPO) vs reward-driven RL (GRPO)</b>.</p>
+  <div class="grid c2">
+    <div class="card purple"><h4><span class="icon">🎭</span>DPO via NeMo Customizer</h4>
+      <p>Direct Preference Optimization — <b>no reward model, no RL loop</b>. Needs <b>(prompt, chosen, rejected)</b> preference pairs.</p>
+      <p style="margin-top:6px"><b>When:</b> style / tone / safety / format alignment after SFT — you <i>have</i> labeled good-vs-bad pairs.</p></div>
+    <div class="card red"><h4><span class="icon">🦾</span>GRPO via OpenPipe ART</h4>
+      <p><b>OpenPipe ART = Agent Reinforcement Trainer.</b> RL using <b>Group Relative Policy Optimization</b> (compares a <i>group</i> of sampled rollouts per prompt — no separate reward/value model) + <b>LoRA</b>. NAT collects <b>multi-generation trajectories</b> (several responses per example) to score them relatively.</p>
+      <p style="margin-top:6px"><b>When:</b> improve <b>multi-step agent behavior through experience</b> where you can <i>score</i> outcomes (a reward) but lack preference pairs.</p></div>
+  </div>
+
+  <h3>Data Flywheel Blueprint <span class="tag">eval-driven continuous improvement</span></h3>
+  <p class="lede">An <code>NVIDIA-AI-Blueprints</code> reference app (not a single microservice) that uses <b>production traffic to continuously find a cheaper/better model</b> — model distillation by selection.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 960 150" font-family="inherit">
+      <defs><marker id="arrF" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker></defs>
+      <g font-size="10.5">
+        <rect x="4" y="40" width="118" height="58" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="63" y="62" text-anchor="middle" style="fill:var(--blue)" font-weight="700">Prod traffic</text><text x="63" y="78" text-anchor="middle" style="fill:var(--muted)">logs tagged</text><text x="63" y="90" text-anchor="middle" style="fill:var(--muted)">workload_id</text>
+        <rect x="152" y="40" width="118" height="58" rx="9" style="fill:var(--panel);stroke:var(--cyan)"/><text x="211" y="62" text-anchor="middle" style="fill:var(--cyan)" font-weight="700">Build datasets</text><text x="211" y="78" text-anchor="middle" style="fill:var(--muted)">group · dedup ·</text><text x="211" y="90" text-anchor="middle" style="fill:var(--muted)">stratified split</text>
+        <rect x="300" y="40" width="130" height="58" rx="9" style="fill:var(--panel);stroke:var(--green)"/><text x="365" y="62" text-anchor="middle" style="fill:var(--green)" font-weight="700">Evaluate</text><text x="365" y="78" text-anchor="middle" style="fill:var(--muted)">multi-model;</text><text x="365" y="90" text-anchor="middle" style="fill:var(--muted)">NeMo Evaluator</text>
+        <rect x="460" y="40" width="130" height="58" rx="9" style="fill:var(--panel);stroke:var(--purple)"/><text x="525" y="62" text-anchor="middle" style="fill:var(--purple)" font-weight="700">Customize</text><text x="525" y="78" text-anchor="middle" style="fill:var(--muted)">LoRA-finetune</text><text x="525" y="90" text-anchor="middle" style="fill:var(--muted)">small candidates</text>
+        <rect x="620" y="40" width="140" height="58" rx="9" style="fill:var(--panel);stroke:var(--amber)"/><text x="690" y="58" text-anchor="middle" style="fill:var(--amber)" font-weight="700">Surface smaller</text><text x="690" y="73" text-anchor="middle" style="fill:var(--muted)">model meeting</text><text x="690" y="85" text-anchor="middle" style="fill:var(--muted)">cost/lat/acc bars</text>
+        <rect x="790" y="40" width="166" height="58" rx="9" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)"/><text x="873" y="62" text-anchor="middle" style="fill:var(--green)" font-weight="700">Human review</text><text x="873" y="78" text-anchor="middle" style="fill:var(--muted)">→ promote →</text><text x="873" y="90" text-anchor="middle" style="fill:var(--muted)">back to prod</text>
+      </g>
+      <line x1="122" y1="69" x2="152" y2="69" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arrF)"/>
+      <line x1="270" y1="69" x2="300" y2="69" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arrF)"/>
+      <line x1="430" y1="69" x2="460" y2="69" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arrF)"/>
+      <line x1="590" y1="69" x2="620" y2="69" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arrF)"/>
+      <line x1="760" y1="69" x2="790" y2="69" style="stroke:var(--green)" stroke-width="1.8" marker-end="url(#arrF)"/>
+      <path d="M 873 98 C 873 135 100 135 63 100" fill="none" style="stroke:var(--blue)" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#arrF)"/>
+    </svg>
+    <div class="caption">Microservices: <b>Data Store</b> (datasets) · <b>Customizer</b> (LoRA) · <b>Evaluator</b> (LLM-judge similarity) · <b>NIM/Inference</b> (serve candidates). Infra: Elasticsearch · MongoDB · Redis/Celery.</div>
+  </div>
+  <div class="callout"><b>Why it's on the exam:</b> the canonical answer to "which NVIDIA pattern connects evaluation to <b>continuous improvement / cuts inference cost using production data?</b>" → <b>Data Flywheel Blueprint</b>. It discovers cases where a <b>small distilled model matches a large one</b> (common in tool-calling) — NVIDIA reports <b>up to 98.6% inference-cost reduction</b>. Distinguish from the generic "flywheel" wording; the Blueprint is the concrete, deployable implementation.</div>
+
+  <h3>Cost / latency / accuracy tradeoff matrix</h3>
+  <p class="lede"><b>Define minimum acceptable accuracy first</b>, then optimize cost &amp; latency <i>within</i> that floor — never trade accuracy below it (bad-answer cost &gt; compute savings). This is exactly what the Data Flywheel automates and the Sizing Calculator quantifies.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Action</th><th>Cost</th><th>Latency</th><th>Accuracy</th></tr>
+    <tr><td><b>Larger model</b></td><td class="bad">↑</td><td class="bad">↑</td><td class="good">usually ↑</td></tr>
+    <tr><td><b>More retrieval chunks</b></td><td class="bad">↑</td><td class="bad">↑</td><td class="mid">diminishing; risks noise</td></tr>
+    <tr><td><b>Add a reranker</b> (retrieve wide → keep few)</td><td class="good">↓ (fewer tokens to LLM)</td><td>~</td><td class="good">↑ (cleaner context)</td></tr>
+    <tr><td><b>Cache frequent queries</b></td><td class="good">↓ (amortized)</td><td class="good">↓↓</td><td class="mid">same / slightly stale</td></tr>
+    <tr><td><b>Distill / finetune a smaller model</b></td><td class="good">↑ upfront, ↓ serving</td><td class="good">↓</td><td class="mid">matches large on <i>narrow</i> task</td></tr>
+    <tr><td><b>Quantize (FP8 / INT4)</b></td><td class="good">↓</td><td class="good">↓</td><td class="mid">small drop</td></tr>
+  </table></div>
 </section>
 
 <!-- ============ DECISION FRAMEWORKS ============ -->
@@ -684,6 +787,11 @@
     <div class="trap"><h4><span class="n">#12</span>Evaluator vs Customizer vs Agent Toolkit</h4><p>Evaluator <b>measures</b> (benchmarks, judge, RAG/agent metrics); Customizer <b>tunes</b> (LoRA/SFT/DPO/GRPO); Agent Toolkit <b>profiles &amp; evaluates agent workflows</b> in your code (<code>nat eval</code>). <span class="fix">Questions love swapping these</span>.</p></div>
     <div class="trap"><h4><span class="n">#13</span>Benchmark scores as production proof</h4><p>High MMLU doesn't predict agent task success; agent eval needs <span class="fix">trajectory-level, task-specific metrics</span>. Also beware test-set contamination in public benchmarks.</p></div>
     <div class="trap"><h4><span class="n">#14</span>Verbosity bias</h4><p>Longer ≠ better; judges inflate long answers. If two answers tie on content, an LLM judge will often pick the longer. <span class="fix">Control for length in rubrics</span>.</p></div>
+    <div class="trap"><h4><span class="n">#15</span>Compound error is multiplicative</h4><p>A 10-step agent at 95% per step is <b>0.95<sup>10</sup> ≈ 60%</b>, not 95% and not 50%. "Each step works 9/10 times" → <code>0.9<sup>5</sup> ≈ 59%</code> end-to-end. <span class="fix">Fix with fewer steps / higher per-step reliability / verification — not just "a bigger model"</span>.</p></div>
+    <div class="trap"><h4><span class="n">#16</span>Profiler vs Sizing Calculator</h4><p>Profiler answers <b>"where do my tokens/latency go?"</b> (per-step breakdown). Sizing Calculator answers <b>"how many GPUs for N users at latency L?"</b> (slope-based capacity). <span class="fix">Both System-level; questions swap them</span>.</p></div>
+    <div class="trap"><h4><span class="n">#17</span>DPO vs GRPO / OpenPipe ART</h4><p>Both NAT finetuning paths above SFT, but <b>DPO learns from labeled (chosen, rejected) pairs (no RL)</b>; <b>GRPO is RL</b> comparing a <i>group</i> of sampled rollouts against a <b>reward</b> (no pairs, no reward model). <span class="fix">"Score outcomes, no preference pairs, improve through experience" → GRPO via OpenPipe ART</span>.</p></div>
+    <div class="trap"><h4><span class="n">#18</span>Data Flywheel ≠ just "fine-tuning"</h4><p>Its signature: use <b>production traffic</b> to <b>discover a smaller/distilled model</b> meeting cost/latency/accuracy bars (NVIDIA cites up to <b>98.6%</b> cost cut), then human-review-and-promote. <span class="fix">"Continuously cut inference cost using real traffic" → Data Flywheel Blueprint, not Customizer alone</span>.</p></div>
+    <div class="trap"><h4><span class="n">#19</span>Red teaming is an eval, run continuously</h4><p>A Level-4 evaluator for injection / jailbreak / PII / harmful / out-of-scope, reported as <b>block rate</b>; schedule it (drift) and include benign inputs to catch false-positive blocks. <span class="fix">It <i>finds</i> gaps offline; NeMo Guardrails <i>blocks</i> them at runtime — don't conflate</span>.</p></div>
   </div>
 </section>
 
@@ -709,6 +817,18 @@
   </details>
   <details class="drill"><summary><span class="qn">Q6</span><span>You need to benchmark a NIM-deployed Llama model on MMLU and GSM8K, judge custom chat responses with another NIM as evaluator, and score your retriever with Recall@K/NDCG@K — all via API in the NeMo platform. Which component?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
     <div class="answer"><b>NeMo Evaluator microservice</b>.<span class="why">It covers academic harness benchmarks, LLM-as-a-judge (any NIM as judge), and retriever/RAG pipeline metrics in one service via eval targets / configs / jobs.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q7</span><span>A 6-step agent shows 88% per-step accuracy in component tests, yet end-to-end task success is only ~46%. The team wants a bigger model. Better diagnosis?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Compound error:</b> <code>0.88<sup>6</sup> ≈ 0.46</code>.<span class="why">A bigger model only nudges per-step accuracy. Higher-leverage: cut the number of steps, harden the weakest step (clearer tool schema, grounding), add a verification/recovery step. Profile the trajectory to find the step that bleeds the most.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q8</span><span>NAT Profiler shows one LLM-generation step is 40% of total latency and most tokens. Name two fixes — and which tool tells you how many GPUs you'll need at 200 concurrent users?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Fixes:</b> route that step to a smaller/faster model, or retrieve fewer chunks (+ reranker) to cut input tokens (or cache). <b>GPU count → NAT Sizing Calculator</b> (<code>nat sizing calc</code>, slope-based across concurrency levels).<span class="why">Profiler finds the hotspot; Sizing Calculator does capacity planning. Both are System-level.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q9</span><span>You can auto-score whether each agent run hit its goal (a reward), but have no human-labeled chosen/rejected pairs, and want the multi-step agent to improve with experience. Which NAT finetuning path?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>GRPO via OpenPipe ART</b> (NAT Finetuning Harness).<span class="why">GRPO is RL that compares a <i>group</i> of sampled rollouts against the reward — no preference pairs, no reward model. DPO would apply only if you <i>had</i> (chosen, rejected) pairs.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q10</span><span>Leadership wants to cut inference cost on a high-volume tool-calling agent without losing accuracy, using traffic you already log. Which NVIDIA pattern?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Data Flywheel Blueprint</b>.<span class="why">It mines production logs (tagged by <code>workload_id</code>), builds eval/finetune datasets, finds a smaller distilled model that still clears the accuracy bar via NeMo Evaluator + Customizer, and promotes it after human review (up to ~98.6% cost cut for such tool-calling cases).</span></div>
   </details>
 
   <h3>Builder's corner — habits that make this real</h3>
@@ -890,6 +1010,40 @@ model.print_trainable_parameters()        # e.g. "trainable params: 0.26%" — t
   }}'</code></pre>
     <p><b>What to notice:</b> peft's <code>r</code> and Customizer's <code>lora.adapter_dim</code> are the same concept (adapter rank); <code>finetuning_type: "lora"</code> vs <code>"all_weights"</code> is the Customizer-side LoRA-vs-full-SFT switch from §4, and <code>training_type</code> flips to <code>"dpo"</code> for preference alignment. Newer NeMo platform releases also expose an SDK form (<code>sdk.customization.jobs.create(...)</code> with a <code>training.peft.type="lora"</code> spec) layered on top of this REST shape.</p>
   </div>
+
+  <div class="card amber">
+    <h4><span class="icon">📐</span>8 · NAT Profiler + Sizing Calculator <span class="pill a">find the hotspot, then size the cluster</span></h4>
+    <pre class="code-block"><code># (a) PROFILE: add a profiler block to the eval config, then `nat eval` emits per-step
+#     token/latency breakdown into output_dir (workflow → agent → tool).
+#  eval_config.yml:
+#    general:
+#      output_dir: ./.tmp/nat/eval_output
+#      profiler:
+#        compute_llm_metrics: true          # per-step inference-optimization metrics
+#        token_uniqueness_forecast: true    # inter-query token uniqueness (repeated/wasted context)
+#        workflow_runtime_forecast: true    # forecast expected workflow runtime
+nat eval --config_file eval_config.yml       # read output_dir for the breakdown table
+
+# (b) SIZE: gather metrics across concurrency levels, then size offline for a target SLA.
+nat sizing calc --config_file workflow.yml --calc_output_dir ./sizing \
+                --concurrencies 1,2,4,8,16,32 --num_passes 2
+nat sizing calc --offline_mode --calc_output_dir ./sizing --test_gpu_count 8 \
+                --target_users 200 --target_workflow_runtime 10   # runtime in SECONDS -&gt; est. GPU count</code></pre>
+    <p><b>What to notice:</b> the Profiler tells you <i>where</i> tokens/latency go so you optimize the right step; the Sizing Calculator re-uses that profiler data and <b>slope-based estimation</b> across concurrency levels to output a <b>GPU count</b> for <code>target_users</code> at <code>target_workflow_runtime</code>. <code>--offline_mode</code> = "size again from already-gathered metrics" without re-running the agent — gather once, plan many SLAs.</p>
+  </div>
+
+  <div class="card red">
+    <h4><span class="icon">🛡️</span>9 · NAT Red Teaming evaluator <span class="pill r">adversarial eval in the same run</span></h4>
+    <pre class="code-block"><code># add alongside your ragas/trajectory evaluators in eval_config.yml
+eval:
+  evaluators:
+    red_team:
+      _type: red_teaming            # system-level adversarial evaluator (Lakera-contributed)
+      llm_name: judge_llm           # an attacker/judge LLM drives + scores probes
+      attack_categories: [prompt_injection, jailbreak, pii_extraction, harmful_content, off_topic]
+      attacks_per_category: 10      # -&gt; block_rate reported per category</code></pre>
+    <p><b>What to notice:</b> red teaming is just <b>another evaluator</b> in the <code>nat eval</code> config (§5), reported as a per-category <b>block rate</b> — wire it into the same CI gate (e.g., require <code>block_rate ≥ 0.90</code>). Include a few <i>benign</i> edge-case inputs so a polite refusal of a legitimate query shows up as a <b>false-positive block</b>, not a safety win. It <b>finds</b> gaps; <b>NeMo Guardrails</b> is the runtime layer that <b>blocks</b> them in production.</p>
+  </div>
 </section>
 
 <!-- ============ ENGINEER TAKES ============ -->
@@ -953,6 +1107,10 @@ model.print_trainable_parameters()        # e.g. "trainable params: 0.26%" — t
     <li>NeMo Evaluator LLM-as-a-Judge — <a href="https://docs.nvidia.com/nemo/microservices/latest/evaluate/flows/llm-as-a-judge.html">docs.nvidia.com/…/llm-as-a-judge</a></li>
     <li>NVIDIA blog — AI Agent Evaluation — <a href="https://developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation/">developer.nvidia.com/blog/mastering-agentic-techniques-ai-agent-evaluation</a></li>
     <li>NeMo Agent Toolkit eval &amp; profiler — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html">docs.nvidia.com/nemo/agent-toolkit/…/evaluate</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a></li>
+    <li>NAT Sizing Calculator (GPU cluster planning) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/sizing-calc.html">docs.nvidia.com/…/sizing-calc</a></li>
+    <li>NAT Finetuning Harness — DPO via Customizer, GRPO via OpenPipe ART — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/index.html">docs.nvidia.com/…/finetuning</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/finetuning/rl_with_openpipe.html">GRPO w/ OpenPipe ART</a> · <a href="https://github.com/OpenPipe/ART">OpenPipe/ART</a></li>
+    <li>NAT Red Teaming (Lakera-contributed) — <a href="https://www.lakera.ai/blog/red-teaming-agentic-capabilities-in-nvidia-nemo-agent-toolkit">lakera.ai/blog/red-teaming-…-nemo-agent-toolkit</a></li>
+    <li>Data Flywheel Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">github.com/NVIDIA-AI-Blueprints/data-flywheel</a> · <a href="https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard">build.nvidia.com blueprint card</a></li>
     <li>NeMo Customizer — <a href="https://developer.nvidia.com/nemo-customizer">developer.nvidia.com/nemo-customizer</a> · <a href="https://docs.nvidia.com/nemo/microservices/latest/fine-tune/tutorials/index.html">fine-tune tutorials</a></li>
     <li>NVIDIA blog — chunking strategy study — <a href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/">finding-the-best-chunking-strategy</a></li>
     <li>NVIDIA blog — reranking for RAG — <a href="https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/">enhancing-rag-pipelines-with-re-ranking</a> · <a href="https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/">reranking microservice accuracy &amp; costs</a></li>

@@ -76,7 +76,43 @@ rails = LLMRails(config)
 completion = rails.generate(messages=[{"role": "user", "content": "Hello!"}])
 ```
 
-### 3.2 Colang
+**Deployment tiers, CLI, and the FastAPI server.** NeMo Guardrails runs in two modes — know the distinction:
+- **Library mode (light):** `pip install nemoguardrails langchain-nvidia-ai-endpoints` + `NVIDIA_API_KEY` + NVIDIA-hosted models. Runs on a CPU laptop. Gives you the Python API and the CLI. This is the default for dev and most labs.
+- **Microservice mode (heavy):** NGC container (`nvcr.io/nvidia/nemoguardrails`) — needs an NGC API key, Docker, possibly GPU for the Safety NIM models, and Kubernetes for production. Use when you need a standalone, centrally-governed guardrails service.
+
+CLI (memorize the verbs — the exam may ask "which command starts the server"):
+
+```bash
+nemoguardrails chat     --config ./config            # interactive chat (use --verbose to debug Colang parse errors)
+nemoguardrails evaluate --config ./config            # run evaluation tasks (e.g. fact-checking) against a dataset
+nemoguardrails server   --config ./config --port 8000   # FastAPI server (needs: pip install nemoguardrails[server])
+```
+
+The **FastAPI server exposes an OpenAI-compatible `/v1/chat/completions` endpoint** (select a config with `config_id` in the request body) — so guardrails become a drop-in replacement for an existing LLM API call.
+
+### 3.1b The 4-stage safety lifecycle (NVIDIA conceptual frame)
+
+NVIDIA frames agentic safety as a lifecycle, not a single runtime filter. Memorize the four stages and which tool owns each — the exam tests "map the NVIDIA tool to the stage":
+
+| Stage | What happens | NVIDIA tool |
+|---|---|---|
+| **1 · Evaluate** | Offline vulnerability scanning + safety benchmarking *before* deployment; adversarial probing to find gaps | **NeMo Auditor** (Garak-based) |
+| **2 · Post-Train** | Bake safety into the *model itself* via safety-focused SFT / DPO / RLHF on safety datasets (e.g., Aegis 2.0) | NeMo Customizer / fine-tuning + **Safe Synthesizer** for privacy-preserving training data |
+| **3 · Deploy** | Ship the *exact* validated model through trusted, secure infrastructure so what runs == what was audited | **NIM** containers (provenance, on-prem) |
+| **4 · Runtime** | Inference-time interception of inputs, outputs, tool calls, dialog | **NeMo Guardrails** + Safety NIMs (ContentSafety/TopicControl/JailbreakDetect) + **NAT defense middleware** |
+
+**Exam-critical history:** the **Safety for Agentic AI Blueprint** was NVIDIA's original integrated build→deploy→run safety pipeline. It was **deprecated April 22, 2026.** NVIDIA now recommends the modular **NeMo Microservices** trio: **NeMo Auditor** (pre-deployment scanning), **NeMo Guardrails** (runtime protection), **Safe Synthesizer** (privacy-preserving synthetic data). If a question references the "Safety Blueprint," the right answer is usually "deprecated — use NeMo Auditor + Guardrails (+ Safe Synthesizer) instead." The *lifecycle model itself* is still valid as a conceptual frame.
+
+### 3.1c NeMo Auditor — pre-deployment auditing (Stage 1)
+
+**NeMo Auditor** is a NeMo Microservice that probes an LLM/agent **offline, in batch**, with automated attacks and edge-case prompts to uncover safety/security vulnerabilities *before* you ship. It is **built on the open-source Garak library** (§3.7) — Auditor is the productized, microservice-deployed, CI-gateable wrapper around Garak-style scanning. Core pieces:
+- **Audit jobs** — automated vulnerability + safety assessment runs against a model/agent target.
+- **Vulnerability scanning** — surfaces known failure patterns (jailbreak susceptibility, toxicity, leakage).
+- **Safety scoring** — quantitative scores across dimensions; use as a **CI/CD gate** (agents failing the audit do not deploy).
+
+Where it fits: **between evaluation and deployment**. It is the recommended replacement for the *evaluate stage* of the deprecated Safety Blueprint. Relationship to remember: **Garak = the engine, NeMo Auditor = the managed microservice/CI gate built on it, NeMo Guardrails = the runtime rails.** (Deploy via Docker Compose for local dev or Helm/Kubernetes for production; needs an NGC API key + an LLM endpoint.)
+
+### 3.1d Colang
 
 Colang is the purpose-built modeling language for dialog flows and guardrails — Python-like, indentation-based, designed so flows read like conversation scripts. Key constructs (Colang 1.0):
 
@@ -96,7 +132,32 @@ define flow politics rail
 - `define user ...` — a **canonical form** for user intent, learned from example utterances via embedding similarity (semantic matching, not regex).
 - `define bot ...` — canonical bot responses.
 - `define flow` — the dialog rail: when intent X is matched, do Y (predefined response, action call via `execute my_action`, or let the LLM generate).
-- **Colang 1.0** is the default through NeMo Guardrails 0.11.x; **Colang 2.0** (event-driven; `flow`, `match`, `await`, `activate` keywords; parallel flows) becomes default in 0.12+. Exam-level takeaway: Colang = how you write dialog rails and topic control; canonical forms = intent abstraction layer.
+- **Colang 1.0** is the default through NeMo Guardrails 0.11.x; **Colang 2.0** (event-driven; `flow`, `match`, `send`, `await`, `activate` keywords; real control flow `if/else/while`; variable scoping; parallel flows) becomes default in 0.12+. Exam-level takeaway: Colang = how you write dialog rails and topic control; canonical forms = intent abstraction layer.
+
+**Colang 2.0 — what's actually new.** Colang 2.0 is a fuller event-driven language: a `flow` can `match` an event, `send` an event, and use `if/else`/`while`, local variables (`$var`), and the `when` keyword for event-triggered logic (the key construct for execution rails — fire logic *when* a tool call or bot message event occurs). Set it explicitly with `colang_version: "2.x"` in `config.yml`. New projects should use 2.0. Tiny 2.0 examples:
+
+```colang
+# Colang 2.0: an input content-safety rail expressed as control flow
+define flow content safety check input
+  $is_safe = execute content_safety_check(text=$user_message)
+  if not $is_safe
+    bot refuse unsafe content
+    stop                       # halt the pipeline; main LLM never runs
+
+# Colang 2.0: event-driven execution rail — validate a tool call BEFORE it runs
+define flow validate tool call
+  when tool_call                              # fires on the tool-call event
+    if $tool_call.name == "execute_sql"
+      if contains($tool_call.parameters.query, "DROP") or contains($tool_call.parameters.query, "DELETE")
+        bot refuse dangerous operation
+        stop
+    execute tool_call
+    when tool_result                          # post-call check on the result
+      if $tool_result.status == "error"
+        bot report tool error gracefully
+```
+
+The `when tool_call` / `when tool_result` pattern is the canonical Colang 2.0 **execution rail**: it validates parameters *before* the tool fires and inspects results *after*. Colang 2.0 is whitespace-sensitive — a stray blank line or wrong indent breaks the flow at parse time (test with `nemoguardrails chat --config ./config --verbose`).
 
 ### 3.3 Topic control
 
@@ -141,6 +202,65 @@ rails:
     flows:
       - content safety check output $model=content_safety
 ```
+
+### 3.5b PII detection & redaction — providers and the mask-vs-block decision
+
+NeMo Guardrails ships a `sensitive data detection` capability (input, output, **and** retrieval flows) that wires to multiple PII engines — know the provider names:
+
+| Provider | What it is |
+|---|---|
+| **Presidio** | Microsoft's open-source PII detection + anonymization engine (needs a spaCy model, e.g. `en_core_web_lg`); the default community integration |
+| **GLiNER** | Open-source NER for PII; NVIDIA fine-tuned it on its **Nemotron-PII** dataset to ship **GLiNER-PII** for multi-domain detection. *Presidio + GLiNER combined gives the best accuracy.* |
+| **Private AI** | Commercial PII detect/mask service — broader entity set, multi-file-format support, higher accuracy |
+| **AutoAlign** | AutoAlign's commercial "Sidecar" guardrails — PII detection/redaction with configurable entity types (community integration) |
+
+Outside Guardrails, **NAT redaction processors** (the `nvidia-nat[pii-defense]` extra) redact PII at the *agent-framework* level — across inputs, tool parameters, and outputs.
+
+**Mask vs. block (exam decision):**
+- **Mask / redact** — replace PII with placeholders (`[EMAIL]`, `[SSN]`) when the request is still answerable without the real values; the standard choice for logging/analytics and most user PII.
+- **Block** — refuse the whole request when PII presence *itself* signals a violation (e.g., a user pasting someone else's SSN).
+
+```yaml
+# config.yml — Presidio-backed input PII masking
+rails:
+  input:
+    flows:
+      - mask sensitive data on input
+sensitive_data_detection:
+  input:
+    entities: [PERSON, EMAIL_ADDRESS, PHONE_NUMBER, US_SSN, CREDIT_CARD, IP_ADDRESS]
+    provider: presidio
+```
+
+```python
+# Custom Colang action (registered with rails.register_action) — mask, don't log raw
+async def mask_pii_in_text(text: str) -> str:
+    results = analyzer.analyze(text=text, entities=["EMAIL_ADDRESS","US_SSN","PHONE_NUMBER"], language="en")
+    masked = anonymizer.anonymize(text=text, analyzer_results=results).text
+    for e in results:                       # log the TYPE + score for audit — never the raw value
+        log.info("PII masked: type=%s score=%.2f", e.entity_type, e.score)
+    return masked
+```
+
+**Anti-pattern (exam trap):** detecting/redacting PII from the *response* but logging the *original un-redacted* content for debugging — your logs become the PII leak. **Redact before logging.**
+
+### 3.5c Fact-checking & hallucination rails (output + retrieval)
+
+Two complementary mechanisms guard against ungrounded answers:
+- **Retrieval rails** filter/repair RAG chunks *before* generation (drop irrelevant/contradictory/poisoned context).
+- **Fact-checking output rails** verify the generated answer is grounded in the retrieved context *after* generation; the built-in `self check facts` rail (and `nemoguardrails evaluate fact-checking`) score groundedness.
+
+```colang
+# Colang: grounding/fact-check output rail
+define flow check output hallucination
+  when bot_message
+    $grounded = execute check_hallucination(response=$bot_message, context=$relevant_chunks)
+    if not $grounded
+      bot warn about uncertainty
+      stop
+```
+
+Full hallucination-prevention stack: (1) retrieval rails filter chunks → (2) system prompt "use only provided context" → (3) output fact-check rail → (4) confidence threshold triggers human escalation. **Tuning note:** if the grounding check is too strict it flags *every* response as ungrounded — tune it to fire only when a claim clearly contradicts or is absent from the context.
 
 ### 3.6 Threat landscape: OWASP Top 10 for LLM Applications (2025)
 
@@ -229,9 +349,16 @@ garak --list_probes
 | **Aegis dataset (Nemotron Content Safety Dataset V2)** | ~30–35k human-annotated safety samples powering NemoGuard ContentSafety | Fine-tuning/evaluating your own safety classifiers |
 | **NIM microservices generally** | Self-hosted, containerized inference → data residency + auditability story | Regulated industries; data cannot leave region/VPC |
 | **Model Card++** | NVIDIA's enhanced model documentation (bias, safety, privacy, explainability subcards) | Governance evidence for models pulled from NGC/build.nvidia.com |
-| **NeMo Agent Toolkit (AIQ)** | Profiling/observability/evaluation for agent workflows — feeds auditability | You need traces of agent tool-call chains for audit |
+| **NeMo Auditor** (NeMo Microservice) | Pre-deployment / CI **offline** safety + vulnerability scanning (Garak-based); audit jobs, vuln scanning, safety scoring | Stage 1 gate: block deploys that fail a safety audit; replaces the deprecated Safety Blueprint's evaluate stage |
+| **NAT Safety & Security Engine** (NeMo Agent Toolkit) | In-workflow middleware: **defense middleware** (intercept + mitigate threats inline), **red-teaming middleware** (simulate prompt-injection/jailbreak/tool-poisoning attacks against the *whole agent workflow*), **redaction processors** (`nvidia-nat[pii-defense]`), **Profiler** | You need guardrails/red-teaming *inside* a NAT agent workflow (not just around one LLM call), plus token/tool-call profiling |
+| **Safe Synthesizer** (NeMo Microservice, *Early Access*) | Generates **privacy-protected synthetic tabular data** from sensitive datasets — PII replacement + optional **differential privacy** | You must train/eval on sensitive-data patterns without exposing real records (Stage 2 data prep); not a runtime safety control |
+| **NeMo Agent Toolkit (AIQ) Profiler** | Profiling/observability/evaluation for agent workflows — feeds auditability; measures per-rail latency | You need traces of agent tool-call chains for audit and to tune the guardrail latency budget |
 
-**The canonical NVIDIA safety pipeline:** Garak scans the model → findings inform NeMo Guardrails config → NemoGuard NIMs (ContentSafety + TopicControl + JailbreakDetect) run as rails at inference → traces logged for audit → re-scan with Garak after changes.
+**The canonical NVIDIA safety pipeline:** Garak / **NeMo Auditor** scans the model offline (Stage 1, CI gate) → findings inform NeMo Guardrails config → NemoGuard NIMs (ContentSafety + TopicControl + JailbreakDetect) run as rails at inference (Stage 4), with **NAT defense middleware** as an in-workflow layer → traces logged for audit → re-scan with Auditor/Garak after every change.
+
+**NAT middleware vs. NeMo Guardrails (don't conflate).** NeMo Guardrails wraps a *single LLM interaction* (input→dialog→retrieval→execution→output rails). **NAT defense middleware** sits in the *agent workflow's* request pipeline and applies fast rule-based checks (prompt-injection detection, input-length limits, encoding-attack detection on input; PII redaction + toxic-content filtering on output) across the whole multi-agent chain. Production layers both: NAT middleware (fast, rule-based) → NeMo Guardrails (LLM- + NIM-based). **NAT red-teaming middleware** is the *development-time* counterpart — it runs simulated attack campaigns against the live workflow to find regressions, complementing offline Garak/Auditor scans.
+
+**Fail-closed vs. fail-open (exam-relevant anti-pattern).** When a safety dependency (e.g., the ContentSafety NIM) is unreachable, the system must **degrade to a more restrictive mode (fail closed)** — block or fall back to heuristics — never silently bypass the check (**fail open**), which lets attacks through. Production policy: fail closed; document it.
 
 ## 5. Decision frameworks
 
@@ -286,6 +413,10 @@ garak --list_probes
 10. **Watermarking vs provenance metadata.** C2PA = signed *metadata* (strippable but tamper-evident); SynthID = signal *inside* the pixels/tokens (survives metadata stripping). Robust deployments use both. Neither is an "AI detector."
 11. **Colang flows are matched semantically (embeddings), not by exact string/regex.** Example utterances under `define user` are training examples for intent matching.
 12. **Training data poisoning (LLM04) happens at build time; prompt injection at run time.** A backdoored fine-tune dataset = poisoning; a malicious RAG document = indirect injection (runtime), though poisoning the *embedding store* is LLM04/LLM08 territory — look at whether the artifact is persisted into the model/index or transient in the prompt.
+13. **NeMo Auditor (pre-deployment) ≠ NeMo Guardrails (runtime).** Auditor is the Garak-based *offline* CI scanner (Stage 1); Guardrails is the *inference-time* rail enforcement (Stage 4). "Scan/audit before launch" → Auditor; "block at request time" → Guardrails. And the **Safety for Agentic AI Blueprint is deprecated (Apr 22, 2026)** → answer with the NeMo Microservices trio (Auditor + Guardrails + Safe Synthesizer).
+14. **Fail closed, not open.** If a Safety NIM is down, degrade to *more* restrictive (block / heuristic fallback), never bypass. A fallback that returns "safe" by default silently disables the rail.
+15. **Safe Synthesizer is a data-generation / privacy tool, not a runtime guardrail.** It makes privacy-protected synthetic tabular data (optionally with differential privacy) for training/eval — it does not intercept requests. Early Access; don't make it the backbone of a safety answer.
+16. **Execution rail in Colang 2.0 = `when tool_call`.** The event-driven `when` keyword is the giveaway that a flow is an execution rail validating a tool call before/after it fires — distinct from output rails (`when bot_message`) and input rails (`$user_message`).
 
 ## 7. Scenario drills
 
@@ -295,6 +426,11 @@ garak --list_probes
 4. **A banking assistant must refuse crypto-investment chat with a fixed compliance-approved message whenever the user raises the topic. Mechanism?** → **Dialog rail via Colang** (define user intent + define bot response + flow) — deterministic scripted refusal, not an LLM judgment; TopicControl NIM if topics are broad/drifting.
 5. **You deploy an agent that screens job applicants for an EU customer. What compliance posture applies?** → **EU AI Act high-risk tier** (Annex III employment) — risk management, logging/auditability, human oversight, conformity assessment before market; transparency alone is insufficient.
 6. **The model's answer is inserted directly into your web UI's HTML, and a tester got `<script>` to execute. Which OWASP item and fix?** → **Improper Output Handling (LLM05)** — treat LLM output as untrusted: encode/sanitize before rendering (and add an output rail), regardless of how "safe" the model seems.
+7. **Your team wants a CI gate that batch-scans the agent's LLM for jailbreak/toxicity/leakage vulnerabilities and emits a safety score, blocking deploys that fail. Which NVIDIA tool — and is it runtime?** → **NeMo Auditor** (Garak-based, **offline**, Stage 1). Not runtime — that's NeMo Guardrails. If the prompt cites the "Safety for Agentic AI Blueprint," note it's deprecated (Apr 22, 2026) → use the NeMo Microservices trio.
+8. **A SQL tool runs `DROP TABLE` before the output rail can act. Which rail type was missing, and write the Colang trigger.** → **Execution rail** — it validates the tool call *before* execution. Colang 2.0: `define flow validate tool call` / `when tool_call` / check `$tool_call.parameters.query` for `DROP`/`DELETE` → `bot refuse` + `stop`. Output rails fire too late (damage is done).
+9. **The ContentSafety NIM is unreachable in production. What should the system do?** → **Fail closed** — block or fall back to heuristic/self-check, degrading to a *more* restrictive mode. Never fail open (silently bypass), which lets attacks through.
+10. **You need to fine-tune a safety classifier on customer-support transcripts that contain real SSNs and emails, but compliance forbids using the raw records. Which NVIDIA tool?** → **Safe Synthesizer** — generates privacy-protected synthetic tabular data (PII replacement + optional differential privacy) preserving the statistical patterns, so you train without exposing real PII. (Early Access.)
+11. **You want red-teaming that attacks the *whole multi-agent NAT workflow* (tool poisoning, injection across agents) during development, not just one LLM prompt. What do you use?** → **NAT red-teaming middleware** (the Safety & Security Engine). Garak/Auditor scan a model endpoint; NAT red-teaming exercises the full agent workflow inline.
 
 ## 8. Builder's corner
 
@@ -313,6 +449,13 @@ garak --list_probes
 - Llama 3.1 NemoGuard 8B ContentSafety model card (Aegis 2.0, 23 categories, LoRA details, JSON output) — https://huggingface.co/nvidia/llama-3.1-nemoguard-8b-content-safety
 - ContentSafety NIM docs — https://docs.nvidia.com/nim/llama-3-1-nemoguard-8b-contentsafety/latest/index.html
 - NemoGuard JailbreakDetect tutorial — https://docs.nvidia.com/nemo/guardrails/latest/getting-started/tutorials/nemoguard-jailbreakdetect-deployment.html
+- NeMo Auditor (audit jobs, safety scoring, deployment) — https://docs.nvidia.com/nemo/microservices/latest/audit/reference.html ; tutorials — https://docs.nvidia.com/nemo/microservices/latest/audit/tutorials/notebook.html
+- Safety for Agentic AI Blueprint (deprecated Apr 22 2026 — recommends Auditor + Guardrails + Safe Synthesizer) — https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai
+- NeMo Safe Synthesizer (privacy-protected synthetic tabular data, differential privacy, Early Access) — https://docs.nvidia.com/nemo/microservices/latest/about/core-concepts/safe-synthesizer.html
+- NeMo Agent Toolkit Safety & Security Engine (defense + red-teaming middleware, profiler, `nvidia-nat[pii-defense]`) — https://developer.nvidia.com/nemo-agent-toolkit
+- NeMo Guardrails CLI (chat / evaluate / server) + FastAPI `/v1/chat/completions` — https://docs.nvidia.com/nemo/guardrails/latest/user-guides/cli.html ; https://docs.nvidia.com/nemo/guardrails/latest/run-rails/using-fastapi-server/chat-with-guardrailed-model.html
+- Colang 2.0 language reference (event-driven flows, match/send, control flow) — https://docs.nvidia.com/nemo/guardrails/latest/colang-2/language-reference/event-generation-and-matching.html
+- NeMo Guardrails PII integrations (Presidio / GLiNER-PII / Private AI) — https://docs.nvidia.com/nemo/guardrails/latest/user-guides/community/privateai.html ; GLiNER-PII (Nemotron-PII) — https://huggingface.co/blog/nvidia/nemotron-pii
 - Garak GitHub (architecture, probes, CLI) — https://github.com/NVIDIA/garak
 - OWASP Top 10 for LLM Applications 2025 — https://genai.owasp.org/llm-top-10/ and https://owasp.org/www-project-top-10-for-large-language-model-applications/
 - Llama Guard 3 model card (S1–S14 MLCommons taxonomy) — https://github.com/meta-llama/PurpleLlama/blob/main/Llama-Guard3/8B/MODEL_CARD.md

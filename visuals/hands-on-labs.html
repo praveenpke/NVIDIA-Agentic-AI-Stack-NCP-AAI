@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI — Hands-On Labs &amp; Platform Setup</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#141c2c; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25); --on-accent:#0b0f17;
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --border:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;overflow-x:clip}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:clip}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;padding-right:104px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:800px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-canvas{width:100%;height:100%;display:block}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#8fa0b8}
+
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  .grid{display:grid;gap:16px}
+  .grid>*{min-width:0}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(min(215px,100%),1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green);overflow-wrap:anywhere;word-break:break-word}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;max-width:100%;color:var(--green)}
+  pre.code-block code{overflow-wrap:normal;word-break:normal;background:none;border:none;padding:0;font-size:inherit;color:inherit}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-all}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* STEP TRACK */
+  .steptrack{display:flex;flex-direction:column;gap:14px;margin:18px 0}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0;overflow:hidden;border-left:4px solid var(--green)}
+  .step.opt{border-left-color:var(--amber)}
+  .step .head{display:flex;gap:14px;align-items:flex-start;padding:16px 20px;background:linear-gradient(90deg,color-mix(in srgb, var(--green) 7%, transparent),transparent 55%)}
+  .step.opt .head{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 8%, transparent),transparent 55%)}
+  .step .num{flex:0 0 auto;width:38px;height:38px;border-radius:10px;background:var(--green);color:var(--on-accent);font-weight:800;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+  .step.opt .num{background:var(--amber)}
+  .step .head h4{font-size:1.05rem;margin:0 0 3px;color:var(--text)}
+  .step .head .goal{font-size:.84rem;color:var(--muted)}
+  .step .meta{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end;max-width:230px}
+  .step .body{padding:4px 20px 18px}
+  .expect{display:flex;gap:10px;align-items:flex-start;background:color-mix(in srgb, var(--green) 7%, transparent);border:1px solid color-mix(in srgb, var(--green) 30%, transparent);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:.84rem}
+  .expect b{color:var(--green)}
+  .expect .ic{flex:0 0 auto;color:var(--green);font-weight:800}
+  .artifact{font-size:.78rem;color:var(--muted);margin-top:6px}
+  .artifact b{color:var(--cyan)}
+
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}.step .meta{max-width:none;margin-left:0}}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a class="brand" href="index.html">NCP-AAI · Labs</a>
+  <a href="#scene-wrap">3D Pipeline</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#track">The Track</a>
+  <a href="#matrix">Install Matrix</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#paths">3/7/14-Day</a>
+  <a href="#trouble">Troubleshooting</a>
+  <a href="#drills">Quiz</a>
+  <a href="#xlinks">Code Companions</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Hands-On <span class="pct">Onboarding · 6 steps · Milestones 1–8</span></div>
+  <h1>Hands-On Labs <span class="accent">&amp;</span> Platform Setup</h1>
+  <p class="hook">The <b>minimum NVIDIA path</b> from zero to a guarded, deployable agent — a numbered, runnable track: <b>account &amp; key → first NIM call → first NAT workflow → first Guardrails rail → [opt] self-hosted NIM → Blueprint</b>. Every mandatory step runs on a <b>CPU laptop with one API key</b>. Each step ships a verified command and an expected result.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover nodes for info</div>
+  <div class="scene-legend">
+    <h4>Legend — the onboarding pipeline</h4>
+    <ul>
+      <li><span class="sw" style="background:#76b900"></span><span>Five glowing nodes = the path: Account &amp; Key → NIM → NAT → Guardrails → Deploy</span></li>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Cyan packets = your request flowing through — the <i>same</i> OpenAI-shaped call at every hop</span></li>
+      <li><span class="sw" style="background:#e8a33d"></span><span>Amber side-node = optional self-hosted NIM (GPU/Docker) — identical API, your hardware</span></li>
+      <li><span class="sw" style="background:#4da3ff"></span><span>Pulsing key at the start = <code>nvapi-…</code> — without it nothing flows</span></li>
+      <li><span class="sw" style="background:#e0455a"></span><span>Red deflection at Guardrails = an off-topic request blocked before the LLM</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why &amp; how to think about it</div>
+  <h2>Mental model — get badged in, then commission the line</h2>
+  <p class="lede">The other domain pages teach the concepts; this one is the <b>runnable on-ramp</b>. NVIDIA's exam is practitioner-shaped — it assumes you've actually touched build.nvidia.com, <code>nat run</code>, and <code>nemoguardrails chat</code>. Do steps 1–4 once and every other page's Code Companion becomes copy-paste runnable.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">🪪</span>1 · Get your badge</h4><p>Account + <code>nvapi-</code> key. <b>Without it nothing swipes.</b> One env var unlocks the whole hosted platform.</p></div>
+    <div class="card blue"><h4><span class="icon">🚪</span>2 · Swipe the simplest door</h4><p>One chat completion proves the key works and teaches the address: <code>integrate.api.nvidia.com/v1</code>.</p></div>
+    <div class="card purple"><h4><span class="icon">🛠️</span>3–4 · Wire a machine + its guard</h4><p>A NAT agent (model + tool + YAML), then a Guardrails rail that inspects what goes in and comes out.</p></div>
+    <div class="card amber"><h4><span class="icon">🏭</span>5–6 · In-house &amp; reference</h4><p>Optionally bring the machine in-house (self-hosted NIM), then study NVIDIA's published assembly line (a Blueprint).</p></div>
+  </div>
+
+  <div class="callout"><b>The insight that ties it together (and a favorite exam point) — API stability.</b> The OpenAI-compatible request you send in step 2 to the <i>hosted</i> endpoint is byte-for-byte the same request you'd send to a <i>self-hosted</i> NIM in step 5. You change exactly one thing: the <code>base_url</code>. <b>Write once, deploy anywhere.</b></p></div>
+
+  <h3>Hosted first, local second, self-hosted last</h3>
+  <p class="lede">Every <b>mandatory</b> step is CPU-only. GPUs, Docker, NGC, and Kubernetes appear only in the clearly-marked optional step 5 and the optional <i>full</i>-deployment path of step 6.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Activity</th><th>CPU laptop</th><th>Docker</th><th>GPU</th></tr>
+    <tr><td><b>Account + API key</b> (step 1)</td><td class="good">Yes</td><td>No</td><td>No</td></tr>
+    <tr><td><b>NIM hosted calls</b> (step 2)</td><td class="good">Yes</td><td>No</td><td>No</td></tr>
+    <tr><td><b>NAT workflows</b> (step 3)</td><td class="good">Yes</td><td>No</td><td>No</td></tr>
+    <tr><td><b>Guardrails, library mode</b> (step 4)</td><td class="good">Yes</td><td>No</td><td>No</td></tr>
+    <tr><td>Blueprint study + partial reproduction (step 6)</td><td class="good">Yes</td><td>No</td><td>No</td></tr>
+    <tr><td>Self-hosted NIM, small 7–8B (step 5)</td><td class="bad">No</td><td class="mid">Yes</td><td class="bad">Yes (≈1× A100/H100)</td></tr>
+    <tr><td>Full AI-Q Blueprint deployment (step 6 opt)</td><td class="bad">No</td><td class="mid">Yes</td><td class="bad">Yes (≈2× H100)</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ THE TRACK ============ -->
+<section id="track">
+  <div class="kicker">Section 2 · The numbered track</div>
+  <h2>Six steps, each with a verified command and an expected result</h2>
+  <p class="lede">Run them in order. Steps 1–4 are mandatory and CPU-only; step 5 is optional (GPU); step 6 studies a reference architecture and reproduces a tiny version on CPU.</p>
+
+  <div class="steptrack">
+
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="head">
+        <div class="num">1</div>
+        <div><h4>Make a build.nvidia.com account + API key</h4><div class="goal">Goal: a working <code>NVIDIA_API_KEY</code> exported in your shell.</div></div>
+        <div class="meta"><span class="pill g">CPU only</span><span class="pill b">Milestone 0→1</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)">Sign in at <a href="https://build.nvidia.com" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">build.nvidia.com</a> (the NVIDIA API Catalog), open a model card such as <code>meta/llama-3.3-70b-instruct</code>, click <b>Get API Key</b>, and copy the <code>nvapi-…</code> key (shown once). Then:</p>
+        <pre class="code-block"><code>export NVIDIA_API_KEY="nvapi-your-key-here"   # add to ~/.bashrc or ~/.zshrc, then source it
+echo "$NVIDIA_API_KEY"                         # must print nvapi-…  (not blank, no trailing space)</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> <code>echo $NVIDIA_API_KEY</code> prints your key starting <code>nvapi-</code>. <span class="artifact"><b>Artifact:</b> the exported key.</span></div></div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="head">
+        <div class="num">2</div>
+        <div><h4>First NIM API call</h4><div class="goal">Goal: prove the key works; learn that NIM is <b>OpenAI-API compatible</b>.</div></div>
+        <div class="meta"><span class="pill g">CPU only</span><span class="pill b">Milestone 1</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)">Base URL is <code>https://integrate.api.nvidia.com/v1</code>; chat path <code>/chat/completions</code>.</p>
+        <pre class="code-block"><code>curl -s https://integrate.api.nvidia.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $NVIDIA_API_KEY" \
+  -d '{"model":"meta/llama-3.3-70b-instruct",
+       "messages":[{"role":"user","content":"What is NVIDIA NIM in one sentence?"}],
+       "max_tokens":80,"temperature":0.2}'</code></pre>
+        <p style="font-size:.86rem;color:var(--muted)">Same call in Python — the <b>one</b> NVIDIA-specific line is <code>base_url</code>:</p>
+        <pre class="code-block"><code>from openai import OpenAI; import os
+client = OpenAI(base_url="https://integrate.api.nvidia.com/v1",
+                api_key=os.environ["NVIDIA_API_KEY"])
+r = client.chat.completions.create(model="meta/llama-3.3-70b-instruct",
+        messages=[{"role":"user","content":"What is NVIDIA NIM in one sentence?"}],
+        max_tokens=80, temperature=0.2)
+print(r.choices[0].message.content, "|", r.choices[0].finish_reason, r.usage.total_tokens)</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> a chat completion with <code>message.content</code>, <code>finish_reason:"stop"</code>, and a <code>usage.total_tokens</code> count. <code>finish_reason:"length"</code> means you hit <code>max_tokens</code> (truncated). <span class="artifact"><b>Artifact:</b> saved response + token count.</span></div></div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="head">
+        <div class="num">3</div>
+        <div><h4>First NAT workflow (YAML + <code>nat run</code>)</h4><div class="goal">Goal: a NeMo Agent Toolkit agent that calls a tool, defined entirely in YAML.</div></div>
+        <div class="meta"><span class="pill g">CPU only</span><span class="pill b">Milestone 2–3</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)">Package <code>nvidia-nat</code> · import name <code>nat</code> · CLI <code>nat</code> · needs <b>Python 3.10+</b>.</p>
+        <pre class="code-block"><code>python -m venv nat-env && source nat-env/bin/activate   # Windows: nat-env\Scripts\activate
+pip install nvidia-nat
+nat --version        # logs help banner + version (e.g. 1.7.x) → verifies the install</code></pre>
+        <p style="font-size:.86rem;color:var(--muted)">Create <code>workflow.yml</code> — note the <b>exact current schema</b> (LLM <code>_type: nim</code> + <code>model_name</code>; agent under <code>workflow:</code> with <code>_type: tool_calling_agent</code>, <code>tool_names</code>, <code>llm_name</code>):</p>
+        <pre class="code-block"><code>functions:
+  current_datetime:            # NAT ships built-in example tools
+    _type: current_datetime
+llms:
+  nim_llm:
+    _type: nim                 # NVIDIA NIM provider (reads NVIDIA_API_KEY from env)
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+workflow:
+  _type: tool_calling_agent    # native function-calling agent
+  tool_names: [current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  handle_tool_errors: true     # default: tool exception → ToolMessage, agent self-corrects
+  max_iterations: 15           # default cap on tool-call rounds</code></pre>
+        <pre class="code-block"><code>nat run --config_file workflow.yml --input "What time is it right now?"</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> the agent calls <code>current_datetime</code> and answers in natural language; <code>verbose:true</code> shows the <b>tool call → observation → final answer</b> trace. Swap <code>_type: react_agent</code> to see explicit <code>Thought→Action→Observation</code> (Milestone 3). <span class="artifact"><b>Artifact:</b> <code>workflow.yml</code> + trace.</span></div></div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step">
+      <div class="head">
+        <div class="num">4</div>
+        <div><h4>First NeMo Guardrails run (a Colang rail)</h4><div class="goal">Goal: block off-topic input <b>before the LLM is called</b>; demonstrate a refusal.</div></div>
+        <div class="meta"><span class="pill g">CPU only</span><span class="pill b">Milestone 5</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)"><b>Library mode</b> (this step) is pip + key, CPU-only. The second package is what lets Guardrails reach NVIDIA-hosted models:</p>
+        <pre class="code-block"><code>pip install nemoguardrails langchain-nvidia-ai-endpoints
+nemoguardrails --version</code></pre>
+        <p style="font-size:.86rem;color:var(--muted)"><code>config/config.yml</code>:</p>
+        <pre class="code-block"><code>colang_version: "2.x"          # use Colang 2 flow syntax
+models:
+  - type: main
+    engine: nim                 # NVIDIA-hosted NIM backend
+    model: meta/llama-3.3-70b-instruct
+rails:
+  input:
+    flows:
+      - check topic             # runs on every user msg, BEFORE the LLM</code></pre>
+        <p style="font-size:.86rem;color:var(--muted)"><code>config/topics.co</code> (Colang 2, example-based intent matching):</p>
+        <pre class="code-block"><code>define user ask off topic
+  "What's a good chocolate cake recipe?"
+  "Who won the game last night?"
+
+define flow check topic
+  user ask off topic
+  bot refuse off topic
+
+define bot refuse off topic
+  "I can only help with technology questions — programming, AI, and software engineering."</code></pre>
+        <pre class="code-block"><code>nemoguardrails chat --config config/
+# then type:  What's a good chocolate cake recipe?</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> on-topic questions reach the LLM and get answered; off-topic ones are intercepted by the input rail — <b>the LLM is never called</b> — and the bot returns the refusal. <span class="artifact"><b>Artifact:</b> <code>config/</code> + guarded-vs-unguarded transcript.</span></div></div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step opt">
+      <div class="head">
+        <div class="num">5</div>
+        <div><h4>[Optional] Self-hosted NIM</h4><div class="goal">Goal: run the <i>same</i> API on your own GPU. No lab needs this.</div></div>
+        <div class="meta"><span class="pill a">GPU + Docker</span><span class="pill r">Optional</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)">Requires Linux, driver <b>535+</b>, Docker <b>24+</b>, NVIDIA Container Toolkit, and an <b>NGC API key</b> (separate from <code>NVIDIA_API_KEY</code>).</p>
+        <pre class="code-block"><code># Username is the LITERAL string $oauthtoken
+echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin
+
+docker run -d --name nim-llm --gpus all -p 8000:8000 \
+  -v nim-cache:/opt/nim/.cache -e NGC_API_KEY="$NGC_API_KEY" \
+  nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+
+curl -s http://localhost:8000/v1/health/ready      # → {"status":"ready"} when up</code></pre>
+        <p style="font-size:.86rem;color:var(--muted)">Then call it with <b>exactly the step-2 code, one line changed</b>:</p>
+        <pre class="code-block"><code>client = OpenAI(base_url="http://localhost:8000/v1", api_key="not-needed-locally")</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> <code>/v1/health/ready</code> returns ready, and <code>/v1/chat/completions</code> on <code>localhost:8000</code> returns the same OpenAI-shaped JSON as the hosted endpoint — proving API parity. <span class="artifact"><b>Cleanup:</b> <code>docker stop nim-llm &amp;&amp; docker rm nim-llm</code> (the <code>nim-cache</code> volume keeps weights).</span></div></div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step">
+      <div class="head">
+        <div class="num">6</div>
+        <div><h4>A Blueprint walkthrough — AI-Q Research Assistant</h4><div class="goal">Goal: read a reference architecture; reproduce a minimal RAG pipeline on CPU.</div></div>
+        <div class="meta"><span class="pill g">CPU (study)</span><span class="pill b">Milestone 6</span></div>
+      </div>
+      <div class="body">
+        <p style="font-size:.86rem;color:var(--muted)"><b>Blueprints</b> are production-grade <i>reference architectures</i> (not tutorials) at <a href="https://build.nvidia.com/blueprints" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">build.nvidia.com/blueprints</a>. The <b>AI-Q Research Assistant</b> is built on the <b>NeMo Agent Toolkit</b> (+ LangChain Deep Agents): an orchestrator classifies intent, a shallow agent gives quick cited answers, a deep agent writes long-form cited reports. Repo: <a href="https://github.com/NVIDIA-AI-Blueprints/aiq" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">github.com/NVIDIA-AI-Blueprints/aiq</a>.</p>
+        <pre class="code-block"><code>import os, numpy as np, faiss
+from openai import OpenAI
+c = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+docs = ["NVIDIA NIM serves optimized inference microservices.",
+        "RAG grounds LLM answers in retrieved documents to reduce hallucination.",
+        "Milvus is an open-source vector DB; FAISS is a local CPU alternative."]
+emb = lambda t: np.array([d.embedding for d in
+        c.embeddings.create(model="nvidia/nv-embedqa-e5-v5", input=t).data], dtype="float32")
+X = emb(docs); faiss.normalize_L2(X)
+idx = faiss.IndexFlatIP(X.shape[1]); idx.add(X)            # cosine via inner product
+q = emb(["How does RAG reduce hallucination?"]); faiss.normalize_L2(q)
+top = [docs[i] for i in idx.search(q, 2)[1][0]]
+ans = c.chat.completions.create(model="meta/llama-3.3-70b-instruct",
+        messages=[{"role":"system","content":"Answer ONLY from the context; cite it."},
+                  {"role":"user","content":f"Context:\n{chr(10).join(top)}\n\nQ: How does RAG reduce hallucination?"}])
+print(ans.choices[0].message.content)</code></pre>
+        <div class="expect"><span class="ic">✓</span><div><b>Expected:</b> the embedding call reports a <b>1024-dim</b> vector per doc, FAISS retrieves the RAG/grounding docs as top hits, and the LLM returns a grounded, citation-style answer. <span class="artifact"><b>Artifact:</b> the reproduction script + architecture/gap-analysis writeup.</span></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <h3>The Blueprint, mapped — NVIDIA-specific vs generic <span class="tag">don't assume it's all proprietary</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Component</th><th>Role</th><th>Full Blueprint</th><th>Your CPU reproduction</th></tr>
+    <tr><td><b>LLM</b></td><td>reasoning / generation</td><td>NIM on GPU</td><td class="good">NIM hosted API</td></tr>
+    <tr><td><b>Embedding</b></td><td>text → vectors</td><td>NIM on GPU</td><td class="good"><code>nvidia/nv-embedqa-e5-v5</code> (1024-dim)</td></tr>
+    <tr><td><b>Reranker</b></td><td>re-score passages</td><td>NIM on GPU</td><td class="good"><code>nvidia/nv-rerankqa-mistral-4b-v3</code></td></tr>
+    <tr><td>Vector store</td><td>similarity search</td><td><b>Milvus</b> (containerized)</td><td class="mid">FAISS (<code>faiss-cpu</code>, in-memory)</td></tr>
+    <tr><td>Doc parsing</td><td>PDF/table extraction</td><td><b>NeMo Retriever</b></td><td class="mid">PyPDF / hardcoded text</td></tr>
+    <tr><td>Orchestration</td><td>the agent</td><td><b>NeMo Agent Toolkit</b></td><td class="mid">a Python script</td></tr>
+  </table></div>
+  <div class="callout warn"><b>⚠ Exam trap:</b> the NVIDIA-specific layers are <b>NIM</b> (inference) and <b>NeMo Retriever</b> (doc processing); <b>Milvus</b> and <b>FAISS</b> are open source and swappable. And a Blueprint is a <i>reference implementation</i> to study and adapt — not a step-by-step tutorial.</div>
+</section>
+
+<!-- ============ INSTALL MATRIX ============ -->
+<section id="matrix">
+  <div class="kicker">Section 3 · What to install for what</div>
+  <h2>Feature → install matrix</h2>
+  <p class="lede">The base <code>nvidia-nat</code> package is <b>not</b> enough for eval / profiling / integrations — those need extras (version-dependent; verify names against current docs). For NAT, an extra <code>nvidia-nat[xyz]</code> equals the standalone distribution <code>nvidia-nat-xyz</code>.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Feature</th><th>Install</th><th>Credentials</th><th>Hardware</th><th>Used in</th></tr>
+    <tr><td><b>NIM hosted call</b> (OpenAI client)</td><td><code>pip install openai</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>Step 2 · all domains</td></tr>
+    <tr><td><b>LangChain ↔ NVIDIA endpoints</b></td><td><code>pip install langchain-nvidia-ai-endpoints</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>RAG, Guardrails, D2/D5/D6</td></tr>
+    <tr><td><b>NAT core</b> (agents, YAML, functions)</td><td><code>pip install nvidia-nat</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>Step 3 · D2</td></tr>
+    <tr><td>NAT + LangChain</td><td><code>pip install nvidia-nat[langchain]</code> <i>(verify)</i></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D2/D6</td></tr>
+    <tr><td>NAT evaluation (ragas, trajectory, red-team)</td><td><code>nvidia-nat[eval]</code> / <code>nvidia-nat-eval</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D3</td></tr>
+    <tr><td>NAT profiler / sizing calc</td><td><code>nvidia-nat[profiling]</code> (or in eval)</td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D3/D4</td></tr>
+    <tr><td>NAT observability (Phoenix)</td><td><code>pip install nvidia-nat arize-phoenix</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D8</td></tr>
+    <tr><td><b>NeMo Guardrails — library mode</b></td><td><code>pip install nemoguardrails langchain-nvidia-ai-endpoints</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>Step 4 · D9</td></tr>
+    <tr><td>NeMo Guardrails — server mode</td><td><code>pip install nemoguardrails[server]</code></td><td>NVIDIA_API_KEY</td><td class="good">CPU</td><td>D9/D10</td></tr>
+    <tr><td>Vector store — FAISS</td><td><code>pip install faiss-cpu</code></td><td>none</td><td class="good">CPU</td><td>Step 6 · D6</td></tr>
+    <tr><td>Vector store — Milvus</td><td><code>pip install pymilvus</code> + Docker</td><td>none</td><td class="mid">Docker (GPU for cuVS)</td><td>D6 (adv.)</td></tr>
+    <tr><td>Memory — Redis</td><td><code>pip install redis</code> + <code>docker run -p 6379:6379 redis</code></td><td>none</td><td class="mid">Docker</td><td>D2/D5</td></tr>
+    <tr><td><b>Self-hosted NIM</b></td><td><code>docker pull nvcr.io/nim/...</code></td><td class="bad">NGC API key</td><td class="bad">GPU</td><td>Step 5 · D4/D10</td></tr>
+  </table></div>
+  <div class="callout"><b><code>langchain-nvidia-ai-endpoints</code> is the silent dependency.</b> Guardrails' <code>engine: nim</code> config <i>loads fine</i> without it, then fails the instant it tries to reach the model. A guardrails run that dies with "provider not found" / an import error is almost always this.</div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 4 · Don't fall for these</div>
+  <h2>Exam traps &amp; gotchas</h2>
+
+  <div class="trap"><h4><span class="n">#1</span> Web UI host vs API host</h4><p><code>build.nvidia.com</code> is the <b>web UI</b>; <code>integrate.api.nvidia.com/v1</code> is the <b>API host</b>. Pointing curl at <code>build.nvidia.com</code> → 404 / HTML. <span class="fix">The API base is always <code>https://integrate.api.nvidia.com/v1</code>, then <code>/chat/completions</code>, <code>/embeddings</code>, …</span></p></div>
+
+  <div class="trap"><h4><span class="n">#2</span> Two keys: <code>NVIDIA_API_KEY</code> ≠ NGC API key</h4><p>The build.nvidia.com key authenticates <b>hosted API calls</b>. The NGC key (username literally <code>$oauthtoken</code>) authenticates <b>pulling containers from <code>nvcr.io</code></b>. <span class="fix">Mixing them up is the classic step-5 failure.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#3</span> NAT YAML field names are exact (and have changed)</h4><p>Current schema: LLM <code>_type: nim</code> with <code>model_name</code> (not <code>type:</code>/<code>model:</code>); the agent lives under <code>workflow:</code> with <code>_type: tool_calling_agent</code>, <code>tool_names:</code> (a list), <code>llm_name:</code>. <b>There is no <code>agents:</code>/<code>entry_agent:</code> block.</b> <span class="fix">Validate with <code>python -c "import yaml;yaml.safe_load(open('workflow.yml'))"</code>.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#4</span> YAML is indentation-sensitive — spaces, never tabs</h4><p>A file that parses but mis-nests (e.g. <code>tool_names</code> not a list) gives an agent that "has no tools" at runtime. <span class="fix">Dump the parsed structure to confirm the shape.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#5</span> Model names are exact and namespaced</h4><p><code>meta/llama-3.3-70b-instruct</code> — the <code>meta/</code> prefix and <code>-instruct</code> suffix are mandatory; dropping either → 404 "model not found". <span class="fix">Copy the exact id from the model card.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#6</span> OpenAI-compatibility is the whole point</h4><p>A NIM endpoint speaks the OpenAI Chat Completions API — the <code>openai</code> client works by changing only <code>base_url</code> + <code>api_key</code>. <span class="fix">The same request hits hosted (<code>integrate.api.nvidia.com/v1</code>) or self-hosted (<code>localhost:8000/v1</code>) NIM unchanged.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#7</span> Guardrails engine: <code>nim</code> (current) vs <code>nvidia_ai_endpoints</code> (older)</h4><p>Same backend; pick by version. Both need <code>langchain-nvidia-ai-endpoints</code>. <span class="fix">And set <code>colang_version: "2.x"</code> or your Colang 2 <code>.co</code> flows silently parse as Colang 1.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#8</span> Input rails run <i>before</i> the LLM, output rails <i>after</i></h4><p>"Block this off-topic question without paying for an LLM call" = <b>input</b> rail. "Redact PII from the model's answer" = <b>output</b> rail. <span class="fix">Knowing which side a rail sits on is a recurring distinction.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#9</span> <code>nemoguardrails server</code> needs the <code>[server]</code> extra</h4><p>The base package has no FastAPI/uvicorn; server mode fails with <code>ModuleNotFoundError: fastapi</code>. <span class="fix"><code>pip install nemoguardrails[server]</code>.</span></p></div>
+
+  <div class="trap"><h4><span class="n">#10</span> HTTP codes: 401 vs 404 vs 429</h4><p><b>401</b> = bad/missing key. <b>404</b> = wrong model id or wrong host. <b>429</b> = free-tier rate limit (not a broken key). <span class="fix">For 429, back off and retry — don't regenerate the key.</span></p></div>
+</section>
+
+<!-- ============ PATHS ============ -->
+<section id="paths">
+  <div class="kicker">Section 5 · How far to go</div>
+  <h2>The 3 / 7 / 14-day paths — which steps, which milestones</h2>
+  <p class="lede">NVIDIA-aligned study tracks map onto these six steps. The <b>8 mandatory milestones</b> each prove <i>real</i> platform interaction, not theory.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Path</th><th>Steps covered</th><th>Milestones</th><th>New tooling touched</th></tr>
+    <tr><td><b>3-day — "First Contact"</b></td><td>Steps 1–4</td><td class="mid">1, 2, 3, 5 (4 of 8)</td><td>build.nvidia.com, NIM, NAT (3 agent types), Guardrails + Colang 2</td></tr>
+    <tr><td><b>7-day — "Working Developer"</b></td><td>Steps 1–4 + RAG + <code>nat eval</code> + Blueprint study</td><td class="mid">1–6 (6 of 8)</td><td>+ NIM embedding/reranking, FAISS, profiler, AI-Q Blueprint, Phoenix</td></tr>
+    <tr><td><b>14-day — "Production-Ready"</b></td><td>all + multi-agent + deploy + observability</td><td class="good">1–8 (all)</td><td>+ NAT Router, red-teaming, Docker Compose deploy, dashboards, HITL approval rails</td></tr>
+  </table></div>
+  <div class="grid c4" style="margin-top:18px">
+    <div class="card green"><h4>1–2</h4><p>First NIM call · first NAT workflow</p></div>
+    <div class="card blue"><h4>3–4</h4><p>Agent-pattern comparison · RAG on the NVIDIA stack</p></div>
+    <div class="card purple"><h4>5–6</h4><p>Guardrails in action · Blueprint reproduction</p></div>
+    <div class="card amber"><h4>7–8</h4><p>Observable agent system · integrated capstone</p></div>
+  </div>
+  <div class="callout"><b>Days 1–10 of the 14-day path are CPU-only.</b> Docker enters only for deployment labs; self-hosted NIM and full Blueprint deployment stay clearly optional throughout.</div>
+</section>
+
+<!-- ============ TROUBLESHOOTING ============ -->
+<section id="trouble">
+  <div class="kicker">Section 6 · When it breaks</div>
+  <h2>Troubleshooting matrix — symptom → cause → fix</h2>
+  <p class="lede">The errors you'll actually hit on this track, grouped by what you see.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td class="bad"><code>401 Unauthorized</code></td><td>Key missing / malformed / whitespace</td><td><code>echo $NVIDIA_API_KEY</code> (starts <code>nvapi-</code>, no trailing newline); header <code>Bearer &lt;key&gt;</code>; regenerate if needed</td></tr>
+    <tr><td class="bad"><code>404 Not Found</code></td><td>Wrong host or model name</td><td>Host <code>integrate.api.nvidia.com</code> (not <code>build…</code>); model id exact incl. <code>meta/</code> + <code>-instruct</code></td></tr>
+    <tr><td class="bad"><code>429 Too Many Requests</code></td><td>Free-tier RPM/TPM limit</td><td>Wait ~60 s, slow request rate; check credits — <b>don't</b> regenerate the key</td></tr>
+    <tr><td class="bad">New key returns <code>401</code> briefly</td><td>Key still propagating</td><td>Wait 2–5 min; confirm no copy/paste whitespace</td></tr>
+    <tr><td class="bad"><code>ModuleNotFoundError: 'nat'</code></td><td><code>nvidia-nat</code> not installed / wrong venv</td><td><code>pip install nvidia-nat</code>; check <code>which python</code> matches; Python 3.10+</td></tr>
+    <tr><td class="bad">NAT eval/profiler/langchain import fails</td><td>Extra not installed</td><td><code>pip install nvidia-nat[eval]</code> / <code>[profiling]</code> / <code>[langchain]</code> (verify name)</td></tr>
+    <tr><td class="bad">NAT "invalid key" / "unknown field"</td><td>Field-name mismatch or YAML typo</td><td>Use current schema (<code>_type</code>, <code>model_name</code>, <code>tool_names</code>, <code>llm_name</code>); validate with <code>yaml.safe_load</code></td></tr>
+    <tr><td class="bad">Agent runs but never calls a tool</td><td>Tool not registered / wrong agent type / no tool-use hint</td><td>Confirm <code>_type</code> matches the registered name; ensure agent type supports tool calling; add a hint</td></tr>
+    <tr><td class="bad"><code>nemoguardrails chat</code> hangs/errors</td><td>model id, key, langchain pkg, or <code>colang_version</code> wrong</td><td>Verify all four: model on build.nvidia.com, key exported, <code>langchain-nvidia-ai-endpoints</code> installed, <code>colang_version: "2.x"</code></td></tr>
+    <tr><td class="bad"><code>nemoguardrails server</code> → no <code>fastapi</code></td><td>Server deps missing</td><td><code>pip install nemoguardrails[server]</code> (or <code>fastapi uvicorn</code>)</td></tr>
+    <tr><td class="bad">Colang rail never triggers</td><td>Too few examples / flow-name mismatch</td><td>Add more <code>define user ask off topic</code> examples; flow name must match the <code>.co</code> flow exactly</td></tr>
+    <tr><td class="bad">Colang rail blocks everything</td><td>Off-topic examples too broad</td><td>Add on-topic positives; make off-topic examples more distinct</td></tr>
+    <tr><td class="bad">Embedding "dimension mismatch"</td><td>Index dim ≠ model dim, or different embed models</td><td><code>nv-embedqa-e5-v5</code> is <b>1024</b>-dim; use the <i>same</i> embed model for index + query</td></tr>
+    <tr><td class="bad">FAISS <code>ModuleNotFoundError</code></td><td>Wrong package</td><td><code>pip install faiss-cpu</code> (not <code>faiss-gpu</code> unless you have CUDA)</td></tr>
+    <tr><td class="bad"><code>docker pull nvcr.io/...</code> unauthorized</td><td>NGC login missing/expired</td><td><code>echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin</code></td></tr>
+    <tr><td class="bad">NIM container <code>CUDA out of memory</code></td><td>Model too big for the GPU</td><td>Use a smaller model (7–8B); check <code>nvidia-smi</code>; close other GPU procs</td></tr>
+    <tr><td class="bad">Self-hosted NIM inference minutes-slow</td><td>GPU not seen by container / low VRAM</td><td>Verify <code>nvidia-smi</code> <i>inside</i> the container; confirm Container Toolkit on host; smaller model</td></tr>
+    <tr><td class="bad"><code>Address already in use</code></td><td>Port 8000/8090/6006 taken</td><td>Use another <code>--port</code>, or stop the stale process/container</td></tr>
+    <tr><td class="bad">Blueprint Compose wants GPUs you lack</td><td>Full deployment without the hardware</td><td>Use the "study + partial reproduction" path (step 6) — CPU + hosted APIs</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ DRILLS ============ -->
+<section id="drills">
+  <div class="kicker">Section 7 · Test yourself</div>
+  <h2>Quiz — quick recall on the platform path</h2>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>A teammate's curl to <code>https://build.nvidia.com/v1/chat/completions</code> returns HTML and a 404. What's wrong, and what's the correct host?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>They're hitting the web UI, not the API.</b><span class="why"><code>build.nvidia.com</code> is the browser catalog. The API base is <code>https://integrate.api.nvidia.com/v1</code>, then <code>/chat/completions</code>. Same key, different host.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>You can call the hosted endpoint fine, but <code>docker pull nvcr.io/nim/...</code> fails with "unauthorized" — even though <code>NVIDIA_API_KEY</code> is set. Why?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Wrong key.</b> Pulling containers needs an <b>NGC API key</b>, not the build.nvidia.com hosted-API key.<span class="why"><code>echo "$NGC_API_KEY" | docker login nvcr.io --username '$oauthtoken' --password-stdin</code> — the username is the literal string <code>$oauthtoken</code>.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>Your NAT <code>workflow.yml</code> from an old tutorial uses <code>type: nim</code>, <code>model:</code>, and an <code>agents:</code> + <code>entry_agent:</code> block. <code>nat run</code> errors on unknown fields. Fix the schema.</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Current NAT:</b> LLM is <code>_type: nim</code> with <code>model_name</code>; the agent lives under <code>workflow:</code> with <code>_type: tool_calling_agent</code>, <code>tool_names:</code>, <code>llm_name:</code>.<span class="why">There is no <code>agents:</code>/<code>entry_agent:</code> in current NAT. The <code>_type</code> key (not <code>type</code>) names every entity's kind.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>You need to block off-topic questions <i>without paying for an LLM call</i>, and separately redact PII from the model's answers. Which rail type for each?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Off-topic block → input rail</b> (runs before the LLM, so the LLM is never called). <b>PII redaction → output rail</b> (runs after, on the model's response).<span class="why">Input rails: <code>rails.input.flows</code>; output rails: <code>rails.output.flows</code>. Knowing the side a rail sits on is the recurring distinction.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span><code>nemoguardrails chat</code> loads your config but dies the moment it tries to answer, mentioning a missing provider. Both the model id and key are correct. Most likely cause?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Missing <code>langchain-nvidia-ai-endpoints</code>.</b><span class="why"><code>engine: nim</code> (and the older <code>engine: nvidia_ai_endpoints</code>) need that package to reach NVIDIA-hosted models. The config loads without it, then fails at model call time. Also check <code>colang_version: "2.x"</code> is set.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>You have a GPU and want to self-host. After deploying, how much of your hosted-API client code must change to talk to the local NIM, and what's the gotcha?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>One line — the <code>base_url</code></b> from <code>integrate.api.nvidia.com/v1</code> to <code>localhost:8000/v1</code>.<span class="why">The NIM API is identical hosted vs self-hosted (OpenAI-compatible). Gotcha: wait for <code>/v1/health/ready</code> to return ready first — the container loads weights into GPU memory on first start (minutes).</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q7</span><span>Your RAG reproduction throws a vector "dimension mismatch" when adding to the FAISS index. What two things should you check?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>(1) Index dim must equal the embed model's output dim</b> — <code>nv-embedqa-e5-v5</code> is <b>1024</b>. <b>(2) Use the same embed model at index time and query time.</b><span class="why">Indexing with one model and querying with another (or hardcoding the wrong dim) is the classic cause.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q8</span><span>"I can't do the labs, I don't have an H100." How much of the 8-milestone path is actually blocked by that?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Essentially none of the mandatory path.</b> Steps 1–4 and the step-6 study/partial reproduction are CPU-only; days 1–10 of the 14-day path need no GPU.<span class="why">A GPU is only for the optional self-hosted NIM (step 5) and the optional <i>full</i> Blueprint deployment. Hosted-first means one API key reaches ~90% of the platform.</span></div>
+  </details>
+</section>
+
+<!-- ============ CROSS-LINKS ============ -->
+<section id="xlinks">
+  <div class="kicker">Section 8 · Where to go next</div>
+  <h2>Cross-links to the domain Code Companions</h2>
+  <p class="lede">This track is the on-ramp; each domain page's "Code Companion" is the destination with deeper runnable snippets. Do steps 1–4 here, then these become copy-paste runnable.</p>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🛠️</span><a href="domain-02-agent-development.html" style="color:var(--blue);text-decoration:none">Domain 2 — Agent Development</a></h4><p>The full NAT <code>tools.py</code> + <code>config.yml</code>: custom function registration, MCP client/server, streaming. <b>The authoritative NAT YAML shape lives here.</b></p></div>
+    <div class="card blue"><h4><span class="icon">📊</span><a href="domain-03-evaluation-tuning.html" style="color:var(--blue);text-decoration:none">Domain 3 — Evaluation &amp; Tuning</a></h4><p><code>nat eval</code> config, ragas + trajectory evaluators, the CI eval gate, NAT Profiler + Sizing Calculator, red-teaming evaluator.</p></div>
+    <div class="card purple"><h4><span class="icon">🧠</span><a href="domain-06-knowledge-integration.html" style="color:var(--blue);text-decoration:none">Domain 5/6 — Cognition / Knowledge</a></h4><p>The full RAG pipeline — chunking, NIM embeddings, reranking, vector store — that step 6 previews.</p></div>
+    <div class="card red"><h4><span class="icon">🛡️</span><a href="domain-09-safety-ethics-compliance.html" style="color:var(--blue);text-decoration:none">Domain 9 — Safety, Ethics &amp; Compliance</a></h4><p>Output rails, PII redaction, the NemoGuard safety NIMs, and microservice-mode Guardrails that step 4 previews.</p></div>
+    <div class="card amber"><h4><span class="icon">🚀</span><a href="domain-04-deployment-scaling.html" style="color:var(--blue);text-decoration:none">Domain 4 / 10 — Deployment / Run-Monitor</a></h4><p>The self-hosted NIM, NIM Operator, and Docker/K8s deployment that step 5 previews. (<a href="domain-08-run-monitor-maintain.html" style="color:var(--blue);text-decoration:none">D10</a>)</p></div>
+    <div class="card cyan"><h4><span class="icon">📚</span><a href="resources.html" style="color:var(--blue);text-decoration:none">Resources &amp; Study Guide</a></h4><p>Links to every NVIDIA tool, the practitioner voices, and the <a href="study-guide.html" style="color:var(--blue);text-decoration:none">study guide</a> tying the domains together.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>NVIDIA API Catalog (hosted NIM + key) — <a href="https://build.nvidia.com">build.nvidia.com</a> · model card: <a href="https://build.nvidia.com/meta/llama-3.3-70b-instruct">meta/llama-3.3-70b-instruct</a></li>
+    <li>NeMo Agent Toolkit docs (install · run · workflow config · agents · LLMs) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/">docs.nvidia.com/nemo/agent-toolkit</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a> · <a href="https://pypi.org/project/nvidia-nat/">PyPI nvidia-nat</a></li>
+    <li>NAT Tool Calling Agent config — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/tool-calling-agent/tool-calling-agent.html">docs.nvidia.com/…/tool-calling-agent</a></li>
+    <li>NeMo Guardrails (model config · rails · Colang 2 · safety NIMs) — <a href="https://docs.nvidia.com/nemo/guardrails/latest/">docs.nvidia.com/nemo/guardrails</a></li>
+    <li>NeMo Retriever embedding / reranking NIMs — <a href="https://build.nvidia.com/nvidia/nv-embedqa-e5-v5">build.nvidia.com/nvidia/nv-embedqa-e5-v5</a> · <a href="https://docs.nvidia.com/nim/nemo-retriever/text-embedding/latest/">NeMo Retriever Text Embedding NIM</a></li>
+    <li>NIM for LLMs — self-host (docker · <code>/v1/health/ready</code> · NGC login) — <a href="https://docs.nvidia.com/nim/large-language-models/latest/getting-started.html">docs.nvidia.com/nim/large-language-models</a> · <a href="https://ngc.nvidia.com">ngc.nvidia.com</a></li>
+    <li>AI-Q Research Assistant Blueprint — <a href="https://build.nvidia.com/nvidia/aiq">build.nvidia.com/nvidia/aiq</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/aiq">github.com/NVIDIA-AI-Blueprints/aiq</a> · <a href="https://build.nvidia.com/blueprints">blueprint catalog</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study hub · Hands-On Labs &amp; Platform Setup · all NVIDIA facts verified against current docs, June 2026 · <a href="index.html">back to hub</a> · <a href="#top">back to top ↑</a></p>
+</footer>
+
+<!-- ============ THREE.JS SCENE ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 70, 150);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
+camera.position.set(0, 13, 40);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 3, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 14;
+controls.maxDistance = 95;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.15));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.4);
+key.position.set(10, 26, 16); scene.add(key);
+const gFill = new THREE.PointLight(0x76b900, 60, 70); gFill.position.set(-12, 12, 8); scene.add(gFill);
+const bFill = new THREE.PointLight(0x4da3ff, 50, 70); bFill.position.set(20, 12, 6); scene.add(bFill);
+
+// ---------- ground ----------
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -2.0; scene.add(ground);
+const grid = new THREE.GridHelper(240, 120, 0x1b2840, 0x121a2a); grid.position.y = -1.98; scene.add(grid);
+
+// ---------- label helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const m = c.getContext('2d');
+  m.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(m.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg; g.strokeStyle = border; g.lineWidth = 4;
+  g.beginPath(); g.roundRect(3, 3, w - 6, h - 6, 18); g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  const k = 0.012 * scale; sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+// ---------- pipeline nodes ----------
+// 5 main nodes laid out left → right along x
+const NODES = [
+  { x: -24, name: 'ACCOUNT + KEY', short: '1', color: 0x76b900, desc: 'Step 1 — build.nvidia.com account + nvapi- key. Without it nothing flows. One env var unlocks the hosted platform.' },
+  { x: -12, name: 'NIM CALL',      short: '2', color: 0x4da3ff, desc: 'Step 2 — first hosted NIM call to integrate.api.nvidia.com/v1. OpenAI-API compatible: only base_url + api_key are NVIDIA-specific.' },
+  { x: 0,   name: 'NAT WORKFLOW',  short: '3', color: 0xb07cff, desc: 'Step 3 — a NeMo Agent Toolkit agent: model + tool + YAML (_type: tool_calling_agent, tool_names, llm_name). Run with nat run.' },
+  { x: 12,  name: 'GUARDRAILS',    short: '4', color: 0x3fd2c7, desc: 'Step 4 — a Colang input rail inspects each request BEFORE the LLM; off-topic requests are blocked without an LLM call.' },
+  { x: 24,  name: 'DEPLOY',        short: '5', color: 0xe8a33d, desc: 'Ship & monitor: NAT server / Docker Compose. Optional self-hosted NIM serves the IDENTICAL API on your own GPU.' },
+];
+const NODE_Y = 3.2;
+const nodeMeshes = [];
+for (const n of NODES) {
+  const g = new THREE.Group();
+  // pedestal
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.8, 0.6, 6),
+    new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.6, metalness: 0.5 }));
+  ped.position.y = -1.4; g.add(ped);
+  // core node — an octahedron
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(2.0, 0),
+    new THREE.MeshStandardMaterial({ color: n.color, emissive: n.color, emissiveIntensity: 0.5, roughness: 0.3, metalness: 0.3, flatShading: true }));
+  core.position.y = NODE_Y; g.add(core);
+  // ring
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.12, 12, 40),
+    new THREE.MeshBasicMaterial({ color: n.color }));
+  ring.position.y = NODE_Y; ring.rotation.x = Math.PI / 2; g.add(ring);
+  // step number badge
+  const badge = makeLabel(n.short, { border: '#' + n.color.toString(16).padStart(6, '0'), color: '#' + n.color.toString(16).padStart(6, '0'), scale: 0.7 });
+  badge.position.set(0, NODE_Y + 3.4, 0); g.add(badge);
+  // name label
+  const lbl = makeLabel(n.name, { border: '#' + n.color.toString(16).padStart(6, '0'), scale: 0.95 });
+  lbl.position.set(0, NODE_Y + 5.0, 0); g.add(lbl);
+  g.position.set(n.x, 0, 0);
+  scene.add(g);
+  core.userData = { title: 'Step ' + n.short + ' — ' + n.name, desc: n.desc };
+  nodeMeshes.push({ ...n, core, ring, group: g });
+}
+
+// title
+const title = makeLabel('THE MINIMUM NVIDIA PATH — hosted first', { border: '#76b900', color: '#a4e040', scale: 1.25 });
+title.position.set(0, 13.5, 0); scene.add(title);
+
+// ---------- optional self-hosted NIM side-node ----------
+const sideGroup = new THREE.Group();
+const sideCore = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3),
+  new THREE.MeshStandardMaterial({ color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.4, roughness: 0.4, metalness: 0.3 }));
+sideCore.userData = { title: 'Step 5 (optional) — self-hosted NIM', desc: 'GPU + Docker + NGC key. Pull nvcr.io/nim/... and serve the IDENTICAL OpenAI-compatible API at localhost:8000/v1. Change one line: the base_url.' };
+sideGroup.add(sideCore);
+const sideLbl = makeLabel('[opt] SELF-HOSTED NIM — GPU', { border: '#e8a33d', color: '#e8a33d', scale: 0.85 });
+sideLbl.position.set(0, 3.4, 0); sideGroup.add(sideLbl);
+sideGroup.position.set(12, NODE_Y, -11);  // behind the NIM/NAT area
+scene.add(sideGroup);
+// connector line from NIM node down to side node
+{
+  const pts = [new THREE.Vector3(-12, NODE_Y, 0), new THREE.Vector3(0, NODE_Y - 0.4, -6), new THREE.Vector3(12, NODE_Y, -11)];
+  const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineDashedMaterial({ color: 0xe8a33d, dashSize: 0.5, gapSize: 0.35, transparent: true, opacity: 0.6 }));
+  ln.computeLineDistances(); scene.add(ln);
+}
+
+// ---------- the flow path (curve through the 5 nodes) ----------
+const pathPts = NODES.map(n => new THREE.Vector3(n.x, NODE_Y, 0));
+const flowCurve = new THREE.CatmullRomCurve3(pathPts);
+const flowGeo = new THREE.TubeGeometry(flowCurve, 120, 0.1, 8, false);
+const flowTube = new THREE.Mesh(flowGeo, new THREE.MeshBasicMaterial({ color: 0x24364f }));
+scene.add(flowTube);
+
+// pulsing key at the start (the nvapi- key)
+const keyMesh = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.28, 10, 20),
+  new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x4da3ff, emissiveIntensity: 0.8 }));
+keyMesh.position.set(-30, NODE_Y, 0); keyMesh.rotation.y = Math.PI / 2; scene.add(keyMesh);
+const keyStem = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 0.3),
+  new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x4da3ff, emissiveIntensity: 0.6 }));
+keyStem.position.set(-28.4, NODE_Y, 0); scene.add(keyStem);
+const keyLbl = makeLabel('nvapi-…', { border: '#4da3ff', color: '#4da3ff', scale: 0.7 });
+keyLbl.position.set(-29.5, NODE_Y + 2.2, 0); scene.add(keyLbl);
+
+// ---------- flowing request packets (cyan) ----------
+const packets = [];
+const packetGeo = new THREE.IcosahedronGeometry(0.55, 0);
+function spawnPacket() {
+  const blocked = Math.random() < 0.32;   // some get deflected at guardrails
+  const m = new THREE.Mesh(packetGeo, new THREE.MeshStandardMaterial({
+    color: 0x3fd2c7, emissive: 0x3fd2c7, emissiveIntensity: 0.7, roughness: 0.25 }));
+  m.userData = { title: 'Request packet', desc: 'The SAME OpenAI-shaped request flows through every hop. From key → NIM → NAT → Guardrails → deploy.' };
+  scene.add(m);
+  packets.push({ mesh: m, t: 0, blocked, deflected: false });
+}
+
+// red deflection marker near guardrails
+const guardX = 12;
+
+// ---------- ambient star dust ----------
+{
+  const n = 380, g = new THREE.BufferGeometry(), a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { a[i*3] = (Math.random()-0.5)*180; a[i*3+1] = Math.random()*50; a[i*3+2] = (Math.random()-0.5)*180; }
+  g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+const hoverables = [...nodeMeshes.map(n => n.core), sideCore];
+let hovered = null;
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+let spawnTimer = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // node idle motion
+  nodeMeshes.forEach((n, i) => {
+    n.core.rotation.y += dt * 0.5;
+    n.core.position.y = NODE_Y + Math.sin(t * 1.1 + i) * 0.18;
+    n.ring.rotation.z += dt * 0.4;
+    n.core.material.emissiveIntensity = 0.45 + 0.18 * Math.sin(t * 2 + i * 0.8);
+  });
+  sideCore.rotation.y += dt * 0.4; sideCore.rotation.x += dt * 0.2;
+
+  // pulsing key
+  const kp = 0.8 + 0.4 * Math.sin(t * 3);
+  keyMesh.material.emissiveIntensity = kp; keyStem.material.emissiveIntensity = kp * 0.8;
+  keyMesh.rotation.x += dt * 0.6;
+
+  // spawn packets
+  spawnTimer -= dt;
+  if (spawnTimer <= 0 && packets.length < 10) { spawnPacket(); spawnTimer = 1.0; }
+
+  // move packets along the curve
+  for (let i = packets.length - 1; i >= 0; i--) {
+    const p = packets[i];
+    p.t += dt * 0.11;
+    if (p.t >= 1) { scene.remove(p.mesh); p.mesh.material.dispose(); packets.splice(i, 1); continue; }
+    const pos = flowCurve.getPoint(p.t);
+    // deflect blocked packets at the guardrails node
+    const guardT = (guardX - NODES[0].x) / (NODES[NODES.length - 1].x - NODES[0].x);
+    if (p.blocked && p.t > guardT) {
+      p.deflected = true;
+      const over = (p.t - guardT) * 22;
+      pos.y = NODE_Y + over;            // kick upward
+      pos.z = -over * 0.5;
+      p.mesh.material.color.setHex(0xe0455a);
+      p.mesh.material.emissive.setHex(0xe0455a);
+    }
+    p.mesh.position.copy(pos);
+    p.mesh.rotation.x += dt * 2; p.mesh.rotation.y += dt * 1.6;
+    p.mesh.material.emissiveIntensity = p.deflected ? 0.9 : 0.6 + 0.3 * Math.sin(t * 6 + i);
+  }
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

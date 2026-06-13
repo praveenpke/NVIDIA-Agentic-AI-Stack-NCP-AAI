@@ -6,11 +6,14 @@
 <title>NCP-AAI Domain 4 — Deployment &amp; Scaling</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0f1521; --bg3:#131b2a; --panel:#121927;
+    --bg:#0b0f17; --bg2:#0f1521; --bg3:#131b2a; --panel:#121927; --panel2:#182236;
+    --card:#121927;
     --line:#1f2a3d; --line2:#2a3a52;
     --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.25);
-    --txt:#dbe4f0; --muted:#8fa0b8; --faint:#5d6c82;
+    --on-accent:#06210b;
+    --text:#dbe4f0; --txt:#dbe4f0; --muted:#8fa0b8; --faint:#5d6c82;
     --amber:#e8b339; --red:#e85d5d; --blue:#4da3ff; --purple:#b07cff; --cyan:#39d3c8;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   /* bridge page-local var names to the shared theme slots (theme.css overrides the palette) */
   :root{--txt:var(--text);--faint:var(--muted);--line2:var(--line)}
@@ -190,6 +193,7 @@
     <span class="brand">NCP-AAI · <b>Domain 4</b></span>
     <a href="#scene-wrap">3D Scene</a>
     <a href="#mental">Mental Model</a>
+    <a href="#nat">NAT Servers</a>
     <a href="#nim">NIM</a>
     <a href="#triton">Triton</a>
     <a href="#trtllm">TensorRT-LLM</a>
@@ -678,6 +682,92 @@ animate();
 
 <div class="divider"></div>
 
+<!-- ============ NAT DEPLOYMENT LAYER ============ -->
+<section id="nat">
+  <div class="kicker">Section 1.5 · The agent-serving tier</div>
+  <h2>NAT Deployment Servers — Orchestration vs Inference</h2>
+  <p class="sub">NIM/Triton/TRT-LLM serve the <b>model</b>. <b>NAT (NeMo Agent Toolkit)</b> serves the <b>agent</b> — the orchestration tier holding the agent graph, tool routing, memory and guardrails, which calls the model tier over HTTP. The single most-tested idea: <b>NAT orchestrates (CPU) · NIM infers (GPU) · NAT calls NIM.</b> Different containers, different scaling signals, different cold-start behavior.</p>
+
+  <h3>Two tiers that scale independently</h3>
+  <div class="svgbox">
+    <svg viewBox="0 0 1060 220" width="1060" height="220" font-size="12">
+      <defs><marker id="arrn" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#76b900"/></marker></defs>
+      <rect x="20" y="80" width="120" height="56" rx="10" fill="#16243a" stroke="#4da3ff"/>
+      <text x="80" y="104" text-anchor="middle" fill="#4da3ff" font-weight="700">Client / Agent</text>
+      <text x="80" y="122" text-anchor="middle" class="svg-m" font-size="10.5">HTTP / WS</text>
+      <line x1="142" y1="108" x2="178" y2="108" stroke="#76b900" stroke-width="2" marker-end="url(#arrn)"/>
+      <!-- NAT tier -->
+      <rect x="182" y="35" width="320" height="150" rx="12" fill="#0f1722" stroke="#3a5c00"/>
+      <text x="342" y="26" text-anchor="middle" class="svg-g" font-weight="800">NAT tier · CPU pod · scale horizontally</text>
+      <rect x="198" y="52" width="288" height="46" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="342" y="72" text-anchor="middle" class="svg-t" font-weight="700">NAT FastAPI / A2A server</text>
+      <text x="342" y="89" text-anchor="middle" class="svg-m" font-size="10.5">agent graph · tool routing · memory · guardrails</text>
+      <rect x="198" y="104" width="288" height="68" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="342" y="124" text-anchor="middle" class="svg-m" font-size="10.5">HPA on <tspan fill="#a8e063" font-family="monospace">RPS / concurrency</tspan> (vanilla)</text>
+      <text x="342" y="143" text-anchor="middle" class="svg-m" font-size="10.5">one request → <b>many</b> LLM calls (fan-out)</text>
+      <text x="342" y="161" text-anchor="middle" fill="#e8b339" font-size="10.5">autoscaling NAT on CPU won't help if NIM is saturated</text>
+      <line x1="504" y1="108" x2="540" y2="108" stroke="#76b900" stroke-width="2" marker-end="url(#arrn)"/>
+      <text x="522" y="100" text-anchor="middle" class="svg-m" font-size="9.5">OpenAI HTTP</text>
+      <!-- NIM tier -->
+      <rect x="544" y="35" width="300" height="150" rx="12" fill="#0f1722" stroke="#3a5c00"/>
+      <text x="694" y="26" text-anchor="middle" class="svg-g" font-weight="800">NIM tier · GPU pod · scale vertical→horizontal</text>
+      <rect x="560" y="52" width="268" height="46" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="694" y="72" text-anchor="middle" class="svg-t" font-weight="700">NIM container</text>
+      <text x="694" y="89" text-anchor="middle" class="svg-m" font-size="10.5">optimized serving · batching · quantization</text>
+      <rect x="560" y="104" width="268" height="68" rx="8" fill="#13202e" stroke="#3a5c00"/>
+      <text x="694" y="127" text-anchor="middle" class="svg-m" font-size="10.5">HPA on <tspan fill="#a8e063" font-family="monospace">gpu_cache_usage_perc</tspan></text>
+      <text x="694" y="146" text-anchor="middle" class="svg-m" font-size="10.5">/ token throughput / queue depth</text>
+      <text x="694" y="164" text-anchor="middle" fill="#e85d5d" font-size="10.5">the real bottleneck — never CPU</text>
+      <line x1="846" y1="108" x2="882" y2="108" stroke="#76b900" stroke-width="2" marker-end="url(#arrn)"/>
+      <rect x="886" y="80" width="150" height="56" rx="10" fill="#2c4a00" stroke="#76b900"/>
+      <text x="961" y="104" text-anchor="middle" fill="#cdf38a" font-weight="700">GPU cluster</text>
+      <text x="961" y="122" text-anchor="middle" class="svg-m" font-size="10.5">H100 / A100</text>
+      <text x="528" y="206" text-anchor="middle" class="svg-m" font-size="11">Multi-container by nature: NAT + NIM + vector DB + Redis + observability. <b>One agent ≠ one container</b> — collapsing tiers kills independent scaling.</text>
+    </svg>
+  </div>
+
+  <h3>Pick the deployment server (front end) by who consumes the agent</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Front end</th><th>CLI · protocol / port</th><th>Use when</th></tr>
+    <tr><td class="good"><b>FastAPI server</b></td><td><code>nat serve</code> (alias <code>nat start fastapi</code>) · REST + WebSocket · <b>:8000</b></td><td class="good"><b>Default production</b> — clients call the agent over HTTP/WS. OpenAI-compatible <code>/v1/chat/completions</code></td></tr>
+    <tr><td class="info"><b>MCP server</b></td><td><code>nat mcp serve</code> · Model Context Protocol (MCP SDK)</td><td class="info">Agent must be <b>callable as a tool</b> by other MCP-compatible agents/orchestrators</td></tr>
+    <tr><td><b>FastMCP server</b></td><td><code>nat fastmcp server run</code> · MCP streamable-HTTP · <b>:9902</b> at <code>/mcp</code></td><td>Lightweight / lower-overhead MCP; dev &amp; test of MCP integrations</td></tr>
+    <tr><td class="info"><b>A2A server</b></td><td><code>nvidia-nat[a2a]</code> · Agent-to-Agent (Linux Foundation standard)</td><td class="info"><b>Distributed multi-agent</b> — each agent an independent service; peers discovered via <b>Agent Cards</b>; scale/deploy each separately</td></tr>
+    <tr><td class="bad"><b>Console front end</b></td><td><code>nat run</code> · terminal / interactive</td><td class="bad"><b>Dev &amp; debugging only</b> — never production</td></tr>
+  </table>
+  </div>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:8px"><b>FastAPI surface (NAT 1.5):</b> <code>POST /generate</code> · <code>/generate/stream</code> · <code>/chat</code> · <code>/chat/stream</code> · <code>/v1/chat/completions</code> (OpenAI-compatible) · <code>/websocket</code> · <code>GET /health</code> · <code>POST /evaluate</code>. Here <b>:8000 serves the agent</b>, not the raw model.</p>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card" style="border-left:4px solid var(--green)">
+      <h4><span class="ic">🌳</span>Front-end selection tree (memorize the shape)</h4>
+      <ul class="tick">
+        <li>Dev / debug? → <b>Console</b></li>
+        <li>Consumed by other agents? → <b>No</b> → <b>FastAPI</b> (default)</li>
+        <li>→ <b>Yes</b> → agents are separate services? → <b>Yes</b> → <b>A2A</b></li>
+        <li>→ <b>No</b> → need full MCP? → <b>Yes</b> → <b>MCP</b> · <b>No</b> → <b>FastMCP</b></li>
+      </ul>
+    </div>
+    <div class="card" style="border-left:4px solid var(--blue)">
+      <h4><span class="ic">⏳</span>Async job management (Dask)</h4>
+      <p>Agent runs take seconds→minutes. Holding an HTTP connection open invites timeouts, LB disconnects, retry storms. NAT pattern:</p>
+      <ul class="tick">
+        <li>Client <code>POST</code>s → server returns a <b>job ID immediately</b> (background-queued)</li>
+        <li><b>Dask</b> schedules + executes the workflow</li>
+        <li>Client <b>polls</b> status/result (or subscribes via WebSocket)</li>
+        <li><code>/evaluate</code> is the canonical Dask-backed async job · knobs: scheduler type, job TTL, history retention</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px;border-left:4px solid var(--green)">
+    <h4><span class="ic">🧪</span>Worked example — front end + sync vs async</h4>
+    <p>"A ~90 s research task; other internal agents must also call this researcher as a tool." → Consumed by other agents that are independent services → <b>A2A</b> (or <b>MCP</b> if just called as a tool in-process). 90 s exceeds safe HTTP sync limits → <b>async job: submit → job ID → poll</b> (Dask-backed), <b>not</b> a synchronous REST call with a long timeout (that's the trap answer).</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
 <!-- ============ NIM ============ -->
 <section id="nim">
   <div class="kicker">Section 2 · Serving in a box</div>
@@ -1038,6 +1128,64 @@ animate();
       <p style="margin-top:8px"><span class="pill a">OFFLINE / BATCH JOBS</span> (summarize 1M docs) → throughput-optimized profile, large batches.</p>
     </div>
   </div>
+
+  <h3>Agent-specific scaling — why request-count under-counts</h3>
+  <div class="grid g2">
+    <div class="card" style="border-left:4px solid var(--amber)">
+      <h4><span class="ic">📐</span>Variable-length execution</h4>
+      <p>A classifier = one fixed forward pass. An <b>agent</b> plans a multi-step run with a <b>variable</b> number of LLM + tool calls. Simple Q ≈ 1 LLM call (~2 s); research task ≈ 8 LLM + 15 tool calls (~90 s). Two requests can differ <b>50×</b> in work → <b>request count badly under-estimates load</b>.</p>
+      <p style="margin-top:8px">Scale on the work signals instead:</p>
+      <ul class="tick">
+        <li><b>In-flight (active) agent executions</b></li>
+        <li><b>GPU inference queue depth</b></li>
+        <li><b>Token throughput</b> (consumed vs available)</li>
+      </ul>
+      <p style="margin-top:8px"><b>Token-budget-aware:</b> 50K-token budget × 100 concurrent ≈ <b>5M in-flight tokens</b> → size NIM replicas on token throughput, not RPS. <b>Multi-model:</b> scale the 70B reasoner, the classifier, and the embedder <b>independently</b> — don't over-provision the cheap models to match the bottleneck.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--red)">
+      <h4><span class="ic">🚧</span>Backpressure, rate limiting &amp; probes</h4>
+      <ul class="tick">
+        <li>A single complex request can burn 100K+ tokens → use <b>token-aware</b> rate limiting, not request-count limiting</li>
+        <li><b>Backpressure:</b> when the queue is full, return <b>HTTP 429 / 503 + <code>Retry-After</code></b> — don't accept work you can't serve</li>
+        <li><b>Liveness</b> = "process alive?" (restart) vs <b>Readiness</b> = "can take traffic?" (pull from LB)</li>
+        <li><b style="color:var(--red)">NIM readiness is special</b>: pod <i>running</i> but not <i>ready</i> for <b>minutes</b> while it loads tens of GB into GPU → generous <code>initialDelaySeconds</code>, gate LB on <code>/v1/health/ready</code></li>
+        <li><b>Graceful-drain</b> on shutdown: agent runs carry state (history, tool results) — a mid-run pod kill loses the whole multi-step execution</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Containerization &amp; GPU resource planning for agent stacks</h3>
+  <div class="twocol">
+    <div class="card">
+      <h4><span class="ic">🧩</span>Multi-container by nature</h4>
+      <p>NAT server (CPU) + NIM (GPU) + vector DB (Milvus/pgvector, stateful) + Redis (cache/jobs) + observability (Phoenix/Grafana). <b>Docker Compose</b> for dev/single node (GPU via <code>deploy.resources.reservations.devices</code>; mount <code>/opt/nim/.cache</code> to persist weights; <code>depends_on … condition: service_healthy</code>). <b>Helm</b> for prod — one chart/subchart per tier so each versions &amp; scales independently.</p>
+      <p style="margin-top:8px;font-size:.82rem;color:var(--amber)"><b>Anti-pattern:</b> a monolithic Helm chart packing NAT+NIM+DB+observability — blocks independent scaling/versioning.</p>
+      <pre><code>services:
+  nim-llm:                       # GPU tier
+    image: nvcr.io/nim/meta/llama-3.1-70b-instruct
+    deploy: {resources: {reservations:
+      {devices: [{driver: nvidia, count: 2, capabilities: [gpu]}]}}}
+    volumes: ["nim-cache:/opt/nim/.cache"]   # persist weights
+  agent:                         # NAT FastAPI server — CPU only
+    environment: ["NIM_BASE_URL=http://nim-llm:8000/v1"]</code></pre>
+    </div>
+    <div class="card">
+      <h4><span class="ic">🧮</span>GPU resource planning (rules of thumb)</h4>
+      <div class="tablewrap">
+      <table>
+        <tr><th>Component</th><th>GPU</th><th>Notes</th></tr>
+        <tr><td><b>NAT server</b></td><td class="good"><b>0</b></td><td>CPU orchestration; scale horizontally</td></tr>
+        <tr><td><b>NIM 7-8B</b></td><td class="info">1× A100/H100</td><td>single GPU sufficient</td></tr>
+        <tr><td><b>NIM 70B</b></td><td class="warn">2× H100 80 GB</td><td>needs TP=2</td></tr>
+        <tr><td><b>Vector DB</b></td><td>0</td><td>NVMe-backed, stateful</td></tr>
+      </table>
+      </div>
+      <p style="margin-top:8px"><b style="color:var(--amber)">GPU count is NOT fixed per model</b> — depends on quantization, sequence length, <b>and concurrency</b>. 70B @ 1 request → 2×H100; @ ~50 concurrent → maybe 8×H100. <b>Always benchmark under load</b> (GenAI-Perf) before sizing.</p>
+      <div class="card" style="margin-top:10px;background:var(--bg3);border-left:3px solid var(--cyan)">
+        <p style="font-size:.84rem"><b>AI-Q Blueprint (exam-quotable):</b> <b>default</b> mode uses NVIDIA's hosted <b>API Catalog → 0 local GPUs</b>. Self-hosting via NIM: <b>2× H100 (3× A100)</b> for the <b>RAG component</b>, <b>+2× H100 (4× A100)</b> to self-host <b>Llama 3.3 70B</b>, toward ~5×H100 / 8×A100 for a full self-contained stack. The courseware's "AI-Q min = 2×H100" = the RAG-component figure. <b>Verify per Blueprint/version.</b></p>
+      </div>
+    </div>
+  </div>
 </section>
 
 <div class="divider"></div>
@@ -1147,6 +1295,7 @@ animate();
   <div class="tablewrap">
   <table>
     <tr><th>Product</th><th>Role in this domain</th><th>Choose it when</th></tr>
+    <tr><td><b>NAT deployment server</b></td><td>Agent-serving tier — exposes a NAT workflow via FastAPI / MCP / FastMCP / A2A / Console; <b>calls NIM</b> for inference</td><td class="good">Always for the orchestration layer; pick the front end by who consumes the agent</td></tr>
     <tr><td><b>NIM</b></td><td>Prebuilt optimized inference container + OpenAI API</td><td class="good">Fastest path to production-grade LLM serving; enterprise support; standard models</td></tr>
     <tr><td><b>NIM Operator</b></td><td>K8s operator (NIMCache/NIMService/NIMPipeline CRDs)</td><td class="good">Many NIMs at cluster scale; pre-caching; CRD-driven autoscaling</td></tr>
     <tr><td><b>nim-deploy / NGC Helm charts</b></td><td>Reference Helm deployments for NIM</td><td>Single-service Helm installs, values.yaml customization</td></tr>
@@ -1159,6 +1308,19 @@ animate();
     <tr><td><b>DGX Cloud / NVCF</b></td><td>Managed GPU platform; serverless functions, scale-to-zero</td><td class="info">No-ops elastic inference; bursty workloads</td></tr>
     <tr><td><b>Jetson + JetPack + Nemotron Nano</b></td><td>Edge hardware + SDK + small agentic models</td><td class="warn">On-device, offline, low-latency physical-world agents</td></tr>
     <tr><td><b>NGC (nvcr.io)</b></td><td>Registry for NIM containers, Helm charts, models</td><td>Pulling anything NVIDIA-built (needs NGC_API_KEY)</td></tr>
+  </table>
+  </div>
+
+  <h3>NAT deployment server (front end) decision</h3>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Scenario</th><th>Best choice</th><th>Why</th></tr>
+    <tr><td>Clients call the agent over HTTP/WebSocket (default production)</td><td class="good"><b>FastAPI</b> (<code>nat serve</code>, :8000)</td><td>REST + streaming + OpenAI-compatible <code>/v1/chat/completions</code></td></tr>
+    <tr><td>Agent must be callable <b>as a tool</b> by other MCP agents</td><td class="good"><b>MCP server</b> (<code>nat mcp serve</code>)</td><td>Publishes workflow + tools as MCP tools</td></tr>
+    <tr><td>Lightweight / dev MCP integration</td><td class="info"><b>FastMCP</b> (:9902 <code>/mcp</code>)</td><td>Less overhead, streamable-HTTP</td></tr>
+    <tr><td>Distributed multi-agent, each agent an <b>independent service</b></td><td class="good"><b>A2A server</b> (<code>nvidia-nat[a2a]</code>)</td><td>Agent Cards for discovery; independent scaling per agent</td></tr>
+    <tr><td>Local development / debugging only</td><td class="bad"><b>Console</b> (<code>nat run</code>)</td><td>Interactive terminal — never production</td></tr>
+    <tr><td>Agent run takes 30 s+ (long research task)</td><td class="good"><b>Async job</b> (submit → job ID → poll, Dask)</td><td>Avoids timeouts/disconnects/retry storms — <b>not</b> a long-timeout sync call</td></tr>
   </table>
   </div>
 
@@ -1242,6 +1404,10 @@ animate();
     <div class="trap"><h4>⚠ 12 · Triton ensemble vs BLS</h4><p>Ensembles are <b>static DAGs</b>; conditional/looping logic (agent-ish control flow) needs <b>BLS</b> (Python backend), not an ensemble.</p></div>
     <div class="trap"><h4>⚠ 13 · NIM profile auto-selection order</h4><p>Filter to GPU-runnable profiles first, then rank: backend (<b>trtllm &gt; vllm &gt; sglang</b>) → precision (MXFP4&gt;FP8&gt;…&gt;INT4_AWQ) → <b>latency</b>-optimized default → highest TP. Trap: NIM does <b>NOT</b> default to throughput-optimized. (Current docs put <b>backend before precision</b>; NIM 1.x's older memory→precision→latency→TP→backend chain is superseded — but latency-default and trtllm-preferred hold either way.)</p></div>
     <div class="trap"><h4>⚠ 14 · Edge sizing</h4><p>Jetson Orin Nano (8 GB) cannot run a 70B model. The answer is a <b>quantized small model (Nemotron Nano INT4/Q4)</b>, or hybrid edge-cloud where the edge handles fast/local skills.</p></div>
+    <div class="trap"><h4>⚠ 15 · NAT vs NIM are not the same thing</h4><p>NAT = <b>orchestration</b> tier (agent graph, tool routing, memory, guardrails, CPU); NIM = <b>inference</b> tier (model serving, GPU). <b>NAT calls NIM.</b> "Deploy the agent as one container" is wrong — the stack is multi-container so tiers scale independently. Autoscaling the <b>NAT pod on CPU</b> won't help when NIM is the bottleneck.</p></div>
+    <div class="trap"><h4>⚠ 16 · NAT front-end selection</h4><p>Match the front end to the <i>consumer</i>: HTTP clients → <b>FastAPI</b>; agent-as-a-tool for MCP agents → <b>MCP</b> (or <b>FastMCP</b> lightweight); each agent an independent service → <b>A2A</b> (Agent Cards); dev/debug → <b>Console</b>. Trap: A2A when it's just consumed as a tool (that's MCP), or Console in production.</p></div>
+    <div class="trap"><h4>⚠ 17 · Long agent runs need async jobs, not long timeouts</h4><p>A 90 s task over a synchronous REST call hits client timeouts, LB disconnects, retry storms. NAT pattern: submit → <b>return a job ID immediately</b> → Dask executes → client <b>polls</b> (or WebSocket). "Synchronous REST with a 120 s timeout" is the trap distractor.</p></div>
+    <div class="trap"><h4>⚠ 18 · Request-count autoscaling under-counts agent load</h4><p>Agent runs do a <i>variable</i> number of LLM/tool calls — two requests can differ 50×. Scale on <b>token throughput / in-flight executions / queue depth</b>, with <b>token-aware</b> limiting and <b>HTTP 429/503 + Retry-After</b> backpressure — not raw request count. <b>Graceful-drain</b> on shutdown (agent runs carry state).</p></div>
   </div>
 </section>
 
@@ -1270,6 +1436,18 @@ animate();
   </details>
   <details class="drill"><summary><span class="qn">6</span><span>An inspection robot must run a reasoning + tool-calling agent fully offline on an 8 GB Jetson Orin Nano.</span><span class="hintreveal">click to reveal ▾</span></summary>
     <div class="ans"><span class="tag">ANSWER</span><p>Deploy a <b>4-bit quantized Nemotron Nano</b> (small agentic model) on-device via JetPack/TensorRT-LLM or llama.cpp — cloud NIMs and large models violate the offline/memory constraints.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">7</span><span>Your NAT agent must be discoverable and callable as a tool by other MCP-compatible agents. Which front end?</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p><b>MCP server</b> front end (<code>nat mcp serve</code>) — publishes the workflow + tools as MCP tools. Use <b>FastMCP</b> for a lightweight runtime; use <b>A2A</b> if the agents are independent services collaborating peer-to-peer rather than calling one as a tool.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">8</span><span>A user submits a research task that takes ~90 s; you keep getting 504s and duplicate executions.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Switch from synchronous REST to <b>NAT async job management</b>: return a <b>job ID</b> immediately (Dask-backed background execution), client polls the status/result endpoint (or WebSocket). A 120 s sync timeout is the trap answer — it still breaks under LBs/proxies.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">9</span><span>An agent uses a 70B reasoner + a small classifier + an embedder. How do you scale, and where is autoscaling-on-CPU wrong?</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>Scale each model <b>independently</b> (the 70B is the bottleneck; don't over-provision the cheap ones). Never autoscale the GPU NIM on CPU. The <b>NAT orchestration pod</b> (CPU) scales horizontally on RPS, while the <b>NIM tier</b> scales on <code>gpu_cache_usage_perc</code> / token throughput — separate tiers, separate load curves.</p></div>
+  </details>
+  <details class="drill"><summary><span class="qn">10</span><span>Plan GPU for a customer-support agent: 100 concurrent users, 70B reasoning model, self-hosted.</span><span class="hintreveal">click to reveal ▾</span></summary>
+    <div class="ans"><span class="tag">ANSWER</span><p>NAT server = CPU-only (<b>0 GPU</b>), horizontally scaled; NIM 70B = <b>2× H100 80 GB minimum for TP</b>, but 100 concurrent likely needs more — size from <b>GenAI-Perf token-throughput curves</b>, not the 1-request figure; vector DB stateful on NVMe. Per the <b>AI-Q Blueprint</b>, self-hosted RAG = 2× H100 (3× A100) plus +2× H100 for the 70B — but AI-Q's <b>default</b> mode uses the hosted API Catalog (0 local GPUs).</p></div>
   </details>
 </section>
 
@@ -1478,6 +1656,32 @@ async def invoke(body: dict):
 # Dockerfile: FROM python:3.12-slim; pip install fastapi uvicorn langgraph langchain-nvidia-ai-endpoints
 # CMD ["uvicorn", "agent_app:app", "--host", "0.0.0.0", "--port", "8080"]</code></pre>
       <p><b style="color:var(--green)">What to notice:</b> the agent Deployment scales on CPU/RPS with a vanilla HPA while the NIM Deployment scales on <code>gpu_cache_usage_perc</code> — decoupling them via <code>NIM_BASE_URL</code> is the architectural point (one agent request fans out into many LLM calls, so the two tiers have different scaling curves). Swapping <code>NIM_BASE_URL</code> to <code>https://integrate.api.nvidia.com/v1</code> + an <code>nvapi-</code> key moves the same agent onto build.nvidia.com with zero code change; <code>ChatNVIDIA</code> against a local NIM needs no API key.</p>
+    </div>
+
+    <div class="card" style="border-top:3px solid var(--green)">
+      <h4><span class="ic">11</span>Serve a NAT workflow as a FastAPI front end (the agent tier on :8000) — config-driven<span class="pill g" style="margin-left:auto">YAML + BASH</span></h4>
+      <pre><code># workflow.yml — the NAT FastAPI front end is selected under general.front_end.
+# `nat serve --config_file workflow.yml` (alias for `nat start fastapi`) exposes:
+#   /generate · /generate/stream · /chat · /chat/stream · /v1/chat/completions (OpenAI)
+#   /websocket (streaming) · GET /health · POST /evaluate (Dask-backed async job)
+general:
+  front_end:
+    _type: fastapi        # other choices: mcp · fastmcp (:9902) · a2a · console
+    host: 0.0.0.0
+    port: 8000
+llms:
+  default:
+    _type: nim            # the agent tier CALLS the NIM inference tier — separate concern
+    model_name: meta/llama-3.1-70b-instruct
+    base_url: http://nim-llm:8000/v1
+workflow:
+  _type: react_agent      # your agent graph, tools, memory, guardrails
+
+# ---- run + hit the AGENT (not the raw model) ----
+# nat serve --config_file workflow.yml
+# curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' \
+#   -d '{"model":"default","messages":[{"role":"user","content":"Research NIM, cite sources"}]}'</code></pre>
+      <p><b style="color:var(--green)">What to notice:</b> the front end is <b>declarative</b> — switching <code>_type</code> from <code>fastapi</code> to <code>mcp</code>/<code>fastmcp</code>/<code>a2a</code> re-exposes the <i>same</i> agent to a different consumer with no agent-logic change. <code>:8000</code> here serves the <b>agent</b>; the NIM at <code>nim-llm:8000/v1</code> serves the <b>model</b> — the NAT↔NIM separation the exam tests. For a 90 s research task, prefer <code>POST /evaluate</code> (or async generation): it returns a <b>job ID</b> for background Dask execution instead of holding the HTTP connection open and timing out.</p>
     </div>
   </div>
 </section>

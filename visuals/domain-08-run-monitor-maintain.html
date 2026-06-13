@@ -251,6 +251,8 @@
   <a href="#drift">Drift</a>
   <a href="#slo">SLOs</a>
   <a href="#maintain">Maintain</a>
+  <a href="#debug">Debug</a>
+  <a href="#guardrails-obs">Guardrails Obs</a>
   <a href="#nvidia">NVIDIA Stack</a>
   <a href="#decide">Decisions</a>
   <a href="#traps">Exam Traps</a>
@@ -766,6 +768,40 @@ window.addEventListener('resize', ()=>{
     <div class="card"><h4>Redaction <span class="pill p-red">always</span></h4>
       <p>Always <b>redact PII/secrets before export</b> — NAT ships redaction processors for exactly this, alongside batching and span-tagging processors.</p></div>
   </div>
+
+  <h3 class="block">Where redaction runs — at the OTel exporter, before telemetry leaves the process</h3>
+  <div class="grid g2">
+    <div class="card accent-top"><h4>The pipeline position <span class="pill p-green">NAT</span></h4>
+      <p>NAT redaction processors run at the <b>OTel exporter level — <i>before</i> spans leave the process</b>, so every downstream backend (Phoenix, Langfuse, Weave, OTLP collector) gets already-clean data. Configure <b>regex</b> (SSN, email, phone, card) and/or <b>field rules</b> (always strip <code>tool.input.password</code>); matching span attributes are rewritten in place.</p>
+      <p style="margin-top:6px">NeMo Guardrails has the omission counterpart: <code>enable_content_capture: false</code> simply keeps prompts/outputs out of spans.</p></div>
+    <div class="card accent-top"><h4>Two exam hooks</h4>
+      <ul>
+        <li><b>Irreversible</b> — over-redact and you lose the debugging signal. Drop the SSN, <b>keep the query topic/intent</b>.</li>
+        <li><b>Defense-in-depth, not a substitute for access controls</b> — regex misses novel PII formats; pair redaction with RBAC on the trace store.</li>
+        <li>Distractors: "redact in the Grafana panel", "filter PII when displaying traces", "redact at the LLM prompt" — all wrong; it's at the <b>exporter</b>.</li>
+      </ul></div>
+  </div>
+  <div class="diagram">
+    <svg viewBox="0 0 920 110">
+      <defs><marker id="arrRd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
+      <rect x="15" y="30" width="150" height="52" rx="9" fill="var(--panel)" stroke="var(--blue)"/>
+      <text x="90" y="52" fill="var(--text)" font-size="11" font-weight="700" text-anchor="middle">Agent spans</text>
+      <text x="90" y="70" fill="var(--muted)" font-size="9" text-anchor="middle">raw: "SSN 123-45-6789"</text>
+      <rect x="215" y="30" width="180" height="52" rx="9" fill="color-mix(in srgb, var(--red) 12%, transparent)" stroke="var(--red)"/>
+      <text x="305" y="52" fill="var(--red)" font-size="11" font-weight="700" text-anchor="middle">Redaction processor</text>
+      <text x="305" y="70" fill="var(--muted)" font-size="9" text-anchor="middle">regex + field rules (irreversible)</text>
+      <rect x="445" y="30" width="150" height="52" rx="9" fill="var(--panel)" stroke="var(--amber)"/>
+      <text x="520" y="52" fill="var(--text)" font-size="11" font-weight="700" text-anchor="middle">OTel exporter</text>
+      <text x="520" y="70" fill="var(--muted)" font-size="9" text-anchor="middle">leaves the process</text>
+      <rect x="645" y="30" width="260" height="52" rx="9" fill="var(--green-glow)" stroke="var(--green)"/>
+      <text x="775" y="52" fill="var(--green)" font-size="11" font-weight="700" text-anchor="middle">Phoenix / Langfuse / Weave</text>
+      <text x="775" y="70" fill="var(--muted)" font-size="9" text-anchor="middle">see "[SSN_REDACTED]" only</text>
+      <line x1="165" y1="56" x2="210" y2="56" stroke="var(--green)" stroke-width="2" marker-end="url(#arrRd)"/>
+      <line x1="395" y1="56" x2="440" y2="56" stroke="var(--green)" stroke-width="2" marker-end="url(#arrRd)"/>
+      <line x1="595" y1="56" x2="640" y2="56" stroke="var(--green)" stroke-width="2" marker-end="url(#arrRd)"/>
+    </svg>
+    <div class="dia-cap">Redaction sits between the agent's spans and the exporter — clean data reaches every backend; it is never a display-time filter.</div>
+  </div>
 </section>
 
 <!-- ==================== METRICS ==================== -->
@@ -996,6 +1032,66 @@ window.addEventListener('resize', ()=>{
     </svg>
     <div class="dia-cap">The universal change pipeline — every element of the pinned release combination goes through it.</div>
   </div>
+
+  <h3 class="block">More maintenance moves the exam expects</h3>
+  <div class="grid g2">
+    <div class="card"><h4>Config hot-reload <span class="pill p-green">no restart</span></h4>
+      <p>Some config — notably <b>NeMo Guardrails</b> rail configs — updates <b>without restarting</b> the agent: mount the config from a Kubernetes <b>ConfigMap</b> as a volume and the running process picks up file changes. A guardrail tweak becomes a config change, not a redeploy — but it <b>still goes through the eval gate</b> (a rail change is a behavior change).</p></div>
+    <div class="card"><h4>RAG index freshness = a monitored metric</h4>
+      <p>Stale indexes silently serve outdated answers (a flavor of concept drift). Don't just re-index on a schedule — <b>emit index-staleness as a metric</b> (age of the newest doc) and <b>alert</b> when it crosses a threshold. Pair incremental upserts with the staleness alarm.</p></div>
+    <div class="card"><h4>Guardrail recalibration after a model swap <span class="pill p-red">false positives</span></h4>
+      <p>A model update changes output <b>style/distribution</b>, so rails tuned for the old model start <b>false-positive-blocking</b> good answers. A block-rate jump (e.g. <b>2% → 15%</b>) right after a model change is almost always <b>false positives, not an attack</b> — recalibrate the rails, don't assume the inputs got worse.</p></div>
+    <div class="card"><h4>Two checks before re-embedding</h4>
+      <p>Changing the embedding model forces a <b>full re-embed</b> of the corpus (old/new vectors aren't comparable). Rebuild side-by-side, validate retrieval recall on a golden query set, then <b>atomically swap</b> the alias/collection — never "just refresh new docs."</p></div>
+  </div>
+
+  <h3 class="block">The change-altitude ladder — stop at the cheapest fix that works</h3>
+  <div class="ladder">
+    <div class="rung"><div class="node">1</div><div class="body"><h4>Prompt tuning <span class="pill p-green">first</span></h4><p>Fast, cheap, reversible — and a <b>label move</b> (§3.5), not a redeploy. The default response to a quality dip.</p></div></div>
+    <div class="rung"><div class="node">2</div><div class="body"><h4>Configuration change</h4><p>Guardrails, tool params, RAG <code>top_k</code>, max-steps — when the issue is <b>behavioral boundaries</b>, not raw LLM quality.</p></div></div>
+    <div class="rung"><div class="node">3</div><div class="body"><h4>Model swap</h4><p>When the current model <b>fundamentally cannot</b> do the task (e.g. a reasoning-capability gap). Gated by regression evals + canary; recalibrate guardrails afterward.</p></div></div>
+    <div class="rung"><div class="node">4</div><div class="body"><h4>Architecture change <span class="pill p-red">last resort</span></h4><p>When the <b>agent type, memory strategy, or tool design</b> is wrong. Expensive and risky — <b>never</b> the first answer to "latency is high" or "tokens are high."</p></div></div>
+  </div>
+</section>
+
+<!-- ==================== DEBUG ==================== -->
+<section id="debug">
+  <h2 class="sec"><span class="num">3.6</span>Debugging Agent Failures from a Trace</h2>
+  <p class="sub">An agent rarely raises a clean HTTP 5xx — you localize the fault by reading the <b>span tree</b>. Learn the <i>trace signature</i> of each of the five named failure modes, not just the name.</p>
+
+  <div class="twrap"><table>
+    <tr><th>Failure mode</th><th>Trace signature</th><th>Likely cause</th><th>Fix</th></tr>
+    <tr><td class="cell-bad"><b>LLM timeout</b></td><td>LLM/<code>chat</code> span ≈ timeout duration, <b>error status</b> (or no end time)</td><td>NIM overloaded/queued, input too long, network blip</td><td>shorter per-call timeout + retries w/ backoff (not one 120 s timeout); reduce context; add NIM replicas</td></tr>
+    <tr><td class="cell-bad"><b>Tool failure</b></td><td><code>execute_tool</code> span with <b>error status</b>; read <code>error.message</code>/<code>error.type</code>; may show <code>retry_count</code></td><td>API rate-limit, auth expiry, bad args, downstream 500</td><td>retry+backoff, refresh creds, validate args, circuit-break a flaky tool</td></tr>
+    <tr><td class="cell-warn"><b>Infinite loop</b></td><td><b>repeated identical</b> tool/LLM spans (e.g. 12× same call); trajectory length explodes</td><td>bad plan, ambiguous instructions, tool returns same result</td><td><b>max-steps / recursion limit</b> in workflow config; tighten instructions</td></tr>
+    <tr><td class="cell-warn"><b>Context overflow</b></td><td>LLM span failing with a <b>token-limit / max-context</b> error</td><td>history + RAG chunks + tool outputs exceed the window</td><td>summarize/compress history, sliding window, cap RAG <code>top_k</code>, trim tool outputs</td></tr>
+    <tr><td class="cell-info"><b>Guardrail false positive</b></td><td>guardrail span <b>blocked</b> on a <i>legitimate</i> answer; correlated rail sub-trace shows which rail</td><td>rail calibrated for a different model/style; threshold too tight</td><td>tune rail/Colang flow, add exceptions, <b>recalibrate after any model swap</b></td></tr>
+  </table></div>
+
+  <div class="key"><b>The single most testable signature:</b> <b>repeated identical spans = loop</b> → fix is a <b>step limit</b>, not a bigger timeout. A token-limit error inside an LLM span = <b>context overflow</b> (summarize / cap <code>top_k</code>) — don't confuse the two.</div>
+
+  <div class="grid g2">
+    <div class="card accent-top"><h4><code>nat_test_llm</code> — deterministic replay <span class="pill p-green">NAT</span></h4>
+      <p>NAT ships a test/CI LLM <b>provider</b> (<code>_type: nat_test_llm</code>) that returns a fixed scripted sequence instead of calling a real model — <code>response_seq</code> (ordered canned replies) + <code>delay_ms</code> (simulate latency). Swap it in to <b>reproduce an exact failure trajectory deterministically and for free</b> — turning a flaky prod trace into a repeatable regression test. <b>Not for production.</b></p></div>
+    <div class="card accent-top"><h4>NAT profiler</h4>
+      <p>Framework-level latency &amp; token breakdown <b>per tool/agent</b>. Use it to separate "the model is slow" from "our serialization / event-loop overhead is slow" — the bottleneck a trace alone may not attribute.</p></div>
+  </div>
+</section>
+
+<!-- ==================== GUARDRAILS OBSERVABILITY ==================== -->
+<section id="guardrails-obs">
+  <h2 class="sec"><span class="num">3.7</span>NeMo Guardrails Observability — Correlating Safety with the Agent Trace</h2>
+  <p class="sub">Guardrail block/violation rate is a first-class production metric, but guardrails also emit <b>their own OpenTelemetry traces</b> — and the exam tests <i>how you tie them back to the agent run</i>.</p>
+
+  <div class="grid g2">
+    <div class="card accent-top"><h4>Enable it in <code>config.yml</code></h4>
+      <p>Since NeMo Guardrails <b>v0.16.0</b> the default <code>span_format</code> is <code>opentelemetry</code> (GenAI semconv; old dict format = <code>legacy</code>, deprecated). <code>enable_content_capture</code> (off by default) controls whether prompts/outputs land in spans. Adapters fan out: <b>OpenTelemetry</b> (→ OTLP collector) and/or <b>FileSystem</b> (<code>.jsonl</code> for local debugging).</p>
+      <p style="margin-top:6px"><b>Captured:</b> which rails fired (input/dialog/output) + pass/fail, per-rail latency, LLM calls inside self-check rails, cache status.</p></div>
+    <div class="card accent-top"><h4>Library-instrumentation pattern <span class="pill p-yellow">key exam point</span></h4>
+      <p>NeMo Guardrails depends only on the <b>OTel API</b> — the <b>host application configures the SDK</b> (TracerProvider, span processor, OTLP exporter). Because the host owns the tracer, guardrail spans become <b>children of the active parent span</b> and share the <b>same trace ID</b> as the NAT workflow. That shared trace ID is how a <code>blocked</code> guardrail span lines up under the run that triggered it.</p></div>
+  </div>
+
+  <div class="trap"><h4>⚠ Anti-pattern</h4><p>If the Guardrails tracer is configured <b>independently</b> (its own TracerProvider) instead of via the host's SDK, guardrail spans land as <b>separate traces</b> — you can no longer tell which agent execution a block belongs to. <b>Timestamp-matching is the distractor; shared trace ID is the answer.</b> Fix = let the host app own the OTel SDK so context propagates.</p></div>
 </section>
 
 <!-- ==================== NVIDIA ==================== -->
@@ -1019,7 +1115,9 @@ window.addEventListener('resize', ()=>{
     <div class="card accent-top"><h4>Data Flywheel Blueprint <span class="pill p-yellow">build.nvidia.com</span></h4>
       <p>Production-traffic-driven continuous improvement: logs traffic (<b>Elasticsearch</b>), curates datasets, runs <b>NeMo Customizer</b> (LoRA fine-tune/distill) and <b>NeMo Evaluator</b> on candidate NIMs, surfaces cheaper models that match accuracy — NVIDIA's flagship answer to "cost optimization over time" and "eval-in-production." Up to <b>~98% inference-cost reduction</b> in NVIDIA's example.</p></div>
     <div class="card accent-top"><h4>NeMo Evaluator + NeMo Guardrails</h4>
-      <p><b>NeMo Evaluator</b> (microservice): API-driven evaluation jobs (academic benchmarks + LLM-as-judge + custom datasets) — the gate for model/prompt rollouts in NVIDIA's stack. <b>NeMo Guardrails</b>: guardrail block/violation rates are a monitored production metric, and guardrail configs are versioned artifacts that roll out/back like prompts.</p></div>
+      <p><b>NeMo Evaluator</b> (microservice): API-driven evaluation jobs (academic benchmarks + LLM-as-judge + custom datasets) — the gate for model/prompt rollouts in NVIDIA's stack. <b>NeMo Guardrails</b>: block/violation rates are a monitored metric; configs are versioned artifacts that roll out/back like prompts. Emits its own <b>OTel traces</b> (<code>tracing.enabled: true</code>, <code>span_format: opentelemetry</code> default since <b>v0.16.0</b>); via the <b>library-instrumentation pattern</b> the host app owns the SDK so guardrail spans share the agent's <b>trace ID</b>. Rail configs <b>hot-reload</b> from a ConfigMap; recalibrate after a model swap.</p></div>
+    <div class="card accent-top"><h4><code>nat_test_llm</code> + NAT profiler <span class="pill p-green">debugging</span></h4>
+      <p>Day-2 debugging tooling. <b><code>nat_test_llm</code></b> (<code>_type: nat_test_llm</code>, <code>response_seq</code>, <code>delay_ms</code>) is a test/CI LLM provider returning scripted responses for <b>deterministic replay</b> of a captured failure trajectory — a flaky prod trace becomes a repeatable regression test at zero token cost (<b>not for production</b>). The <b>profiler</b> breaks down latency/token usage per tool/agent to separate model slowness from framework overhead.</p></div>
   </div>
 
   <div class="note"><b>When NVIDIA vs. generic:</b> GPU-level monitoring → <b>always DCGM stack</b> (no generic alternative with that fidelity). Agent tracing → <b>NAT</b> for config-driven multi-exporter telemetry across frameworks; plain OTel SDK or LangSmith/Langfuse if committed to one framework/vendor. Continuous cost optimization with fine-tuning → <b>Data Flywheel</b>; for only prompt/routing tweaks, lighter generic tooling suffices.</div>
@@ -1100,6 +1198,10 @@ window.addEventListener('resize', ()=>{
     <div class="trap"><h4>⚠ 10 · SLO math</h4><p>99.5% SLO ⇒ <b>0.5% error budget</b> over the window. Burn rate &gt; 1 = budget exhausted <b>early</b>. Burn-rate alerting (fast + slow windows) beats single static thresholds — alerting on every p99 blip is the distractor.</p></div>
     <div class="trap"><h4>⚠ 11 · A retry / finish_reason: length / tool-error isn't always an HTTP error</h4><p>Error-rate SLIs based only on 5xx <b>undercount agent failures</b>; tool-call failure rate and refusal rate are separate SLIs.</p></div>
     <div class="trap"><h4>⚠ 12 · "Eval once before launch" is never the right answer</h4><p>Production agents need <b>continuous</b> evals (sampled judge scoring, canary evals on every change) because models, data, and user behavior all drift.</p></div>
+    <div class="trap"><h4>⚠ 13 · Redaction is at the OTel exporter — and irreversible</h4><p>Not at the prompt, not at the dashboard. "Filter PII when the trace is displayed" / "configure redaction in Grafana" are distractors. It's <b>defense-in-depth, not a substitute for RBAC</b> on the trace store. Over-redacting (stripping all input) kills debuggability — keep query topic/intent, drop the SSN.</p></div>
+    <div class="trap"><h4>⚠ 14 · Guardrail block-rate spike after a model swap = false positives</h4><p>A new model's output style trips rails calibrated for the old one. <b>Recalibrate the rails</b>; don't conclude "users got more malicious." (A spike with <i>no deploy</i> concentrated on one source <i>can</i> be a real targeted attack.)</p></div>
+    <div class="trap"><h4>⚠ 15 · Guardrails traces must share the agent's trace ID</h4><p>Let the <b>host app own the OTel SDK</b> so NeMo Guardrails (OTel-API-only) emits spans as children of the active agent span. Its own TracerProvider → <b>separate traces</b>, no correlation. <b>Timestamp-matching is the distractor; shared trace ID is the answer.</b></p></div>
+    <div class="trap"><h4>⚠ 16 · Repeated identical spans = loop (fix: max-steps, not a longer timeout)</h4><p>A token-limit error inside an LLM span = <b>context overflow</b> (summarize/trim, cap <code>top_k</code>), <i>not</i> a loop. Don't confuse the two trace signatures.</p></div>
   </div>
 </section>
 
@@ -1125,6 +1227,18 @@ window.addEventListener('resize', ()=>{
 
   <details class="drill"><summary><span class="qn">6</span>You need GPU utilization, memory, and temperature for every GPU node of your agent cluster in Grafana. Which components?<span class="hintword">reveal</span></summary>
     <div class="ans"><b>dcgm-exporter</b> (DaemonSet, port <b>9400</b>, typically installed by the <b>GPU Operator</b>) scraped by <b>Prometheus</b>, visualized with the NVIDIA DCGM Grafana dashboard (ID <b>12239</b>) — DCGM is the NVIDIA-native GPU telemetry path.</div></details>
+
+  <details class="drill"><summary><span class="qn">7</span>A NAT agent trace shows the same <code>execute_tool search_db</code> span twelve times in a row before the run ends. What failure mode is this and what's the fix?<span class="hintword">reveal</span></summary>
+    <div class="ans">An <b>infinite loop</b> — repeated identical spans are its signature. Fix with a <b>max-steps / recursion limit</b> in the workflow config (and tighter instructions). Not a timeout (no error-status long span) and not context overflow (no token-limit error), so "increase the LLM timeout" and "enlarge the context window" are distractors.</div></details>
+
+  <details class="drill"><summary><span class="qn">8</span>After swapping the LLM behind a NAT agent to a newer NIM, the NeMo Guardrails block rate jumped from 2% to 15%. Most likely cause and response?<span class="hintword">reveal</span></summary>
+    <div class="ans"><b>False positives</b> — the new model's output style trips output rails calibrated for the old model; it's not a surge of harmful traffic. <b>Recalibrate the rails</b> (tune Colang flows/thresholds), validated by reviewing a sample of blocked outputs. Hot-reload the rail config via ConfigMap, then re-run the eval gate.</div></details>
+
+  <details class="drill"><summary><span class="qn">9</span>A "blocked" guardrail event needs to be matched to the exact agent run that triggered it, but guardrail spans show up as their own separate traces. What's misconfigured?<span class="hintword">reveal</span></summary>
+    <div class="ans"><b>Trace context propagation.</b> NeMo Guardrails depends only on the OTel API; the <b>host app must own the OTel SDK</b> (TracerProvider/exporter) so guardrail spans inherit the active parent context and share the <b>same trace ID</b> as the NAT workflow. A standalone Guardrails TracerProvider breaks correlation — configure the SDK once, in the host.</div></details>
+
+  <details class="drill"><summary><span class="qn">10</span>You captured a flaky production failure in a trace and want a deterministic, zero-cost regression test that reproduces it in CI. What NAT feature do you use?<span class="hintword">reveal</span></summary>
+    <div class="ans">The <b><code>nat_test_llm</code></b> provider — swap the real LLM for <code>_type: nat_test_llm</code> with a fixed <code>response_seq</code> (and optional <code>delay_ms</code>) so the exact trajectory replays deterministically with no token cost and no non-determinism. (Not for production.) Pair with the NAT profiler to confirm whether the bottleneck is framework overhead vs. the model.</div></details>
 </section>
 
 <!-- ==================== BUILDER ==================== -->
@@ -1144,7 +1258,7 @@ window.addEventListener('resize', ()=>{
 <!-- ==================== CODE COMPANION ==================== -->
 <section id="code">
   <h2 class="sec"><span class="num">09</span>Code Companion</h2>
-  <p class="sub">Eight runnable fragments that turn this domain's doctrine into muscle memory — tracing hookups, OTel spans, PromQL alerts, burn-rate rules, drift checks, and the eval-in-production loop.</p>
+  <p class="sub">Ten runnable fragments that turn this domain's doctrine into muscle memory — tracing hookups, OTel spans, PromQL alerts, burn-rate rules, drift checks, the eval-in-production loop, guardrails trace correlation, and deterministic replay.</p>
 
   <div class="grid">
     <div class="card accent-top">
@@ -1308,6 +1422,53 @@ for t in langfuse.api.trace.list(from_timestamp=since, limit=50).data:   # N=50/
 langfuse.flush()</code></pre>
       <p><b>What to notice:</b> this is the continuous quality-SLO loop from §3.3/§3.4 — no ground truth in prod, so you sample, judge, and trend <code>llm_judge_pass</code> in the same UI as latency and cost; alert when the daily mean regresses. Scores attach to the <em>trace</em>, so a failing score links straight to the trajectory you need to debug, and failing cases feed the golden regression set.</p>
     </div>
+
+    <div class="card accent-top">
+      <h4>9 &middot; NeMo Guardrails tracing that shares the agent's trace ID — host owns the OTel SDK <span class="pill p-green">python</span> <span class="pill p-purple">yaml</span></h4>
+      <pre class="codeblock"><code># 1) HOST APP configures the OTel SDK once (Guardrails depends only on the OTel API).
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4317", insecure=True)))  # same collector as the agent
+trace.set_tracer_provider(provider)   # &larr; HOST sets this, so guardrail spans inherit the active
+                                      #   parent context &rarr; SAME trace ID as the NAT workflow</code></pre>
+      <pre class="codeblock"><code># 2) guardrails config.yml — turn tracing on (v0.16.0+: opentelemetry span format is the default)
+tracing:
+  enabled: true
+  span_format: opentelemetry        # GenAI semconv; legacy dict format is deprecated
+  enable_content_capture: false     # don't put prompts/outputs in spans unless you must (privacy)
+  adapters:
+    - name: OpenTelemetry
+      service_name: guardrails
+      exporter: otlp                # share the host app's OTLP endpoint &rarr; same trace as the agent
+    - name: FileSystem
+      filepath: ./traces/traces.jsonl   # local .jsonl for offline debugging</code></pre>
+      <p><b>What to notice:</b> the whole point is <b>context propagation via the host-owned SDK</b> — a blocked output rail then appears as a child span under the agent run that triggered it (shared trace ID), so you can answer "which execution did this block belong to?" If Guardrails set up its <em>own</em> TracerProvider, the spans split into a separate trace (exam trap 15). <code>enable_content_capture: false</code> is the redaction-by-omission counterpart to §3.1's exporter-level redaction.</p>
+    </div>
+
+    <div class="card accent-top">
+      <h4>10 &middot; Deterministic replay with <code>nat_test_llm</code> — reproduce a failure in CI, no tokens, no flakiness <span class="pill p-purple">yaml</span></h4>
+      <pre class="codeblock"><code># A NAT workflow config that swaps the real LLM for a scripted test provider.
+llms:
+  agent_llm:
+    _type: nat_test_llm             # test/CI ONLY — never production
+    response_seq:                   # exact, ordered responses the "model" will return
+      - "Thought: I'll look up the order.\nAction: search_orders[4711]"
+      - "Final Answer: Order 4711 ships tomorrow."
+    delay_ms: 50                    # optionally simulate latency to exercise timeout handling
+
+functions:
+  search_orders:
+    _type: my_search_orders_tool
+workflow:
+  _type: react_agent
+  llm_name: agent_llm</code></pre>
+      <p><b>What to notice:</b> because the LLM output is <b>fixed</b>, the agent's trajectory is reproducible — feed it the sequence pulled from a failing production trace and you get the <em>same</em> spans every run, which is what makes it a regression test rather than a coin flip. Combine with the NAT <b>profiler</b> to confirm whether remaining latency is the model (here, faked) or framework overhead. NVIDIA's native answer to "how do I deterministically replay an agent failure" (the toolkit's <code>run_workflow</code> helper drives such configs in pytest).</p>
+    </div>
   </div>
 </section>
 
@@ -1393,6 +1554,9 @@ langfuse.flush()</code></pre>
       <li><a href="https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/introduction/">Grafana SLO docs (error budget, burn rate)</a></li>
       <li><a href="https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard">NVIDIA Data Flywheel Blueprint</a> &middot; <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">GitHub</a></li>
       <li><a href="https://developer.nvidia.com/blog/build-efficient-ai-agents-through-model-distillation-with-nvidias-data-flywheel-blueprint/">NVIDIA blog — Model distillation with Data Flywheel (~98% cost reduction)</a></li>
+      <li><a href="https://docs.nvidia.com/nemo/guardrails/latest/observability/index.html">NeMo Guardrails — Tracing / Observability (OTel span format v0.16.0, adapters, library-instrumentation)</a></li>
+      <li><a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/llms/index.html">NeMo Agent Toolkit — LLMs (nat_test_llm test provider, response_seq / delay_ms)</a></li>
+      <li><a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/resources/running-tests.html">NeMo Agent Toolkit — Running Tests (run_workflow, pytest harness)</a></li>
       <li><a href="https://flashgenius.net/blog-article/your-comprehensive-guide-to-the-nvidia-agentic-ai-llm-professional-certification-ncp-aai">FlashGenius NCP-AAI exam guide (domain weight context)</a></li>
     </ul>
     <p style="margin-top:22px;color:var(--muted);font-size:.75rem">NCP-AAI Domain 8 study visual &middot; observe → detect → maintain &middot; built from notes/domain-08-run-monitor-maintain.md</p>

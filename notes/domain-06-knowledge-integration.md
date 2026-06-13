@@ -78,6 +78,12 @@ The stages are independently tunable and independently measurable — evaluate r
 
 Rule of thumb: **HNSW = quality-first default** (recall, incremental data); **IVF = scale/memory-constrained, bulk-loaded data**; quantization (PQ/SQ, e.g., IVF_PQ) trades recall for big memory cuts.
 
+**GPU-accelerated indexes — cuVS and the Milvus GPU index family.** NVIDIA's GPU vector-search library is **cuVS (CUDA Vector Search)**, part of **RAPIDS** — this is the library Milvus calls when you pick a GPU index (and it also accelerates FAISS's GPU path). The GPU index types in Milvus are **`GPU_CAGRA`**, **`GPU_IVF_FLAT`**, **`GPU_IVF_PQ`**, and **`GPU_BRUTE_FORCE`**. **CAGRA** (CUDA-Accelerated Graph index for vector Retrieval) is the flagship GPU-native *graph* index — conceptually the GPU answer to HNSW — and the one the AI-Q/RAG Blueprints use. Verified numbers: CAGRA builds ~**12× faster** and searches ~**4.7× faster** than CPU HNSW, with batched throughput up to ~**100× CPU** under heavy load.
+
+Two non-obvious facts the exam likes:
+1. **GPU indexes win on throughput, not necessarily latency.** They shine when you have **high QPS / large query batches** or need fast index *builds*; for a single low-traffic query a tuned CPU HNSW can match or beat them. So "1M+ vectors at high throughput" → GPU; "occasional queries, latency-sensitive" → GPU isn't automatic. (Misconception trap: GPU search ≠ "only for massive datasets" — the trigger is QPS, not just corpus size.)
+2. **GPU indexes must fit (largely) in GPU memory** and have weaker OOM protection — oversubscribing GPU memory can crash the query node. A practical pattern is **hybrid: build the graph on GPU with CAGRA, then serve searches on CPU as HNSW** (CAGRA-built graphs even beat native HNSW latency at high dimensionality, >512D), reserving the GPU for index building in cost-sensitive deployments.
+
 ### 3.4 Hybrid search: dense + sparse with RRF
 
 Dense vectors capture *meaning* but fumble exact tokens (part numbers, error codes, names, acronyms). Sparse/lexical scoring (**BM25**: term-frequency × inverse-document-frequency with length normalization) nails exact matches but has zero notion of synonyms. **Hybrid search runs both and fuses the ranked lists**, typically with **Reciprocal Rank Fusion**:
@@ -94,9 +100,20 @@ A **cross-encoder** feeds the query and a candidate passage through the model *t
 
 ### 3.6 Data handling: parsing, PII, freshness
 
-**Document parsing / multimodal extraction.** Enterprise knowledge lives in PDFs full of tables, charts, and scanned pages — naive text extraction destroys it. **NV-Ingest (NeMo Retriever extraction)** is NVIDIA's answer: a microservice pipeline that splits documents into pages, classifies page elements, and uses specialized NIMs (page-element detection, table-structure recognition, OCR) to extract **text, tables (as markdown), charts, and infographics** into a uniform JSON/DataFrame schema — then optionally chunks, embeds, and uploads to Milvus in the same fluent pipeline. Tables extracted as *structured markdown* embed and retrieve dramatically better than tables flattened to whitespace soup.
+**Document parsing / multimodal extraction.** Enterprise knowledge lives in PDFs full of tables, charts, and scanned pages — naive text extraction destroys it. **NV-Ingest (NeMo Retriever extraction)** is NVIDIA's answer: a microservice pipeline that splits documents into pages, classifies page elements, and uses specialized NIMs to extract **text, tables (as markdown), charts, and infographics** into a uniform JSON/DataFrame schema — then optionally chunks, embeds, and uploads to Milvus in the same fluent pipeline. The named NIMs the exam may reference: **`nemoretriever-page-elements-v2`** (detects which boxes are text/table/chart), **`nemoretriever-table-structure-v1`** (recovers row/column structure → markdown), **`nemoretriever-graphic-elements-v1`** (chart/figure elements), and **PaddleOCR** as the OCR text-recognition engine for scanned/image content (NV-Ingest also offers a Nemotron OCR NIM; PaddleOCR is the open, Apache-2.0 default and the name the course/AI-Q Blueprint uses). Tables extracted as *structured markdown* embed and retrieve dramatically better than tables flattened to whitespace soup.
+
+> **Exam framing for PaddleOCR:** if a question lists the AI-Q/RAG Blueprint's ingestion stack, **PaddleOCR is the document-OCR component** (text extraction from scanned pages/images); the page-element / table-structure / graphic-element detector NIMs handle *layout*, OCR handles *characters*. "Retrieval over scanned-PDF tables is near-zero" → the fix lives in this extraction layer (detectors + OCR), not in chunking.
 
 **PII redaction.** Redact **at ingestion time, before indexing** — once PII is embedded and stored, every retrieval can leak it, and embeddings themselves can be inverted. Tooling: **NeMo Curator's `PiiModifier`** (built on Microsoft **Presidio**) for pattern/NER-based detection of names, emails, SSNs, etc., and `LLMPiiModifier` / `AsyncLLMPiiModifier` for LLM-based detection via a NIM. Defense in depth adds a runtime check (NeMo Guardrails) on inputs/outputs, but ingestion-time redaction is the load-bearing control.
+
+**NeMo Curator is more than PII — it's the GPU data-prep stage.** PII redaction is one *modifier* inside a broader **GPU-accelerated curation toolkit** that runs on RAPIDS **cuDF** + **Dask** (so it scales to millions of docs, with reported ~10–100× speedups over CPU pipelines, and ~16× on fuzzy dedup specifically). Its core operations — each a stage you compose into a pipeline — are:
+- **Deduplication** in three flavors: **exact** (MD5 hashing), **fuzzy** (**MinHash + LSH** for near-duplicates — reformatting, typos, small edits), and **semantic** (embedding-cluster dedup). Dedup matters for RAG because embedding the *same* content many times wastes index space and biases retrieval toward over-represented chunks.
+- **Language identification** — filter/route documents by language before embedding.
+- **Quality filtering** — heuristic and classifier-based removal of low-quality text (boilerplate, garbled OCR, spam).
+- **Domain classification** and other transforms (used end-to-end to build NVIDIA's own Nemotron pre-training datasets).
+- **PII redaction** (`PiiModifier` / `LLMPiiModifier`) as above.
+
+The exam point: **NeMo Curator = data preparation/cleaning (dedup, language ID, quality filter, PII) at GPU scale**, sitting *between* raw extraction and chunking — distinct from NeMo Retriever (embed/rerank/extract) and from Milvus (storage/search). Don't conflate "Curator" (prep the data) with "Retriever" (serve embeddings/retrieval).
 
 **Freshness and re-indexing.** A vector index is a *snapshot*; RAG's whole advantage over fine-tuning is cheap knowledge updates — but only if you actually update. Patterns:
 - **Incremental upsert:** track a content hash + `last_modified` per source doc; on change, delete that doc's chunks and re-embed only it. Stable chunk IDs (`doc_id#chunk_n`) make deletes targeted.
@@ -118,14 +135,57 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 |---|---|---|
 | **NeMo Retriever embedding NIMs** | The embedding stage as a container with an OpenAI-compatible API | **`llama-3.2-nv-embedqa-1b-v2`** — multilingual (26 languages), 8192-token max input, Matryoshka dims 384–2048, asymmetric `input_type` query/passage; also `nv-embedqa-e5-v5` (English), `nv-embedqa-mistral-7b-v2` (multilingual). In LangChain: `NVIDIAEmbeddings` from `langchain-nvidia-ai-endpoints` |
 | **NeMo Retriever reranking NIM** | The precision stage: cross-encoder reranking as a service | **`llama-3.2-nv-rerankqa-1b-v2`** (current), `nv-rerankqa-mistral-4b-v3` (prior gen). In LangChain: `NVIDIARerank` (`compress_documents`), wraps as a `ContextualCompressionRetriever` |
-| **NV-Ingest / NeMo Retriever extraction** | Ingestion stage: scalable multimodal document extraction | Fluent Python `Ingestor` pipeline: `.files().extract(extract_text/tables/charts/infographics).embed().vdb_upload().ingest()`; uses detection/table-structure/OCR NIMs; outputs uniform metadata schema; newest releases ship as the `nemo-retriever` library (`create_ingestor`) — same chain |
-| **Milvus (+ GPU CAGRA)** | NVIDIA's default vector DB in RAG blueprints | Dense + sparse(BM25) + `hybrid_search` with `RRFRanker`/`WeightedRanker`; metadata filter expressions; **CAGRA** = GPU-native graph ANN index for high-throughput search |
-| **NeMo Curator (PII)** | Ingestion-time PII redaction | `PiiModifier` (Presidio-based NER/patterns) and `LLMPiiModifier` (NIM-backed LLM detection) chained in a `Sequential` curation pipeline |
+| **NV-Ingest / NeMo Retriever extraction** | Ingestion stage: scalable multimodal document extraction | Fluent Python `Ingestor` pipeline: `.files().extract(extract_text/tables/charts/infographics).embed().vdb_upload().ingest()`; named NIMs: `nemoretriever-page-elements-v2`, `nemoretriever-table-structure-v1`, `nemoretriever-graphic-elements-v1`, **PaddleOCR** (OCR); outputs uniform metadata schema; newest releases ship as the `nemo-retriever` library (`create_ingestor`) — same chain |
+| **PaddleOCR** | The OCR text-recognition engine inside NV-Ingest / the Blueprints | Extracts characters from scanned pages & images (Apache-2.0); pairs with the page-element/table/graphic detector NIMs that handle layout. The exam's named "document-processing OCR" component |
+| **Milvus (+ cuVS / GPU CAGRA)** | NVIDIA's default vector DB in RAG blueprints | Dense + sparse(BM25) + `hybrid_search` with `RRFRanker`/`WeightedRanker`; metadata filter expressions; GPU indexes via **cuVS** (`GPU_CAGRA`/`GPU_IVF_FLAT`/`GPU_IVF_PQ`/`GPU_BRUTE_FORCE`); CAGRA ≈ GPU-native HNSW, ~12× faster build / ~4.7× faster search, throughput-oriented |
+| **NeMo Curator** | GPU data-prep stage (dedup, language ID, quality filter, PII) | RAPIDS cuDF + Dask, ~10–100× CPU speedup; **dedup** exact(MD5)/fuzzy(MinHash+LSH)/semantic; language ID; quality filtering; domain classification; PII via `PiiModifier` (Presidio) / `LLMPiiModifier` (NIM). *Curator = prep the data; Retriever = serve retrieval — don't conflate* |
 | **NeMo Guardrails** | Runtime complement: input/output PII checks, grounding rails | Defense in depth on top of ingestion-time redaction |
-| **NVIDIA RAG Blueprint** | The reference architecture tying it together | NIM LLM + NeMo Retriever embed/rerank + Milvus + NV-Ingest; the exam's mental picture of "NVIDIA's RAG stack" |
+| **NVIDIA RAG Blueprint** | The foundational RAG reference workflow | NIM LLM + NeMo Retriever embed/rerank + vector DB (Milvus/Elasticsearch) + NV-Ingest extraction + reflection; the exam's mental picture of "NVIDIA's RAG stack" |
+| **AI-Q Research Assistant Blueprint** | Agentic *deep-research* layer **on top of** the RAG Blueprint | Orchestrated by **NeMo Agent Toolkit (NAT)**; plans a report → searches (RAG corpus **+ web via Tavily**) → writes → reflects on gaps → re-queries → finishes with cited sources. The exam's "agentic RAG architecture" reference |
 | **NeMo Evaluator** | Measures this domain's output | Retriever evals (Recall@K, NDCG@K on BEIR-format data) and RAG evals (RAGAS-style) — Domain 3 crossover |
 
 **When NVIDIA vs generic:** the NIM/Retriever stack buys you GPU-optimized, containerized, OpenAI-API-compatible pieces that slot into LangChain/LlamaIndex unchanged — the *concepts* (bi-encoder, cross-encoder, ANN, RRF) are identical to open-source equivalents, and exam questions mostly test that you can map concept → NVIDIA product name.
+
+### 4.1 AI-Q Blueprint RAG architecture (the NVIDIA reference picture)
+
+The exam expects you to recognize **NVIDIA's reference RAG stack as a layered Blueprint**, and to distinguish the two tiers:
+
+- **NVIDIA RAG Blueprint (foundation):** the production-ready retrieve→rerank→generate pipeline. Components by stage: **NV-Ingest** (multimodal extraction: page-element / table-structure / graphic-element detectors + **PaddleOCR**) → optional **NeMo Curator** prep → **NeMo Retriever embedding NIM** (`llama-3.2-nv-embedqa-1b-v2`) → **vector DB** (Milvus with **cuVS** GPU acceleration, or Elasticsearch) → hybrid retrieval → **NeMo Retriever reranking NIM** (`llama-3.2-nv-rerankqa-1b-v2`) → **NIM LLM** for generation. The embed+rerank pair is tuned together for high BEIR/TechQA accuracy with multilingual + cross-lingual support.
+- **AI-Q Research Assistant Blueprint (agentic layer on top):** *extends* the RAG Blueprint into a deep-research agent. Orchestrated by **NeMo Agent Toolkit (NAT)**, it: (1) drafts a **report plan**, (2) **searches** both the internal RAG corpus and the **web (Tavily)**, (3) **writes** a draft, (4) **reflects on gaps** and issues follow-up queries, (5) **finalizes** with a source list. This is the canonical "agentic RAG / retrieval-in-the-reasoning-loop" reference for the exam.
+
+> **Version-dependent (don't memorize the exact SKUs):** the Blueprints' *generation* LLMs and embedding SKUs are refreshed frequently (the course-era lineup cites Llama 3.3 Nemotron Super 49B / Llama 3.3 70B for generation, Llama 3.2 NV EmbedQA 1B + RerankQA 1B for retrieval, on a ~2×H100 80GB self-hosted footprint; current builds have moved to Nemotron-3 / Nemotron embed-VL models and default to API-Catalog hosting with *no local GPU requirement*). **Memorize the architecture and component *roles*, not the model version string** — and always verify hardware on the specific Blueprint page, since requirements vary widely across Blueprints.
+
+**NIM endpoint config shapes (the asymmetric embedding + the ranking API).** NeMo Retriever NIMs are OpenAI-style HTTP services. The two shapes worth recognizing:
+
+```python
+# Embedding NIM — note the asymmetric input_type (passage at index, query at search)
+POST {base_url}/v1/embeddings
+{ "model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
+  "input": ["...chunk text..."],
+  "input_type": "passage",          # use "query" when embedding a search query
+  "encoding_format": "float" }      # -> {"data":[{"embedding":[...]}]}
+
+# Reranking NIM — a DIFFERENT route and payload than embeddings
+POST {base_url}/v1/ranking
+{ "model": "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+  "query":    {"text": "warranty period for model X?"},
+  "passages": [ {"text": "..."}, {"text": "..."} ] }
+# -> {"rankings":[{"index": 2, "logit": 8.1}, ...]}  # sort by logit desc, keep top_n
+```
+
+The exam-relevant details: reranking lives at **`/v1/ranking`** (not `/v1/embeddings`), takes a `query` + a list of `passages`, and returns `rankings` scored by **`logit`** (sort descending, keep the top-N). And the embedding endpoint's **`input_type`** is the asymmetry knob (trap #5) — `"passage"` for documents, `"query"` for queries.
+
+**NAT retriever/embedder config.** When you wire retrieval through NeMo Agent Toolkit, you declare an **`embedder`**, an optional **`reranker`**, a **`vector_store`**, and the candidate counts (`top_k` wide / `rerank_top_n` narrow) — the two-stage mantra expressed as config:
+
+```yaml
+retriever:
+  type: nim
+  embedder:  { model: nvidia/llama-3.2-nv-embedqa-1b-v2, base_url: ${NIM_URL} }
+  reranker:  { model: nvidia/llama-3.2-nv-rerankqa-1b-v2, base_url: ${NIM_URL} }
+  vector_store: { type: milvus }   # or faiss for local dev
+  top_k: 40            # stage 1: retrieve wide & cheap
+  rerank_top_n: 5      # stage 2: rank narrow & expensive
+```
 
 ## 5. Decision frameworks
 
@@ -179,6 +239,9 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 13. **Vector RAG for multi-hop** — similarity search retrieves chunks that look like the question; multi-hop answers live in chains of facts that individually don't resemble the question. "Question requires joining facts across documents" → GraphRAG/knowledge graph (local search for entity-hops, global for themes).
 14. **GraphRAG everywhere** — also a trap: full GraphRAG indexing is LLM-expensive and high-maintenance. Single-hop factual QA → plain vector RAG; occasional graph-style queries → LazyGraphRAG-style deferred approaches.
 15. **Pre- vs post-filtering** — post-filtering (search, then discard non-matching) can leave you with fewer than k results and wasted compute; production engines pre-filter the ANN search. Also: metadata filters are your ACL boundary, not the LLM's discretion.
+16. **NeMo Curator vs NeMo Retriever confusion** — they sit in different stages. **Curator = GPU data *preparation*** (dedup, language ID, quality filtering, PII) *before* chunking/embedding; **Retriever = embedding + reranking + extraction NIMs** that *serve* retrieval. "Which NVIDIA tool deduplicates / quality-filters the corpus at scale?" → **Curator**. "Which serves the embedding/rerank models?" → **Retriever**. Also: NeMo Curator does far more than PII — PII is just one modifier.
+17. **GPU vector search = "only for huge datasets"** — the trigger is **QPS/throughput**, not raw corpus size. cuVS/CAGRA helps at 1M+ vectors under *high query pressure*; at low traffic a tuned CPU HNSW can match it on latency. And GPU indexes need to fit in GPU memory (weak OOM protection). "Sub-10ms at very high QPS over millions of vectors" → GPU (cuVS/CAGRA); "occasional queries, latency-sensitive, tight GPU budget" → CPU HNSW (optionally CAGRA-built, HNSW-served).
+18. **"PaddleOCR / a detector NIM is the whole extraction story"** — extraction is a *team*: **detector NIMs** (`page-elements`, `table-structure`, `graphic-elements`) find *where* the content is and recover *structure*; **PaddleOCR** reads the *characters*. A scanned table needs both — layout detection to find the table and OCR to read its cells. Naming PaddleOCR as "the document-processing component" is correct for OCR specifically, not for table-structure recovery.
 
 ## 7. Scenario drills
 
@@ -203,6 +266,15 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 7. **Docs change daily; nightly full re-embedding of 10M chunks is blowing the GPU budget. Better pattern?**
    → **Incremental upsert**: hash each source doc, on change delete its chunks by stable ID prefix and re-embed only that doc; schedule a periodic diff sync. Reserve full re-embeds for model/chunking changes.
 
+8. **Your corpus is a 5M-document Common-Crawl-style dump: heavy near-duplicates (reposts, boilerplate variants), mixed languages, lots of low-quality pages. Retrieval surfaces the same content five times and confidence is low. Which NVIDIA tool, and what operations?**
+   → **NeMo Curator** (the GPU data-prep stage, *before* chunking/embedding). Run **fuzzy dedup (MinHash + LSH)** to collapse near-duplicates, **language ID** to keep only target languages, and **quality filtering** to drop boilerplate/garbled text — all on GPU via RAPIDS cuDF/Dask. This is a *data-preparation* fix, not a retrieval-architecture fix; reranking or hybrid won't undo a corpus that's 5× duplicated. (Don't answer "NeMo Retriever" — that serves embeddings/reranking, it doesn't dedup.)
+
+9. **You must serve a vector search at very high QPS over 8M vectors with strict throughput SLOs, and you have spare H100 capacity. What index / library?**
+   → **Milvus GPU index via cuVS — `GPU_CAGRA`** (the GPU-native graph index). It's built for batched, high-throughput search (~12× faster build, ~4.7× faster search than CPU HNSW, up to ~100× throughput under load). Watch GPU memory (the index must fit). If queries were *occasional* and latency-sensitive instead, a tuned CPU **HNSW** (optionally CAGRA-built, HNSW-served) would be the more economical pick — GPU's edge is throughput, not single-query latency.
+
+10. **A team needs an agent that produces a sourced research report: plan the report, pull from the internal RAG corpus *and* the live web, then revise based on gaps. Which NVIDIA blueprint, and what orchestrates it?**
+   → **AI-Q Research Assistant Blueprint**, which extends the foundational **RAG Blueprint** with a deep-research loop — plan → search (RAG corpus **+ Tavily web**) → write → reflect-on-gaps → re-query → finalize with citations — all orchestrated by **NeMo Agent Toolkit (NAT)**. The plain RAG Blueprint answers a single grounded question; AI-Q adds the agentic multi-step report workflow on top.
+
 ## 8. Builder's corner
 
 - **Measure retrieval before you architect.** Build the BEIR-style query→relevant-chunk eval set first (even 50 queries), get baseline recall@k/NDCG, *then* decide between chunking tweaks, hybrid, reranking, or GraphRAG. Teams routinely add expensive components to fix problems the metrics would have localized in an afternoon — and the fix order is almost always: extraction → chunking → hybrid → reranker → exotic.
@@ -214,7 +286,10 @@ Decision: **vector RAG for "find the passage"; GraphRAG/KG for "connect the fact
 ## 9. Sources
 
 - NeMo Retriever overview & models: https://docs.nvidia.com/nim/#nemo-retriever ; https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard ; https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard
-- NV-Ingest / NeMo Retriever extraction: https://github.com/NVIDIA/nv-ingest ; https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/
+- NV-Ingest / NeMo Retriever extraction (incl. PaddleOCR + detector NIMs): https://github.com/NVIDIA/nv-ingest ; https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/
+- NVIDIA RAG Blueprint & AI-Q Research Assistant Blueprint: https://github.com/NVIDIA-AI-Blueprints/rag ; https://github.com/NVIDIA-AI-Blueprints/aiq-research-assistant ; https://build.nvidia.com/nvidia/aiq
+- Milvus GPU indexes & cuVS (CAGRA / GPU_IVF_FLAT / GPU_IVF_PQ): https://milvus.io/docs/gpu_index.md ; https://milvus.io/docs/gpu-cagra.md ; https://zilliz.com/blog/milvus-on-gpu-with-nvidia-rapids-cuvs
+- NeMo Curator (dedup / language ID / quality / PII on GPU): https://docs.nvidia.com/nemo/curator/ ; https://github.com/NVIDIA-NeMo/Curator
 - NVIDIA reranking blogs: https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/ ; https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/
 - NVIDIA chunking study: https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/
 - Milvus hybrid search & RRF: https://milvus.io/docs/multi-vector-search.md ; https://milvus.io/docs/rrf-ranker.md ; https://milvus.io/blog/get-started-with-hybrid-semantic-full-text-search-with-milvus-2-5.md
@@ -305,7 +380,7 @@ chunks = ingestor.ingest()                                # pandas DataFrame of 
 print(chunks.iloc[0]["text"])
 ```
 
-*What to notice:* one fluent chain covers ingestion → extraction → embedding → indexing, with specialized NIMs (page-element detection, table structure, OCR) doing the heavy lifting per modality. The exam point: tables/charts are extracted as *structured* artifacts, not flattened text — fixing retrieval failures that no chunking tweak can.
+*What to notice:* one fluent chain covers ingestion → extraction → embedding → indexing, with specialized NIMs (`nemoretriever-page-elements-v2` for layout, `-table-structure-v1` for tables, `-graphic-elements-v1` for charts, **PaddleOCR** for character recognition) doing the heavy lifting per modality. The exam point: tables/charts are extracted as *structured* artifacts, not flattened text — fixing retrieval failures that no chunking tweak can.
 
 **5) Metadata-filtered retrieval: scope, tenancy, and freshness in one expression**
 
@@ -379,6 +454,27 @@ ORDER BY embedding <=> $1 LIMIT 5;
 ```
 
 *What to notice:* vectors as a column type means filtering, joins, and transactions are just SQL — the pgvector pitch. The §3.3 knobs appear literally: `m`/`ef_construction` at build, `ef_search` at query; switching to IVFFlat is one index swap (`lists ≈ √rows`, bulk-load before building).
+
+**9) NeMo Curator: GPU data-prep pipeline (dedup → language ID → quality filter → PII) before chunking**
+
+```python
+from nemo_curator import Sequential
+from nemo_curator.modules import FuzzyDuplicatesRemoval     # MinHash + LSH, GPU
+from nemo_curator.filters import FastTextLangId, QualityFilter
+from nemo_curator.modifiers import PiiModifier
+
+# A curation pipeline runs on RAPIDS cuDF/Dask — composes as ordered stages
+curate = Sequential([
+    FuzzyDuplicatesRemoval(threshold=0.8),                  # collapse near-duplicates (reposts, boilerplate)
+    FastTextLangId(keep={"en"}),                            # language identification → keep target langs
+    QualityFilter(),                                        # drop boilerplate / garbled-OCR / low-signal text
+    PiiModifier(entities=["PERSON", "EMAIL", "US_SSN"]),    # Presidio-backed PII redaction, pre-index
+])
+clean_docs = curate(raw_docs)                               # -> deduped, filtered, redacted corpus
+# only NOW do you chunk -> embed (llama-3.2-nv-embedqa-1b-v2) -> upsert to Milvus
+```
+
+*What to notice:* this is the stage **between raw extraction and chunking**, and it's **NeMo Curator**, not Retriever — the exam separates "prepare the data" (Curator) from "serve retrieval" (Retriever). Fuzzy dedup is **MinHash + LSH**; everything runs GPU-accelerated (cuDF/Dask) for ~10–100× CPU throughput. PII redaction here is the *load-bearing* control (trap #12); skipping dedup is what makes retrieval return the same passage five times (scenario drill #8). Class/method names are illustrative — verify against the current Curator API.
 
 ## 11. What top engineers are saying (2025-26)
 

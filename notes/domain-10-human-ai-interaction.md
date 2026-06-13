@@ -48,6 +48,13 @@ flowchart TD
 
 Key exam heuristic: **risk and reversibility decide the loop position, not convenience.** The higher the risk and the less reversible the action, the closer the human must be to the action. Production systems layer all three: HITL for the few dangerous actions, HOTL for the middle, HOOTL for the safe bulk. A common target in mature systems is ~5-15% of tasks escalated to a human; 0% means your gates are too loose, 50% means the agent isn't adding value.
 
+**The finer-grained ladder (and "human-in-command").** The three-tier HITL/HOTL/HOOTL split is the coarse view. A more granular ladder runs **fully automated → automated + logging → automated + alerts → approval-required → HITL → HOTL → human-in-command**, moving from max autonomy/min oversight (left) to min autonomy/max oversight (right). The two endpoints worth knowing for the exam:
+
+- **Human-in-command (HIC)** — the *EU AI Act* term (alongside HITL and HOTL) for the strongest oversight: the human makes every decision and the agent only *recommends/drafts*; the human also decides *whether and when to use the system at all*. (Analogy: a driver who can always override the autopilot.) On the NVIDIA stack, HIC is realized by having the agent produce **structured output** (a proposal) and stopping there — execution is the human's to trigger. Distinguish HIC ("agent drafts, human acts") from HITL ("agent acts after the human approves the specific step").
+- **Automated + logging / automated + alerts** sit *left* of approval-required: the agent acts without blocking, but every action is **logged** (post-hoc review) or specific action types **alert** a monitor. These are the HOOTL-with-teeth and HOTL-lite rungs — useful when a scenario says "let it run but make sure we can review/get pinged."
+
+Each rung maps to an NVIDIA primitive: *automated + logging* → NAT audit/observability; *automated + alerts* → NAT observability metrics/traces; *approval-required* → NeMo Guardrails execution rail + NAT interactive workflow; *HITL/HOTL* → NAT interactive workflows (WebSocket/HTTP) with streaming; *human-in-command* → NAT structured output. The exam may ask you to place a described system on this ladder and name the primitive.
+
 ### 3.2 Approval gates for high-risk / irreversible actions
 
 **What:** a hard checkpoint where the agent must obtain explicit human consent before executing a *specific* action (not before every step).
@@ -94,6 +101,17 @@ LangChain also ships a **HITL middleware** that wraps tool calls and auto-interr
 **How it works well:** the handoff carries **full context** — conversation history, tool traces, the agent's tentative conclusion and its uncertainty — so the human doesn't restart from zero; the system defines *who* receives it (tiered queues), *SLA*, and *what the agent says* meanwhile. A degenerate escalation ("Sorry, I can't help") with no route or context is an anti-pattern.
 
 Cascade pattern: small model answers → if confidence < τ₁, defer to large model → if still < τ₂, escalate to human. This trades cost/latency against accuracy with humans as the final tier.
+
+**The five canonical escalation triggers** (and how each is wired on the NVIDIA stack):
+1. **Confidence threshold** — model's confidence below τ → escalate. *(Output-parse a confidence score; an execution rail gates on it.)*
+2. **Domain boundary** — request crosses into a domain the agent isn't built for. *(An input-classification rail detects out-of-domain.)*
+3. **Safety trigger** — a guardrail fires on input or intermediate output. *(NeMo Guardrails content/input rails naturally route to escalation.)*
+4. **Repeated failure** — a step retried more than N times. *(NAT step counting + an execution rail.)*
+5. **User request** — the user explicitly asks for a human.
+
+Anti-pattern: a **single escalation queue** for everything — domain experts waste time on out-of-domain cases and bottleneck. Route by **domain, severity, and required expertise** (tiered queues), not one inbox.
+
+**Feedback loops (human corrections as training signal).** Oversight produces free labels: a human *rejecting* an action, *editing* an argument, or *correcting* a draft. Capture them — log the rejection reason, the original-vs-edited pair — and feed them into the **NAT evaluation framework as regression tests** (low-rated turns become "must not regress" cases; high-rated turns become golden cases). This is the data flywheel: corrections improve prompts, tune guardrails, and update tools over time. Not capturing corrections means the agent repeats the same mistake forever. (Watch the bias: users over-rate so-so answers 4-5 and only 1-2 when angry — pair the star rating with a structured "was this correct? Y/N".)
 
 ### 3.5 Confidence thresholds and selective deferral
 
@@ -146,7 +164,7 @@ These are *environment-level* controls that hold even if the model is jailbroken
 - **Action allowlists / denylists:** an **allowlist** (default-deny: only enumerated actions/commands/domains permitted) is strictly safer than a **denylist** (default-allow: block known-bad), because denylists can't enumerate unknown attacks. Exam answer: prefer allowlist/deny-by-default for production agents; denylists are a supplementary layer. Granularity matters: allow `git status`, not "git *"; allow POST to one endpoint, not the whole API.
 - **Audit logs:** append-only, tamper-evident records of every action — who/which agent, what tool, what arguments, what result, timestamp, correlation/trace ID, and *who approved* gated actions. They enable HOOTL after-the-fact oversight, incident forensics, and compliance (e.g., EU AI Act human-oversight expectations). Implemented in practice via OTel traces shipped to an observability store plus immutable application logs.
 - **Kill switches:** an out-of-band mechanism to instantly halt one agent, one workflow, or the whole fleet — revoke credentials, cut tool/network access, pause the queue. Must live *outside* the agent's control plane (an agent must not be able to disable its own kill switch) and should be paired with anomaly triggers (spend rate, action rate, error spikes) for automatic tripping. Graceful design: checkpoint state on halt so work can resume after investigation.
-- **Sandboxing:** execute agent-generated code/commands in isolated, disposable environments (containers, microVMs, network-egress-restricted) so a bad action "breaks the sandbox, not the host." Essential for code-execution tools, browser agents, and self-modifying agents. NVIDIA's OpenShell (below) is the NVIDIA-stack instantiation: out-of-process policy enforcement + sandboxed execution + deny-by-default permissions.
+- **Sandboxing:** execute agent-generated code/commands in isolated, disposable environments (containers, microVMs, network-egress-restricted) so a bad action "breaks the sandbox, not the host." Essential for code-execution tools, browser agents, and self-modifying agents. NVIDIA's OpenShell (below) is the NVIDIA-stack instantiation (a standalone Apache-2.0 runtime, kernel-level isolation via a per-sandbox container): out-of-process policy enforcement + sandboxed execution + deny-by-default permissions.
 
 Defense-in-depth ordering: prompts/guardrails (soft) → tool-layer validation → permissions/allowlists (hard) → sandbox/isolation (hard) → monitoring/audit/kill switch (detect & stop).
 
@@ -159,9 +177,108 @@ Defense-in-depth ordering: prompts/guardrails (soft) → tool-layer validation �
 | **NAT observability/profiling** | `general.telemetry` config section (`logging` + `tracing`) with built-in exporters: **Phoenix, Langfuse, W&B Weave, LangSmith**, and generic **OTLP/OpenTelemetry** — yields per-function spans, token counts, latencies, full tool-use traces = transparency + audit substrate. | Tool-use traces and audit logs on the NVIDIA stack with a few YAML lines instead of custom instrumentation. |
 | **NeMo Guardrails** | Programmable runtime rails in `config.yml` + Colang flows. Five rail types: **input, dialog, retrieval, output, execution** (execution rails wrap custom actions/tools — the guardrail layer closest to action oversight). Built-in self-check input/output, fact-checking/hallucination checks; can block, alter, or stop a flow — an automated gate that *complements* human gates. | Automated, policy-as-config enforcement on every turn; pair with HITL so humans handle only what rails can't decide. |
 | **NemoGuard NIMs / NVIDIA AI Safety Recipe** | Deployable safety models: **Llama 3.1 NemoGuard 8B Content Safety**, **NemoGuard 8B Topic Control**, **NemoGuard Jailbreak Detect**; **garak** LLM vulnerability scanner pre-deployment; recipe reported content-safety 88%→94% and security resilience 56%→63% with no measurable accuracy loss. | Enterprise-grade automated moderation tiers in front of/behind the agent so human oversight focuses on actions, not every utterance. |
-| **NVIDIA OpenShell** (Agent Toolkit component, Apache 2.0) | Oversight-engineering runtime: **out-of-process policy enforcement** (controls live outside the agent's reach), **sandboxed execution** for long-running/self-evolving agents, **deny-by-default granular permissions** (evaluated at binary/destination/method/path level), agents can *propose* policy updates for developer approval, **privacy router** (routes context to local vs frontier models by policy), full **audit trail** of allow/deny decisions, live policy updates. | You need hard containment (sandbox + permissions + audit) for autonomous coding/ops agents on NVIDIA infra — the "kill-switch/sandbox/allowlist" blueprint topics made concrete. |
+| **NVIDIA OpenShell** (standalone open-source agent runtime, Apache 2.0; complements the NVIDIA agent stack) | Oversight-engineering runtime: **out-of-process policy enforcement** (controls live outside the agent's reach), **sandboxed execution** for long-running/self-evolving agents, **deny-by-default granular permissions** (evaluated at binary/destination/method/path level), agents can *propose* policy updates for developer final approval, **privacy router** (keeps sensitive context local on open models; routes to frontier models like Claude/GPT only when policy allows), full **audit trail** of every allow/deny decision, live (hot-reloadable) policy updates. | You need hard containment (sandbox + permissions + audit) for autonomous coding/ops agents on NVIDIA infra — the "kill-switch/sandbox/allowlist" blueprint topics made concrete. |
 
 Generic-vs-NVIDIA guidance: LangGraph `interrupt()` is the canonical *mechanism* the exam names for pause/resume; NAT is NVIDIA's *orchestration layer* that adds config-driven HITL, evaluation, profiling, and observability across frameworks; NeMo Guardrails is the *automated* policy layer; OpenShell is the *containment* layer. Know which layer a scenario is asking about.
+
+### 4.1 NAT interactive workflows: WebSocket *and* HTTP
+
+The HITL pause/resume in NAT runs over a **bidirectional channel** between the deployed FastAPI server and the client. The agent (1) sends the human a request — input, clarification, or approval; (2) pauses; (3) resumes with the human's value injected. Two transports:
+
+- **WebSocket** (`nat serve` over `/websocket`) — real-time, bidirectional; carries the **full interaction-model set** (text prompts, approval/choice widgets) and streams intermediate steps/tokens for HOTL monitoring. This is the primary HITL transport.
+- **HTTP interactive execution** — for environments where WebSocket support is limited, NAT also runs HITL **over plain HTTP**: the server returns a *pending-interaction* response with a request ID, the client POSTs the human's answer back to resume. Same approve/clarify pattern, polling instead of a live socket.
+
+Exam-relevant: HITL is **not WebSocket-only** in NAT — "WebSocket *or* HTTP" is the correct framing. WebSocket is preferred for live streaming + the richer prompt widgets; HTTP is the fallback for restricted deployments.
+
+### 4.2 NAT authentication & per-user functions (least privilege, NVIDIA-specific)
+
+NAT has a first-class **authentication provider** layer configured under the **`authentication`** key in the workflow YAML; each provider declares a `_type`. Supported provider types (know this list — the exam likes "which auth methods does NAT support?"):
+
+| `_type` | Method | Typical use |
+|---|---|---|
+| `api_key` | API key | Simple token-based access |
+| `oauth2_auth_code_flow` | **OAuth2 Authorization Code Grant Flow** (`OAuth2AuthCodeFlowProviderConfig`) | Delegated user access; works over WebSocket *and* HTTP; NAT acts as an OAuth2 client (manages token lifecycle + consent prompts) |
+| `http_basic_auth` | HTTP Basic (username/password) | Simple setups |
+| (bearer/credential validator) | Bearer-token / JWT validation | Service-to-service calls |
+| MCP service account | MCP service-account auth | Agent-to-agent auth in MCP deployments |
+
+OAuth2 gotcha: the **`redirect_uri`** in the workflow config must match the registered redirect URI in the provider's console, or auth fails. With per-user OAuth, **each user gets their own workflow instance + MCP client**, prompted to authenticate on first request, with **per-user token isolation** (encrypted at rest; backends include in-memory, Redis, MySQL, S3; automatic refresh).
+
+**Per-user functions** are the oversight payoff: NAT exposes **different tool sets per authenticated role**. A regular user sees read-only tools (search/lookup); a power user adds write tools (send_email, create_ticket); an admin gets destructive tools (delete_record). This is **least privilege enforced at the agent level** — an agent acting for a regular user *literally does not have* `delete_record` in its tool set, so it cannot call it even if the model "decides" to. It is both a security control and an oversight control (capability isolation by user authority).
+
+> Defense-in-depth note: filtering tools from the tool list is necessary but not sufficient — the LLM may still *attempt* a tool it shouldn't. Back per-user filtering with an **execution-rail permission check** before any tool executes, so an out-of-list call is blocked at runtime, not just hidden.
+
+### 4.3 NeMo Guardrails execution rail as an automated approval gate (worked Colang)
+
+Execution rails (Module 8 / §4) wrap custom actions; used for oversight, a rail **intercepts a tool call, decides whether it needs approval (by tool name / args / risk), and pauses for human review** — composing with NAT's interactive workflow (the rail asks; NAT carries the prompt over WebSocket/HTTP; the human's answer flows back to the rail).
+
+```colang
+# gate financial actions over $500 — requires human approval
+define flow check_financial_action
+  when tool_call "issue_refund" or tool_call "process_payment"
+    if $amount > 500
+      $approval = await request_human_approval(
+        action=$tool_name, details=$tool_input,
+        reason="Amount exceeds $500 threshold")
+      if not $approval
+        bot refuse action "Action requires approval and was denied."
+        stop
+```
+
+```python
+# the action the rail calls — bridges to the active NAT interactive session
+async def request_human_approval(action, details, risk_level) -> bool:
+    wf = get_active_workflow()                 # the live WebSocket/HTTP session
+    if wf is None:                             # no human attached:
+        return False                           # fail CLOSED (deny by default)
+    return await wf.request_approval(action=action, details=details)
+
+rails.register_action(request_human_approval, name="request_human_approval")
+```
+
+Exam point: an execution rail gating a tool **intercepts and can require approval before execution** — it does not silently auto-reject (that's a denylist) and does not just log-and-run (that's middleware/logging). The "fail closed" default when no approver is available is the safe design.
+
+### 4.4 Synchronous vs asynchronous approval + graceful degradation
+
+| | **Synchronous approval** | **Asynchronous approval** |
+|---|---|---|
+| Behavior | Agent **blocks** until the human responds | Agent **queues** the action and releases resources (or completes other work) |
+| Pros | Simple, deterministic, human always in the loop | Human reviews at their convenience; no held resources |
+| Cons | Human availability is the bottleneck; resources held during the wait | More state management; must handle "human never responds" |
+| NAT implementation | NAT interactive workflow (WebSocket/HTTP) **with a timeout** | NAT async job management (Dask) + notification + an approval queue |
+
+**Graceful degradation is mandatory when the approver is unavailable.** On timeout, the correct fallbacks are: (a) **queue the action for later review**, or (b) **inform the user it's pending approval**. The wrong answer — always — is "timeout → execute anyway," which defeats the entire gate. (NAT prompt timeouts raise `TimeoutError`; catch it and degrade safely.) "Blocking without timeout" is itself an anti-pattern: an agent that waits forever holds resources indefinitely if the human is in a meeting.
+
+### 4.5 The compliance / auditability stack (who · should · what · audit · how)
+
+Regulators (EU AI Act human-oversight duties; SOX/MiFID II for financial decisions; HIPAA for PHI) demand **traceability, accountability, and reviewability**. On the NVIDIA stack these come from *composing* primitives, not a single feature:
+
+```
+Authentication (NAT auth)        → WHO requested this?     (user identity, role)
+   ↓
+Execution rail (NeMo Guardrails) → SHOULD this be allowed? (policy check / approval gate)
+   ↓
+Agent execution (NAT)            → WHAT did the agent do?  (full action trace)
+   ↓
+Audit log + redaction            → audit RECORD            (logged, PII-redacted, queryable)
+   ↓
+Observability (NAT OTel)         → HOW did it perform?     (metrics, traces, cost)
+```
+
+- **Traceability** — every action traces to a specific user request (trace/correlation IDs in the spans + audit entries).
+- **Accountability** — every action is tied to an *authenticated* user (and, for gated actions, the *approver's* identity).
+- **Reviewability** — the audit log is human-readable, **queryable/indexed**, and **PII-redacted** (regex or, better, an NLP/Presidio-based redactor — regex misses spelled-out PII). An unsearchable pile of JSONL is "compliance theater," not an audit trail.
+
+The audit log should be **append-only and tamper-evident** (hash-chain each entry: `entry_hash = sha256(prev_hash + entry)`); a broken chain reveals after-the-fact edits. Watch the **single-writer** caveat: concurrent sessions writing one chain corrupt ordering — funnel audit writes through one queue/lock.
+
+### 4.6 NVIDIA-documented vs inferred (likely meta-question)
+
+The exam may test whether you can separate NVIDIA's *primitives* from *design patterns* layered on top:
+
+- **NVIDIA-documented:** WebSocket/HTTP interactive workflows, NeMo Guardrails execution rails, per-user functions + authentication providers, observability/tracing, structured output.
+- **Inferred from general practice (NVIDIA gives primitives, not the pattern):** approval-workflow design (sync/async), escalation paths with confidence thresholds, asynchronous approval *queues*, feedback loops, graceful degradation.
+
+If a question offers "escalation paths with confidence thresholds — NVIDIA-documented," that's the trap: the *trigger* is a design pattern; only the implementation primitives (execution rail, output parsing, step counting) are NVIDIA features.
 
 ## 5. Decision frameworks
 
@@ -206,6 +323,11 @@ Generic-vs-NVIDIA guidance: LangGraph `interrupt()` is the canonical *mechanism*
 12. **NAT HITL details:** interaction models are Pydantic (`HumanPromptText` etc.); full set supported under `nat serve` (WebSocket), while `nat run` supports only `HumanPromptText`; HITL prompts can carry a timeout (server raises `TimeoutError` on expiry; default is no timeout).
 13. **Undo ≠ confirmation:** confirmation is *pre-action* friction for irreversible ops; undo is *post-action* reversal for reversible ones. Irreversible actions need confirmation precisely because undo is impossible — an answer offering "undo" for a sent wire transfer is a trap.
 14. **Audit logging is not optional in HOOTL.** Removing the human from the loop *raises* the bar for logging, rate limits, and after-the-fact review; "fully autonomous, so no logging needed" is always wrong.
+15. **HIC ≠ HITL.** Human-in-command = agent only *recommends/drafts*, human makes every decision and decides whether to use the system at all (EU AI Act term, realized via NAT structured output). HITL = agent *acts after* per-step approval. "Agent generates a report for the human to send" is HIC, not HITL.
+16. **NAT HITL is WebSocket *or* HTTP.** The pause/resume primary transport is WebSocket, but NAT also supports HITL/OAuth interactive execution **over plain HTTP** for WebSocket-limited environments. "WebSocket is the *only* way" is wrong.
+17. **Per-user functions are oversight, not just security.** Limiting an agent's tool set by user role is capability control: the agent acting for a regular user *cannot* call admin tools because they aren't in its tool set. And tool-list filtering alone isn't enough — back it with an execution-rail permission check (the LLM may still try a removed tool).
+18. **Graceful degradation on approval timeout — never "execute anyway."** When the approver is unavailable, the safe fallbacks are *queue for review* or *inform the user it's pending*. Auto-executing on timeout defeats the gate. Also: blocking *without* a timeout is its own anti-pattern (resources held forever).
+19. **Auditability is a *composition*, not one feature.** The exam's "which NAT features give a complete audit trail?" answer is **authentication (who) + audit/middleware logging (what) + observability (how)** — not NIM, not Dynamo, not Helm. And an audit log that nobody can query is compliance theater.
 
 ## 7. Scenario drills
 
@@ -227,6 +349,18 @@ Generic-vs-NVIDIA guidance: LangGraph `interrupt()` is the canonical *mechanism*
 6. **An NCP-AAI scenario: on the NVIDIA stack, a NeMo Agent Toolkit ReAct agent hits its `max_iterations` mid-task. The team wants the user to decide whether it continues. Which mechanism?**
    → NAT HITL: acquire `user_interaction_manager` from `Context`, call `prompt_user_input` with an approval prompt (per the `hitl_approval_function` / `simple_calculator_hitl` pattern); continue and raise iterations only on "yes". *This is NAT's built-in, config-driven approval-gate pattern — no custom pause logic or framework switch needed.*
 
+7. **A NAT support agent has tools `search`, `send_email`, `issue_refund`, `delete_record`. Regular users must never be able to trigger refunds or deletions, even via prompt injection. How, on the NVIDIA stack?**
+   → **Per-user functions via NAT authentication**: map the regular-user role to a tool set of `{search}` only, so `issue_refund`/`delete_record` are *not in the agent's tool set* for that user. Back it with an execution-rail permission check so a removed tool is also blocked at runtime. *Capability isolation by authenticated role is least privilege enforced at the agent level — the agent literally cannot call what it can't see.*
+
+8. **A refund agent must get manager approval for refunds over $500, but the manager is often in meetings for an hour. The team wants the agent to keep serving other users meanwhile. Sync or async, and what on timeout?**
+   → **Asynchronous approval**: NeMo Guardrails execution rail gates `issue_refund` > $500, queues the action (NAT async/Dask + notification), and the agent releases resources to serve others. On timeout, **degrade gracefully** — keep it queued for later review and inform the user it's pending; **never auto-execute**. *Sync approval would block resources for an hour; auto-execute-on-timeout defeats the gate.*
+
+9. **A compliance officer asks: "Which NVIDIA features prove who did what and let us reconstruct any decision?" Which combination?**
+   → **NAT authentication (who/identity + approver) + audit logging with PII redaction (what, append-only, queryable) + NAT observability/OTel (how/traces, cost)** — giving traceability, accountability, reviewability. *Not NIM/Dynamo/Helm; auditability is a composition of auth + logging + observability, hash-chained and searchable.*
+
+10. **The product team wants the agent to draft investment recommendations but says a licensed advisor must make and place every trade decision. Where on the oversight ladder, and how on NVIDIA?**
+    → **Human-in-command (HIC)**: the agent uses **NAT structured output** to produce a recommendation/draft only; execution is entirely the advisor's. *HIC (EU AI Act term) is "agent recommends, human commands" — stronger than HITL, where the agent would act after approval. Regulated, high-stakes judgment ⇒ keep the human in command.*
+
 ## 8. Builder's corner
 
 - **Classify tools by risk tier on day one.** Tag every tool `read-only | reversible-write | irreversible` and wire policy off the tag: tier 1 free, tier 2 HOTL + undo, tier 3 HITL gate. Retrofitting risk tiers after an incident is far more painful.
@@ -242,6 +376,10 @@ Generic-vs-NVIDIA guidance: LangGraph `interrupt()` is the canonical *mechanism*
 - NAT HITL example (`simple_calculator_hitl`, `hitl_approval_function`): https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/examples/HITL/simple_calculator_hitl/README.md
 - NAT Interactive Models guide (`HumanPromptText`, `UserInteractionManager`, `prompt_user_input`, serve-vs-run support): https://docs.nvidia.com/nemo/agent-toolkit/latest/reference/interactive-models.html
 - NAT WebSocket message schema (HITL prompts over `nat serve`): https://docs.nvidia.com/nemo/agent-toolkit/1.6/reference/websockets.html
+- NAT HTTP interactive execution (HITL/OAuth over plain HTTP, WebSocket-limited envs): https://docs.nvidia.com/nemo/agent-toolkit/1.5/reference/rest-api/http-interactive-execution.html
+- NAT authentication providers (api_key, oauth2 auth-code flow, http_basic_auth, bearer/credential validator, MCP service account; `authentication` YAML key, `redirect_uri` gotcha, per-user token isolation): https://docs.nvidia.com/nemo/agent-toolkit/latest/components/auth/api-authentication.html
+- NAT MCP authentication + secure per-user token storage (encrypted, in-memory/Redis/MySQL/S3, auto-refresh): https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/mcp/mcp-auth.html ; https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/mcp/mcp-auth-token-storage.html
+- EU AI Act human oversight — HITL / HOTL / human-in-command (HIC) (Art. 14): https://www.tandfonline.com/doi/full/10.1080/17579961.2023.2245683
 - NAT HITL timeout behavior (issue #1579): https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/1579
 - NAT observability (telemetry exporters: Phoenix, Langfuse, Weave, LangSmith, OTLP): https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/observe/observe.html
 - NeMo Agent Toolkit UI (streaming + HITL rendering): https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI

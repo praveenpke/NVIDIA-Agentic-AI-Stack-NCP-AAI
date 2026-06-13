@@ -10,7 +10,7 @@
     --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
     --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
     --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --on-accent:#0b0f17;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -417,6 +417,54 @@
       <p>Eval configs can pass the reasoning system prompt, so you can benchmark a Nemotron NIM with <b>thinking on vs off</b>.</p>
     </div>
   </div>
+
+  <h3>NAT (NeMo Agent Toolkit) — the six named pieces the exam tests <span class="tag">memorize every <code>_type</code></span></h3>
+  <p class="lede">Our LangGraph treatment above covers the <i>concepts</i>; this is the NAT <b>product surface</b>. The blueprint names six pieces for this domain: <b>Reasoning Agent, ReWOO Agent, Test Time Compute, Memory systems, Object Stores, Automatic Memory Wrapper</b>. Every NAT component is selected by a string <code>_type</code> in a YAML config — the exact strings are the answer key.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🧠</span>NAT Reasoning Agent <span class="pill g"><code>reasoning_agent</code></span></h4>
+      <p>A <b>wrapper</b> that plans the whole task <b>upfront</b> with a thinking-capable LLM, then hands the plan to the wrapped <code>augmented_fn</code> (e.g. a <code>react_agent</code>) to execute — it does <b>not</b> reason between steps like ReAct. Requires <code>nvidia-nat[langchain]</code>; <code>llm_name</code> must emit thinking tags (Nemotron, thinking on).</p>
+      <pre class="code-block"><code>workflow:
+  _type: reasoning_agent
+  llm_name: nemotron_model      # must support thinking tags
+  augmented_fn: my_react_agent  # executes the plan
+  verbose: true</code></pre>
+    </div>
+    <div class="card blue"><h4><span class="icon">🗺️</span>NAT ReWOO Agent <span class="pill b"><code>rewoo_agent</code></span></h4>
+      <p>NAT's <b>Reasoning WithOut Observation</b> agent: <b>Planner</b> writes the full <code>#E1…#En</code> plan in one call → <b>Worker</b> runs tools and substitutes evidence (no per-step LLM call) → <b>Solver</b> emits the answer. ~<b>2 LLM calls</b> total vs ReAct's N. Cheaper, but plan is fixed (poor failure recovery). Fields: <code>tool_names</code>, <code>llm_name</code>, <code>planner_prompt</code>, <code>solver_prompt</code>, <code>max_history</code> (15), <code>tool_call_max_retries</code> (3).</p>
+      <pre class="code-block"><code>workflow:
+  _type: rewoo_agent
+  tool_names: [wikipedia_search, math_agent]
+  llm_name: nim_llm
+  use_tool_schema: true</code></pre>
+    </div>
+    <div class="card purple"><h4><span class="icon">⚙️</span>NAT Test Time Compute <span class="pill p"><code>nat.experimental.test_time_compute</code></span></h4>
+      <p><b>Experimental.</b> The "spend more inference compute" machinery, distinct from the Reasoning Agent. A pipeline of pluggable strategies: <b>generate</b> multiple candidates (<code>single_shot_multi_plan_planner</code>, multi-LLM generation) → <b>score</b> (<code>motivation_aware_scorer</code>, LLM-based plan/agent scorers) → <b>select / merge / edit</b> (<code>llm_based_plan_selector</code>, <code>llm_based_output_merging_selector</code>, <code>multi_llm_judge_function</code>). Orchestrators: <code>execute_score_select_function</code>, <code>plan_select_execute_function</code>. NAT documents it at the <b>strategy level only</b> — the internal scoring algorithm isn't published.</p>
+    </div>
+    <div class="card cyan"><h4><span class="icon">🪣</span>NAT Object Stores <span class="pill c">byte/blob backends</span></h4>
+      <p>A pluggable <b>key-value blob store</b> for binary data + metadata (<code>put_object</code>/<code>get_object</code>/<code>upsert_object</code>/<code>delete_object</code>), under an <code>object_stores:</code> section. Four backends by <code>_type</code> + plugin:</p>
+      <div class="tbl-scroll"><table class="tbl">
+        <tr><th><code>_type</code></th><th>Plugin</th><th>Key fields</th><th>Use</th></tr>
+        <tr><td><code>in_memory</code></td><td>built-in</td><td><code>bucket_name</code></td><td>Dev; lost on restart</td></tr>
+        <tr><td><code>redis</code></td><td><code>nvidia-nat-redis</code></td><td><code>host, port, db, bucket_name</code></td><td>Fast, shared, TTL-able</td></tr>
+        <tr><td><code>mysql</code></td><td><code>nvidia-nat-mysql</code></td><td><code>host, port, username, password, bucket_name</code></td><td>Durable, queryable</td></tr>
+        <tr><td><code>s3</code></td><td><code>nvidia-nat-s3</code></td><td><code>endpoint_url, access_key, secret_key, bucket_name</code></td><td>Large archival, logs</td></tr>
+      </table></div>
+    </div>
+    <div class="card amber"><h4><span class="icon">🧰</span>NAT Memory systems <span class="pill a"><code>MemoryEditor</code> · <code>MemoryItem</code></span></h4>
+      <p>Separate from Object Stores: the <b>long-term-memory</b> interface. <code>MemoryEditor</code> abstract methods: <code>add_items()</code>, <code>search(query, top_k)</code>, <code>remove_items()</code> (a richer <code>MemoryManager</code> adds <code>summarize/reflect/forget/merge</code>). A <b><code>MemoryItem</code></b> has fields <code>conversation</code>, <code>user_id</code>, <code>tags</code>, <code>metadata</code>, <code>memory</code>, <code>similarity_score</code>. Providers by <code>_type</code>: <code>mem0_memory</code> (<code>nvidia-nat-mem0ai</code>), <code>zep_memory</code> (<code>nvidia-nat-zep-cloud</code>), <code>redis_memory</code> (<code>nvidia-nat-redis</code>). Tools <code>add_memory</code>/<code>get_memory</code> reference a backend via the <code>memory</code> field (the <code>auto_memory_agent</code> wrapper uses <code>memory_name</code> instead); isolation by <code>user_id</code> (+ optional <code>conversation_id</code>).</p>
+    </div>
+    <div class="card red"><h4><span class="icon">🔁</span>NAT Automatic Memory Wrapper <span class="pill r"><code>auto_memory_agent</code></span></h4>
+      <p>Wraps <b>any</b> inner agent (ReAct, ReWOO, Tool Calling, Reasoning) and <b>captures + recalls memory on every turn automatically</b> — the LLM can't forget to call a memory tool (the reliability win over model-invoked <code>add_memory</code>). Config: <code>inner_agent_name</code>, <code>memory_name</code>, <code>llm_name</code>.</p>
+      <pre class="code-block"><code>workflow:
+  _type: auto_memory_agent
+  inner_agent_name: my_react_agent
+  memory_name: zep_memory
+  llm_name: nim_llm</code></pre>
+    </div>
+  </div>
+
+  <div class="callout warn"><b>Two distinctions the exam plants:</b> (1) <b>Reasoning Agent ≠ Test Time Compute</b> — Reasoning Agent is a <i>single-trajectory</i> plan-then-delegate wrapper; TTC is <i>multi-candidate</i> generate→score→select. "Plan the task then run my ReAct agent" → Reasoning Agent; "make 3 candidates and judge the best" → TTC. (2) <b>Object Store ≠ cognitive memory type</b> — <code>in_memory/redis/mysql/s3</code> are blob backends chosen by <i>durability + latency + size</i>, not "episodic/semantic." NAT never labels a store "episodic"; that mapping is an architecture choice, not a NAT feature.</div>
 </section>
 
 <!-- ============ DECISION FRAMEWORKS ============ -->
@@ -457,6 +505,27 @@
     <tr><td>Long-horizon, many workstreams</td><td class="good">Hierarchical: supervisor plans milestones, sub-agents expand</td></tr>
     <tr><td>Step failed mid-plan</td><td class="good">Replanner over <code>past_steps</code> → revised remaining plan (never blindly restart)</td></tr>
   </table></div>
+
+  <h3>NAT agent-type selection <span class="tag">which <code>_type</code>?</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>NAT <code>_type</code></th><th>Why</th></tr>
+    <tr><td>Decompose the whole task before any tool runs; steps feed each other; minimize LLM calls</td><td class="good"><code>rewoo_agent</code></td><td>Planner/worker/solver ≈ 2 LLM calls; <code>#E</code> placeholders carry evidence forward. Plan is fixed → poor failure recovery</td></tr>
+    <tr><td>Environment unpredictable; must adapt each step</td><td class="good"><code>react_agent</code></td><td>Re-reasons every observation; ReWOO can't re-plan mid-run</td></tr>
+    <tr><td>Wrap an existing agent so it plans the whole task upfront with a reasoning model</td><td class="good"><code>reasoning_agent</code></td><td>Plans ahead, delegates to <code>augmented_fn</code>; <code>llm_name</code> must support thinking tags</td></tr>
+    <tr><td>Generate multiple candidate answers/plans and pick the best with a judge</td><td class="good">Test Time Compute <span class="pill p">experimental</span></td><td>generate → score → select/merge; <i>not</i> the Reasoning Agent</td></tr>
+    <tr><td>Memory must be saved/recalled reliably without the LLM forgetting tool calls</td><td class="good"><code>auto_memory_agent</code></td><td>Captures/recalls every turn; wraps any inner agent</td></tr>
+  </table></div>
+
+  <h3>NAT storage selection <span class="tag">Object Store vs Memory provider</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>Dev/test scratch state, no infra</td><td class="good">Object Store <code>in_memory</code> (lost on restart)</td></tr>
+    <tr><td>Fast shared session blobs, auto-expiry</td><td class="good">Object Store <code>redis</code> (<code>nvidia-nat-redis</code>, TTL)</td></tr>
+    <tr><td>Durable, queryable preferences that survive restarts</td><td class="good">Object Store <code>mysql</code> (<code>nvidia-nat-mysql</code>)</td></tr>
+    <tr><td>Large archival logs / documents, cheap, latency-OK</td><td class="good">Object Store <code>s3</code> (<code>nvidia-nat-s3</code>, lifecycle policy)</td></tr>
+    <tr><td>Semantic recall of user facts across sessions</td><td class="good">Memory provider <code>mem0_memory</code> / <code>zep_memory</code> (not a plain object store)</td></tr>
+    <tr><td>Facts change over time; need bi-temporal validity</td><td class="good">Memory provider <code>zep_memory</code> (Graphiti temporal graph)</td></tr>
+  </table></div>
 </section>
 
 <!-- ============ EXAM TRAPS ============ -->
@@ -478,6 +547,11 @@
     <div class="trap"><h4><span class="n">#12</span>More thinking isn't free or always better</h4><p>Test-time compute shows diminishing returns outside math/code and an <b>overthinking</b> failure mode (huge token bills on trivial queries). <span class="fix">"Enable maximum reasoning on all traffic" is wrong; route/toggle by difficulty.</span></p></div>
     <div class="trap"><h4><span class="n">#13</span>Scratchpad ≠ memory store</h4><p>The scratchpad is <b>working</b> memory for the current task (state field or file, discarded/archived at the end); long-term memory is curated knowledge that survives the task. <span class="fix">Conflating them stuffs the store with junk.</span></p></div>
     <div class="trap"><h4><span class="n">#14</span>In-memory checkpointer in production</h4><p><code>InMemorySaver</code> dies with the process; resumability claims require a durable backend (SQLite/Postgres). <span class="fix">"Agent loses all conversations on restart" → wrong checkpointer backend.</span></p></div>
+    <div class="trap"><h4><span class="n">#15</span>NAT Reasoning Agent ≠ Test Time Compute</h4><p>Reasoning Agent (<code>reasoning_agent</code>) is a <b>single-trajectory wrapper</b> that plans upfront then delegates to one <code>augmented_fn</code>; TTC (<code>nat.experimental.test_time_compute</code>) is the <b>multi-candidate</b> generate→score→select machinery. <span class="fix">"Plan the task then run my ReAct agent" → Reasoning Agent. "Generate N candidates, pick best with a judge" → TTC.</span></p></div>
+    <div class="trap"><h4><span class="n">#16</span>NAT Reasoning Agent does NOT reason between steps</h4><p>Unlike ReAct, it plans <b>ahead of time</b> and hands the finished plan to the inner agent. Its <code>llm_name</code> must be a thinking-capable model (Nemotron, thinking on). <span class="fix">"Reasons after each observation" → that's ReAct, not the Reasoning Agent.</span></p></div>
+    <div class="trap"><h4><span class="n">#17</span>NAT Object Store ≠ cognitive memory type</h4><p><code>in_memory/redis/mysql/s3</code> are <b>byte/blob backends</b> distinguished by <i>persistence and latency</i>, not "episodic/semantic." <span class="fix">NAT never labels a store "episodic"; "episodic→Redis, semantic→S3" is an architecture choice, not a NAT feature. Choose by durability + latency + size.</span></p></div>
+    <div class="trap"><h4><span class="n">#18</span>TTC algorithm is not published</h4><p>NAT documents Test Time Compute at the <b>strategy level</b> (search/score/select/edit, named functions like <code>execute_score_select_function</code>) but not the internal scoring/selection algorithm. <span class="fix">Describe it generically ("generate candidates → score → select/merge"); don't assert a specific algorithm.</span></p></div>
+    <div class="trap"><h4><span class="n">#19</span>Automatic Memory Wrapper vs <code>add_memory</code> tool</h4><p><code>auto_memory_agent</code> captures/recalls on <b>every</b> turn automatically (the LLM can't forget); the <code>add_memory</code>/<code>get_memory</code> tools are <b>model-invoked</b> (the model may skip them). <span class="fix">"Memory unreliable because the agent forgets to save" → use the Automatic Memory Wrapper. It handles sequential history; semantic recall still needs a Mem0/Zep backend.</span></p></div>
   </div>
 </section>
 
@@ -506,6 +580,18 @@
   </details>
   <details class="drill"><summary><span class="qn">Q7</span><span>Compliance asks: "If the orchestrator pod dies at step 40 of 60, do we re-run the first 39 steps (some are payments)?" Your answer with a properly built graph?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
     <div class="answer"><b>No</b> — with a durable checkpointer, state is snapshotted every superstep; resume the same <code>thread_id</code> from the last checkpoint.<span class="why">Keep tool calls idempotent (or record results in state) so the resumed step doesn't double-charge.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q8</span><span>In NAT, you want an agent that decomposes a financial-report task into all steps before any tool runs, with minimum LLM calls because steps just feed each other. Which agent <code>_type</code>, and why not ReAct?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b><code>rewoo_agent</code></b> — Planner writes the whole <code>#E1…#En</code> plan in one call, Worker substitutes evidence with no per-step LLM call, Solver emits the answer in one more (~2 calls vs ReAct's N).<span class="why">ReAct re-reasons every step (more tokens) and is only worth it when the environment is unpredictable. ReWOO's plan is fixed → poor failure recovery if a step invalidates the plan.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q9</span><span>A NAT agent keeps forgetting to call its <code>add_memory</code> tool, so user facts are saved inconsistently. Smallest fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">Wrap the inner agent with the <b>Automatic Memory Wrapper</b> (<code>_type: auto_memory_agent</code>, set <code>inner_agent_name</code> + <code>memory_name</code>).<span class="why">Capture/recall then happens every turn automatically — the LLM can't skip it. For semantic recall (not just last-N turns), back it with <code>mem0_memory</code> or <code>zep_memory</code>, not a plain object store.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q10</span><span>You must persist large conversation logs cheaply for 90 days, and separately keep fast-access session blobs. Which NAT Object Store <code>_type</code> for each?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">Logs → <b><code>s3</code></b> (<code>nvidia-nat-s3</code>; cheap, large, latency-OK, 90-day lifecycle policy). Session blobs → <b><code>redis</code></b> (<code>nvidia-nat-redis</code>; fast, TTL-able).<span class="why">These are <i>storage</i> choices by durability/latency — not "episodic vs semantic" labels (trap #17).</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q11</span><span>A NAT question describes "generate 3 candidate plans, score each with an LLM, and execute the best." Which NAT feature — and what's the exact distinction from the Reasoning Agent?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Test Time Compute</b> (e.g. <code>plan_select_execute_function</code> with <code>single_shot_multi_plan_planner</code> + <code>llm_based_plan_selector</code>).<span class="why">TTC is <i>multi-candidate</i> generate→score→select. The Reasoning Agent is a <i>single-trajectory</i> wrapper that plans once and delegates to <code>augmented_fn</code> — no candidate scoring (traps #15, #18).</span></div>
   </details>
 
   <h3>Builder's corner — habits that make this real</h3>
@@ -712,6 +798,48 @@ def take_note(state):                             # any node can persist a findi
     <p><b>What to notice:</b> the scratchpad lives in <b>state, outside the message list</b>, so summarization can compress chat history without destroying intermediate findings (trap #9). The filesystem variant is the same idea at unlimited scale — context holds <i>pointers</i> (paths), not payloads — exactly the deep-agents/Manus offloading pattern.</p>
   </div>
 
+  <div class="card amber">
+    <h4><span class="icon">🟩</span>9 · NAT in YAML — the five named pieces side by side <span class="pill a">the exam shape</span></h4>
+    <pre class="code-block"><code># ── Object Store: a blob backend (swap _type for in_memory / mysql / s3) ──
+object_stores:
+  logs:
+    _type: s3                         # nvidia-nat-s3
+    endpoint_url: http://localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    bucket_name: agent-logs
+
+# ── Long-term Memory: MemoryEditor provider (mem0 / zep / redis) ──
+memory:
+  user_memory:
+    _type: mem0_memory                # MemoryItem(user_id, conversation, tags, metadata, memory)
+
+functions:
+  worker:
+    _type: react_agent                # the agent that does the work
+    llm_name: nim_llm
+    tool_names: [search, calculator]
+
+  planner_then_execute:               # NAT Reasoning Agent: plan upfront, delegate
+    _type: reasoning_agent
+    llm_name: nemotron_model          # MUST support thinking tags
+    augmented_fn: worker              # executes the plan; no re-reasoning between steps
+
+  cheap_planner:                      # NAT ReWOO Agent: planner -> worker -> solver, ~2 LLM calls
+    _type: rewoo_agent
+    llm_name: nim_llm
+    tool_names: [search, calculator]
+    use_tool_schema: true
+
+# ── Automatic Memory Wrapper: capture/recall every turn, LLM can't forget ──
+workflow:
+  _type: auto_memory_agent
+  inner_agent_name: worker
+  memory_name: user_memory
+  llm_name: nim_llm</code></pre>
+    <p><b>What to notice:</b> every NAT component is a string <code>_type</code> in YAML — recognizing <code>reasoning_agent</code> (plan-ahead wrapper), <code>rewoo_agent</code> (planner/worker/solver), <code>auto_memory_agent</code> (transparent memory), the four Object Store types, and the three Memory providers is exactly the exam's target. <b>Object Stores</b> (byte blobs, <code>object_stores:</code>) and <b>Memory</b> (<code>MemoryEditor</code>/<code>MemoryItem</code>, <code>memory:</code>) are <i>different subsystems</i>; <b>Test Time Compute</b> (generate→score→select) is the separate "multiple candidates" path, distinct from the single-trajectory Reasoning Agent.</p>
+  </div>
+
   </div>
 </section>
 
@@ -774,6 +902,9 @@ def take_note(state):                             # any node can persist a findi
     <li>NVIDIA NIM reasoning models (detailed thinking toggle) — <a href="https://docs.nvidia.com/nim/large-language-models/latest/reasoning-model.html">docs.nvidia.com/nim/…/reasoning-model</a></li>
     <li>Llama-Nemotron: Efficient Reasoning Models (paper) — <a href="https://arxiv.org/abs/2505.00949">arxiv.org/abs/2505.00949</a></li>
     <li>NeMo Agent Toolkit memory module — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/memory.html">docs.nvidia.com/nemo/agent-toolkit/…/memory</a></li>
+    <li>NAT Reasoning Agent — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/reasoning-agent/reasoning-agent.html">…/agents/reasoning-agent</a> · NAT ReWOO Agent — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/rewoo-agent/index.html">…/agents/rewoo-agent</a></li>
+    <li>NAT Object Stores — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/object-store.html">…/build-workflows/object-store</a> · NAT Automatic Memory Wrapper — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/auto-memory-wrapper/index.html">…/agents/auto-memory-wrapper</a></li>
+    <li>NAT Test Time Compute (Improve Workflows) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/about-improving-workflows.html">…/improve-workflows</a></li>
     <li>Mem0 paper — <a href="https://arxiv.org/abs/2504.19413">arxiv.org/abs/2504.19413</a> · Zep/Graphiti paper — <a href="https://arxiv.org/abs/2501.13956">arxiv.org/abs/2501.13956</a></li>
     <li>CoT — <a href="https://arxiv.org/abs/2201.11903">arxiv.org/abs/2201.11903</a> · Self-consistency — <a href="https://arxiv.org/abs/2203.11171">arxiv.org/abs/2203.11171</a> · Tree of Thoughts — <a href="https://arxiv.org/abs/2305.10601">arxiv.org/abs/2305.10601</a></li>
     <li>Test-time scaling limits — <a href="https://arxiv.org/abs/2505.20522">arxiv.org/abs/2505.20522</a> (plateau) · <a href="https://arxiv.org/pdf/2502.12215">arxiv.org/pdf/2502.12215</a> (do o1-like models truly scale?)</li>

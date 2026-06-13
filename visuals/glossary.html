@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI — Glossary</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#141c2c; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25); --on-accent:#0b0f17;
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --border:#243349; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;overflow-x:clip}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:clip}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;padding-right:104px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{position:relative;overflow:hidden;padding:64px 24px 44px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  header.hero::before{content:"";position:absolute;inset:-40% -20%;background:
+    radial-gradient(ellipse 30% 35% at 28% 42%,color-mix(in srgb, var(--green) 10%, transparent),transparent 70%),
+    radial-gradient(ellipse 25% 30% at 72% 58%,color-mix(in srgb, var(--cyan) 8%, transparent),transparent 70%),
+    radial-gradient(ellipse 22% 26% at 55% 80%,color-mix(in srgb, var(--purple) 7%, transparent),transparent 70%);
+    animation:heroGlow 16s ease-in-out infinite alternate;pointer-events:none}
+  @keyframes heroGlow{
+    0%{transform:translate3d(-3%,2%,0) scale(1);opacity:.7}
+    50%{transform:translate3d(3%,-2%,0) scale(1.06);opacity:1}
+    100%{transform:translate3d(-2%,-3%,0) scale(1.02);opacity:.8}
+  }
+  .hero-inner{position:relative;z-index:1}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:50px 0 16px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.7rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:24px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid>*{min-width:0}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card .icon{font-size:1.15rem}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green);overflow-wrap:anywhere;word-break:break-word}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;max-width:100%;color:var(--green)}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit;overflow-wrap:normal;word-break:normal}
+  .pill{display:inline-block;font-size:.66rem;font-weight:700;border-radius:999px;padding:2px 9px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* DOMAIN FILTER LEGEND */
+  .filterbar{position:sticky;top:45px;z-index:90;background:color-mix(in srgb, var(--bg) 94%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:12px 0}
+  .filterbar .inner{max-width:1180px;margin:0 auto;padding:0 24px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .filterbar .lbl{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-right:4px}
+  .dchip{font-size:.72rem;font-weight:700;border-radius:999px;padding:4px 11px;border:1px solid var(--line);background:var(--bg3);color:var(--muted);cursor:pointer;user-select:none;transition:all .14s;white-space:nowrap}
+  .dchip:hover{color:var(--text);border-color:color-mix(in srgb, var(--green) 50%, var(--line))}
+  .dchip.active{background:var(--green);color:var(--on-accent);border-color:var(--green)}
+  .dchip.all.active{background:var(--blue);border-color:var(--blue);color:var(--on-accent)}
+  .filter-count{margin-left:auto;font-size:.74rem;color:var(--muted)}
+  .filter-count b{color:var(--green)}
+
+  /* GLOSSARY ENTRY */
+  .catcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:6px 22px 14px;margin:18px 0}
+  .catcard>.cat-head{display:flex;align-items:center;gap:12px;padding:16px 0 6px;border-bottom:1px solid var(--line);margin-bottom:6px}
+  .catcard>.cat-head .cat-ic{font-size:1.5rem}
+  .catcard>.cat-head h3{margin:0;font-size:1.18rem}
+  .catcard>.cat-head .cnt{margin-left:auto;font-size:.72rem;color:var(--muted);font-weight:700}
+  .term{padding:15px 2px 13px;border-bottom:1px dashed var(--line)}
+  .term:last-child{border-bottom:none}
+  .term .t-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 10px;margin-bottom:5px}
+  .term .t-name{font-size:1rem;font-weight:800;color:var(--text)}
+  .term .t-alt{font-size:.78rem;color:var(--muted);font-weight:500}
+  .term .t-doms{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .term .t-doms .dtag{font-size:.6rem;font-weight:800;letter-spacing:.03em;border-radius:5px;padding:2px 6px;background:var(--bg3);border:1px solid var(--line);color:var(--muted)}
+  .term .def{font-size:.88rem;color:var(--muted);margin:3px 0}
+  .term .def b{color:var(--text)}
+  .term .nv{font-size:.82rem;color:var(--muted);margin:5px 0 0;padding-left:11px;border-left:2px solid color-mix(in srgb,var(--green) 50%,transparent)}
+  .term .nv b{color:var(--green)}
+  .term .why{font-size:.82rem;color:var(--muted);margin:5px 0 0;padding-left:11px;border-left:2px solid color-mix(in srgb,var(--amber) 55%,transparent)}
+  .term .why b{color:var(--amber)}
+  .term.hidden{display:none}
+  .catcard.hidden{display:none}
+
+  /* TABLE */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.92rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.85rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  footer{border-top:1px solid var(--line);margin-top:54px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+  @media(max-width:640px){.filter-count{display:none}}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a class="brand" href="index.html">NCP-AAI · Glossary</a>
+  <a href="#agents">Agent Types</a>
+  <a href="#platform">NAT / NeMo / NIM</a>
+  <a href="#rag">RAG</a>
+  <a href="#eval">Eval &amp; Metrics</a>
+  <a href="#tuning">Tuning</a>
+  <a href="#safety">Safety</a>
+  <a href="#serving">Serving</a>
+  <a href="#protocols">Protocols</a>
+  <a href="#obs">Observability</a>
+  <a href="#cognition">Cognition</a>
+  <a href="#traps">Source Corrections</a>
+  <a href="#drills">Quiz</a>
+  <a href="study-guide.html">Study Guide</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <div class="domain-chip">Reference <span class="pct">77 terms</span></div>
+    <h1>The <span class="accent">Glossary</span></h1>
+    <p class="hook">Every NCP-AAI term in one place — <b>agent patterns, NAT/NeMo/NIM products, eval metrics, guardrails, inference, and protocols</b>. Each entry: a plain definition, the <b>exact NVIDIA name &amp; context</b>, <b>why it matters for the exam</b>, and the domains it belongs to. <b>Filter by domain</b> below to study one slice at a time.</p>
+  </div>
+</header>
+
+<!-- ============ DOMAIN FILTER LEGEND ============ -->
+<div class="filterbar" id="filterbar">
+  <div class="inner">
+    <span class="lbl">Filter by domain</span>
+    <span class="dchip all active" data-dom="all">All</span>
+    <span class="dchip" data-dom="D1">D1 · Architecture</span>
+    <span class="dchip" data-dom="D2">D2 · Development</span>
+    <span class="dchip" data-dom="D3">D3 · Eval &amp; Tuning</span>
+    <span class="dchip" data-dom="D4">D4 · Deployment</span>
+    <span class="dchip" data-dom="D5">D5 · Cognition</span>
+    <span class="dchip" data-dom="D6">D6 · Knowledge</span>
+    <span class="dchip" data-dom="D7">D7 · Platform</span>
+    <span class="dchip" data-dom="D8">D8 · Run/Monitor</span>
+    <span class="dchip" data-dom="D9">D9 · Safety</span>
+    <span class="dchip" data-dom="D10">D10 · Human-AI</span>
+    <span class="filter-count" id="fcount"><b id="fnum">0</b> terms shown</span>
+  </div>
+</div>
+
+<main>
+
+<div id="emptyState" class="callout warn" style="display:none">No glossary terms are tagged to this domain. <b>D10 · Human-AI Interaction</b> is covered on its own domain page — see the study guide. Pick another domain or <b>All</b> to keep browsing terms.</div>
+
+
+<!-- ============ §1 AGENT TYPES ============ -->
+<section id="agents">
+  <div class="kicker">Section 1 · Agent patterns &amp; types</div>
+  <h2>Agent patterns &amp; agent types</h2>
+  <p class="lede">Questions like "which agent type fits this task?" are really "which <b>shape of the perceive→reason→act→observe loop</b> fits?" NAT ships <b>eight</b> agent types — learn what each one's loop looks like and you can derive the answer.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🧠</span><h3>Core loop &amp; patterns</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D1 D2">
+      <div class="t-head"><span class="t-name">Agent</span><span class="t-alt">vs pipeline/workflow</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span></span></div>
+      <p class="def">A system that <b>perceives</b> input, <b>reasons</b>, <b>acts</b> via tools, and <b>observes</b> results — changing its behavior based on intermediate observations (a fixed pipeline can't).</p>
+      <p class="nv"><b>NVIDIA:</b> Authored in <b>NeMo Agent Toolkit (NAT)</b> via YAML, picking one agent-type implementation.</p>
+      <p class="why"><b>Exam:</b> If the task can change course mid-run from a tool result, it wants an <b>agent</b>; if it's the same every time, a workflow.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2">
+      <div class="t-head"><span class="t-name">Agent loop</span><span class="t-alt">perceive → reason → act → observe</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span></span></div>
+      <p class="def">The four-phase cycle every agent repeats until a stop condition. Agent types differ in the <b>shape</b> of this loop.</p>
+      <p class="nv"><b>NVIDIA:</b> ReAct loops every step; ReWOO plans all steps first; Tool Calling runs ~one act→observe.</p>
+      <p class="why"><b>Exam:</b> Memorize the loop and "which agent type?" becomes derivable.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D5">
+      <div class="t-head"><span class="t-name">Multi-agent system</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D5</span></span></div>
+      <p class="def">Multiple specialized agents that <b>coordinate</b> — via router/orchestrator, sequential handoff, hierarchy, or peer messaging — to solve a task no single agent owns.</p>
+      <p class="nv"><b>NVIDIA:</b> Composed in NAT; cross-process coordination uses <b>A2A</b>. Reference = <b>Multi-Agent Warehouse Blueprint</b>.</p>
+      <p class="why"><b>Exam:</b> Know the coordination shapes (router / sequential / hierarchical / A2A peer) and when each applies.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2 D5">
+      <div class="t-head"><span class="t-name">Compound error</span><span class="t-alt">why agents are hard</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D3</span></span></div>
+      <p class="def">End-to-end success ≈ <code>p_step ^ n_steps</code> — per-step accuracies <b>multiply</b>.</p>
+      <p class="nv"><b>NVIDIA:</b> Drives "fewer steps / higher per-step reliability / verification" guidance.</p>
+      <p class="why"><b>Exam:</b> 8 steps × 92% → <code>0.92⁸ ≈ 0.51</code>. The fix is fewer/hardened steps, <b>not</b> "a bigger model."</p>
+    </div>
+
+    <div class="term" data-doms="D5 D2">
+      <div class="t-head"><span class="t-name">Chain-of-Thought (CoT)</span><span class="t-doms"><span class="dtag">D5</span><span class="dtag">D2</span></span></div>
+      <p class="def">Prompting the model to emit <b>intermediate reasoning</b> before the final answer, improving complex-reasoning accuracy.</p>
+      <p class="nv"><b>NVIDIA:</b> Used by NAT ReAct &amp; Reasoning agents; test-time compute extends it.</p>
+      <p class="why"><b>Exam:</b> CoT + strict schema → put the <b>reasoning field first</b> so the model reasons before committing.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🤖</span><h3>The 8 NAT agent types</h3><span class="cnt">8 terms</span></div>
+
+    <div class="term" data-doms="D1 D2 D5">
+      <div class="t-head"><span class="t-name">ReAct</span><span class="t-alt">Reasoning + Acting</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span><span class="dtag">D5</span></span></div>
+      <p class="def">Interleaves <b>Thought → Action → Observation</b>, re-planning after <b>every</b> observation.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type; routes to tools via their names/descriptions.</p>
+      <p class="why"><b>Exam:</b> Best for <b>adaptive multi-step</b> tasks; highest token/latency cost. The default autonomous agent.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2 D5">
+      <div class="t-head"><span class="t-name">ReWOO</span><span class="t-alt">Reasoning Without Observation</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span><span class="dtag">D5</span></span></div>
+      <p class="def">Generates the <b>entire plan in one LLM call</b>, then executes with no reasoning between steps.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type; decouples planning from execution for token efficiency.</p>
+      <p class="why"><b>Exam:</b> Cheaper/faster than ReAct for <b>predictable</b> tasks, but <b>can't adapt</b> mid-run. The "ReAct vs ReWOO" trade = adaptivity vs cost.</p>
+    </div>
+
+    <div class="term" data-doms="D2 D3 D5">
+      <div class="t-head"><span class="t-name">Reasoning Agent</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D3</span><span class="dtag">D5</span></span></div>
+      <p class="def">Reasons <b>through planning ahead of time</b> and invokes an underlying function/agent — unlike ReAct, it doesn't reason between every step. Vehicle for <b>test-time compute</b>.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type; wraps another agent/function.</p>
+      <p class="why"><b>Exam:</b> Reach for it when hard-reasoning quality justifies extra inference. Don't confuse with ReAct (which reacts each step).</p>
+    </div>
+
+    <div class="term" data-doms="D2">
+      <div class="t-head"><span class="t-name">Tool Calling Agent</span><span class="t-doms"><span class="dtag">D2</span></span></div>
+      <p class="def">Makes a <b>single</b> tool selection + execution per turn — no multi-step loop.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type; <b>lowest latency/cost</b>.</p>
+      <p class="why"><b>Exam:</b> Right for <b>simple, well-defined</b> tasks where the tool is obvious. "Minimize latency, single clear action" → this.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2">
+      <div class="t-head"><span class="t-name">Router Agent</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span></span></div>
+      <p class="def"><b>Classifies</b> the input and <b>dispatches</b> to a specialist agent — it routes, it doesn't do the task.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type; typical <b>entry point of a multi-agent system</b> (intent / keyword / LLM classification).</p>
+      <p class="why"><b>Exam:</b> "Billing → billing agent, tech → support agent" = Router. Distinguish from Sequential and Parallel.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2">
+      <div class="t-head"><span class="t-name">Sequential Executor</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span></span></div>
+      <p class="def">Runs a <b>fixed, ordered</b> sequence; each step feeds the next; <b>every</b> step always runs (no routing).</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type for deterministic pipelines (extract → transform → validate → store).</p>
+      <p class="why"><b>Exam:</b> The "agent" answer when the process is the same every time — no branching.</p>
+    </div>
+
+    <div class="term" data-doms="D1 D2">
+      <div class="t-head"><span class="t-name">Parallel Executor</span><span class="t-alt">the easily-forgotten one</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D2</span></span></div>
+      <p class="def">Runs multiple sub-agents/functions <b>concurrently</b> and aggregates results.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT agent type — the one most often <b>omitted</b> from third-party "list the agent types" sheets.</p>
+      <p class="why"><b>Exam:</b> Use when sub-tasks are <b>independent</b> and can run at once to cut latency. If you memorized "seven," you missed this — there are <b>eight</b>.</p>
+    </div>
+
+    <div class="term" data-doms="D2">
+      <div class="t-head"><span class="t-name">Responses API Agent</span><span class="t-doms"><span class="dtag">D2</span></span></div>
+      <p class="def">A NAT agent built around the OpenAI-style <b>Responses API</b> interaction shape (stateful, multi-turn, tool-augmented).</p>
+      <p class="nv"><b>NVIDIA:</b> One of NAT's eight agent types.</p>
+      <p class="why"><b>Exam:</b> Appears in "name all NAT agent types" questions — know it's the Responses-API-shaped one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §2 PLATFORM ============ -->
+<section id="platform">
+  <div class="kicker">Section 2 · The NVIDIA stack</div>
+  <h2>NVIDIA platform — NAT, NeMo, NIM</h2>
+  <p class="lede">The exam's center of gravity. <b>NAT orchestrates agents; NeMo microservices supply customization, evaluation, data, retrieval, and safety; NIM serves the models.</b> "Which NVIDIA product does X?" is a recurring shape — match the job to the exact name.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🧰</span><h3>NeMo Agent Toolkit (NAT)</h3><span class="cnt">4 terms</span></div>
+
+    <div class="term" data-doms="D1 D2 D3 D4 D5 D6 D7 D8">
+      <div class="t-head"><span class="t-name">NAT (NeMo Agent Toolkit)</span><span class="t-alt">formerly AIQ / Agent Intelligence Toolkit</span><span class="t-doms"><span class="dtag">D1–D8</span></span></div>
+      <p class="def">Open-source toolkit to <b>build, deploy, evaluate, profile &amp; monitor</b> agents. YAML config; ships agent types, deploy servers (FastAPI/MCP/A2A), eval framework, profiler, middleware, plugins.</p>
+      <p class="nv"><b>NVIDIA:</b> <code>pip install nvidia-nat</code>; CLI prefix <code>nat</code>. Framework-agnostic (LangChain, LlamaIndex, CrewAI). Base install = core agents/config/functions/middleware; eval/profiling extras may need extra packages.</p>
+      <p class="why"><b>Exam:</b> Touches almost every domain. Know what's in the base vs the extras.</p>
+    </div>
+
+    <div class="term" data-doms="D2">
+      <div class="t-head"><span class="t-name">Function / Function Group</span><span class="t-doms"><span class="dtag">D2</span></span></div>
+      <p class="def">A <b>function</b> is a registered tool; a <b>Function Group</b> bundles functions assignable to an agent as a unit.</p>
+      <p class="nv"><b>NVIDIA:</b> Part of NAT's function registry; makes tool sets modular/reusable.</p>
+      <p class="why"><b>Exam:</b> "Give several agents the same toolset cleanly" → Function Group.</p>
+    </div>
+
+    <div class="term" data-doms="D2 D8 D9">
+      <div class="t-head"><span class="t-name">Middleware (NAT)</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D8</span><span class="dtag">D9</span></span></div>
+      <p class="def">Pipeline components between caller and agent core handling cross-cutting concerns.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT middleware for <b>caching, logging, defense/security, red-teaming</b>, configured in YAML.</p>
+      <p class="why"><b>Exam:</b> "Add caching/logging/safety without touching agent logic" → middleware.</p>
+    </div>
+
+    <div class="term" data-doms="D2 D3">
+      <div class="t-head"><span class="t-name">Plugin system (NAT)</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D3</span></span></div>
+      <p class="def">NAT's extension mechanism — register custom agents, tools, evaluators, front-ends, integrations.</p>
+      <p class="nv"><b>NVIDIA:</b> Basis for the function/evaluator registries; extend NAT without forking.</p>
+      <p class="why"><b>Exam:</b> "Add a custom evaluator / tool to NAT" → register a plugin.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🏭</span><h3>NeMo microservices</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D3 D7 D8">
+      <div class="t-head"><span class="t-name">NeMo Customizer</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D7</span></span></div>
+      <p class="def"><b>Fine-tuning</b> microservice — SFT, LoRA, and <b>DPO</b> — via API jobs.</p>
+      <p class="nv"><b>NVIDIA:</b> The fine-tune engine in the <b>Data Flywheel</b>; NAT's harness drives it (OpenPipe ART for GRPO).</p>
+      <p class="why"><b>Exam:</b> "Run a managed DPO/SFT job" → Customizer.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D7">
+      <div class="t-head"><span class="t-name">NeMo Evaluator</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D7</span></span></div>
+      <p class="def"><b>Evaluation</b> microservice — academic benchmarks (MMLU, GSM8K), <b>LLM-as-a-judge</b> (any NIM), retriever/RAG metrics — via eval targets/configs/jobs.</p>
+      <p class="nv"><b>NVIDIA:</b> Standalone microservice; NAT eval runs <b>inside</b> the workflow instead.</p>
+      <p class="why"><b>Exam:</b> "Benchmark a NIM + judge chats + score a retriever via API in NeMo" → Evaluator.</p>
+    </div>
+
+    <div class="term" data-doms="D6 D8">
+      <div class="t-head"><span class="t-name">NeMo Curator</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D8</span></span></div>
+      <p class="def">GPU-accelerated <b>data preparation</b> — fuzzy dedup, language/quality filtering, extraction, PII removal — at corpus scale (10–100× CPU).</p>
+      <p class="nv"><b>NVIDIA:</b> The ingestion/curation stage feeding embeddings, fine-tuning, the Data Flywheel.</p>
+      <p class="why"><b>Exam:</b> "Prepare millions of docs for indexing/training" → Curator (data prep, not retrieval/eval).</p>
+    </div>
+
+    <div class="term" data-doms="D6 D7">
+      <div class="t-head"><span class="t-name">NeMo Retriever</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D7</span></span></div>
+      <p class="def"><b>RAG retrieval</b> microservice family — embedding, indexing, search, reranking — served as NIMs.</p>
+      <p class="nv"><b>NVIDIA:</b> e.g. <code>llama-3.2-nv-embedqa-1b-v2</code> (embed) and <code>llama-3.2-nv-rerankqa-1b-v2</code> (rerank). <span class="pill a">version-dependent</span> these v2 APIs carry a 2026-05-18 deprecation date — check the current model card.</p>
+      <p class="why"><b>Exam:</b> "NVIDIA service for embedding + reranking in RAG" → NeMo Retriever NIMs. Embedding ≠ reranking.</p>
+    </div>
+
+    <div class="term" data-doms="D9 D6">
+      <div class="t-head"><span class="t-name">NeMo (family)</span><span class="t-alt">don't conflate the five</span><span class="t-doms"><span class="dtag">D7</span></span></div>
+      <p class="def">The five lifecycle microservices: <b>Customizer</b> (fine-tune) · <b>Evaluator</b> (eval) · <b>Curator</b> (data) · <b>Retriever</b> (RAG) · <b>Guardrails</b> (safety).</p>
+      <p class="nv"><b>NVIDIA:</b> Distinct products — "NeMo" the platform ≠ any one of them.</p>
+      <p class="why"><b>Exam:</b> "Which NeMo microservice does X?" — memorize the five + one-line jobs.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">📦</span><h3>NIM &amp; Blueprints</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D4 D7">
+      <div class="t-head"><span class="t-name">NIM (NVIDIA Inference Microservice)</span><span class="t-doms"><span class="dtag">D4</span><span class="dtag">D7</span></span></div>
+      <p class="def">Standardized <b>container</b> serving a model with optimized inference, an <b>OpenAI-compatible API</b>, and health endpoints.</p>
+      <p class="nv"><b>NVIDIA:</b> LLMs, embedders, rerankers, and safety models all ship as NIMs. Hosted on <b>build.nvidia.com</b> or self-hosted.</p>
+      <p class="why"><b>Exam:</b> "Self-hosted, standardized, OpenAI-compatible model endpoint" → NIM.</p>
+    </div>
+
+    <div class="term" data-doms="D4">
+      <div class="t-head"><span class="t-name">NIM Operator</span><span class="t-doms"><span class="dtag">D4</span></span></div>
+      <p class="def">A <b>Kubernetes operator</b> automating NIM lifecycle — GPU allocation, model caching, health, inference-aware autoscaling.</p>
+      <p class="nv"><b>NVIDIA:</b> Recommended way to run NIM on K8s in production.</p>
+      <p class="why"><b>Exam:</b> "Deploy/scale NIMs on K8s without hand-managing GPUs" → NIM Operator (vs Dynamo, the inference framework).</p>
+    </div>
+
+    <div class="term" data-doms="D1 D6 D7 D9">
+      <div class="t-head"><span class="t-name">Blueprint</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D7</span></span></div>
+      <p class="def">A complete <b>deployable reference architecture</b> composing NVIDIA tools for a use case (build.nvidia.com/blueprints).</p>
+      <p class="nv"><b>NVIDIA:</b> AI-Q · Multi-Agent Warehouse · Data Flywheel · Safety for Agentic AI.</p>
+      <p class="why"><b>Exam:</b> Match the end-to-end use case to the named Blueprint.</p>
+    </div>
+
+    <div class="term" data-doms="D6 D7">
+      <div class="t-head"><span class="t-name">AI-Q Blueprint</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D7</span></span></div>
+      <p class="def">NVIDIA's <b>RAG research-assistant</b> Blueprint — end-to-end reference RAG (ingest → embed → Milvus+cuVS → rerank → NIM LLM).</p>
+      <p class="nv"><b>NVIDIA:</b> The canonical "production RAG wired with NVIDIA parts" example.</p>
+      <p class="why"><b>Exam:</b> Full RAG stack + "the NVIDIA reference" → AI-Q.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D7 D8">
+      <div class="t-head"><span class="t-name">Data Flywheel</span><span class="t-alt">Blueprint</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D7</span><span class="dtag">D8</span></span></div>
+      <p class="def">Continuous improvement: <b>collect → evaluate → curate → fine-tune (smaller model) → redeploy</b> after human review.</p>
+      <p class="nv"><b>NVIDIA:</b> Wires NAT (collect, tagged by <code>workload_id</code>) + Evaluator + Curator + Customizer.</p>
+      <p class="why"><b>Exam:</b> "Cut inference cost using logged traffic without losing accuracy" → Data Flywheel.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §3 RAG ============ -->
+<section id="rag">
+  <div class="kicker">Section 3 · Knowledge &amp; retrieval</div>
+  <h2>RAG — retrieval-augmented generation</h2>
+  <p class="lede"><b>RAG fixes knowledge/freshness/private-data gaps — fine-tuning fixes skills/behavior.</b> The "RAG vs fine-tune" call is one of the most-tested distinctions. Evaluate retrieval and generation <b>separately</b> so the failing half tells you what to fix.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">📚</span><h3>Pipeline pieces</h3><span class="cnt">6 terms</span></div>
+
+    <div class="term" data-doms="D6 D3">
+      <div class="t-head"><span class="t-name">RAG</span><span class="t-alt">Retrieval-Augmented Generation</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D3</span></span></div>
+      <p class="def"><b>Grounds</b> generation in retrieved knowledge: search a KB for relevant chunks, pass them as context to the LLM.</p>
+      <p class="nv"><b>NVIDIA:</b> Curator → NIM embeddings → Milvus+cuVS → NIM reranker → NIM LLM; AI-Q is the reference.</p>
+      <p class="why"><b>Exam:</b> RAG = facts; fine-tuning = skills. The core distinction.</p>
+    </div>
+
+    <div class="term" data-doms="D6">
+      <div class="t-head"><span class="t-name">Embedding</span><span class="t-doms"><span class="dtag">D6</span></span></div>
+      <p class="def">A dense vector where <b>semantic similarity = geometric proximity</b>, enabling similarity search.</p>
+      <p class="nv"><b>NVIDIA:</b> NeMo Retriever embedding NIMs (e.g. <code>llama-3.2-nv-embedqa-1b-v2</code>).</p>
+      <p class="why"><b>Exam:</b> Embedding quality bounds <b>recall</b> — first tuning lever after chunking.</p>
+    </div>
+
+    <div class="term" data-doms="D6 D3">
+      <div class="t-head"><span class="t-name">Reranking</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D3</span></span></div>
+      <p class="def">A <b>second-stage cross-encoder</b> that re-scores first-stage candidates, catching query–doc interactions embeddings miss.</p>
+      <p class="nv"><b>NVIDIA:</b> NeMo Retriever rerank NIM (<code>llama-3.2-nv-rerankqa-1b-v2</code>); sits between retrieval and generation in AI-Q.</p>
+      <p class="why"><b>Exam:</b> "Right docs retrieved but ranked too low" → add/tune a reranker (improves precision/NDCG).</p>
+    </div>
+
+    <div class="term" data-doms="D6 D3">
+      <div class="t-head"><span class="t-name">Chunking</span><span class="t-doms"><span class="dtag">D6</span><span class="dtag">D3</span></span></div>
+      <p class="def">Splitting documents into retrievable units (fixed / semantic / structure-aware), each embedded and indexed.</p>
+      <p class="nv"><b>NVIDIA:</b> The <b>first</b> RAG tuning lever; NVIDIA publishes chunking-strategy studies.</p>
+      <p class="why"><b>Exam:</b> "Low recall@k, answers miss facts" → revisit chunking first.</p>
+    </div>
+
+    <div class="term" data-doms="D6">
+      <div class="t-head"><span class="t-name">Milvus / Vector DB</span><span class="t-doms"><span class="dtag">D6</span></span></div>
+      <p class="def">A database to store/index/search dense embeddings at scale (HNSW, IVF, flat; metadata filtering). <b>Milvus</b> is NVIDIA's standard.</p>
+      <p class="nv"><b>NVIDIA:</b> Milvus is the AI-Q vector store; integrates <b>cuVS</b> for GPU search.</p>
+      <p class="why"><b>Exam:</b> NVIDIA-recommended production vector DB; index type trades recall vs speed/memory.</p>
+    </div>
+
+    <div class="term" data-doms="D6">
+      <div class="t-head"><span class="t-name">cuVS</span><span class="t-alt">CUDA Vector Search</span><span class="t-doms"><span class="dtag">D6</span></span></div>
+      <p class="def">GPU-accelerated <b>ANN search</b> (HNSW/IVF on GPU) for high-throughput concurrent vector search.</p>
+      <p class="nv"><b>NVIDIA:</b> Integrated into Milvus.</p>
+      <p class="why"><b>Exam:</b> "Vector search is the bottleneck at high QPS" → cuVS/GPU search.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🎯</span><h3>RAG generation metrics (RAGAS triad)</h3><span class="cnt">2 terms</span></div>
+
+    <div class="term" data-doms="D3 D6">
+      <div class="t-head"><span class="t-name">Faithfulness / Groundedness</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D6</span></span></div>
+      <p class="def">Are the answer's <b>claims supported by the retrieved context</b>? (claims supported ÷ total, 0–1).</p>
+      <p class="nv"><b>NVIDIA:</b> Scored via NAT / NeMo Evaluator LLM-judge; often gated ≥ ~0.8–0.9.</p>
+      <p class="why"><b>Exam:</b> Low faithfulness + good context = a <b>generation</b> problem (hallucination), fix grounding/prompt — not retrieval.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D6">
+      <div class="t-head"><span class="t-name">Context relevance &amp; Answer relevance</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D6</span></span></div>
+      <p class="def">The other two triad edges. <b>Context relevance:</b> is retrieved context relevant (low noise)? <b>Answer relevance:</b> does the answer address the question?</p>
+      <p class="nv"><b>NVIDIA:</b> RAGAS triad supported via NAT <code>ragas</code> / NeMo Evaluator.</p>
+      <p class="why"><b>Exam:</b> Faithful-but-wrong → retrieval; relevant-context-but-unfaithful → generation. The RAG diagnosis pattern.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §4 EVAL ============ -->
+<section id="eval">
+  <div class="kicker">Section 4 · Measuring quality</div>
+  <h2>Evaluation &amp; metrics</h2>
+  <p class="lede">Model benchmarks measure <b>static knowledge</b>; agent eval measures <b>dynamic behavior over trajectories</b>. Localize faults: a green light at one level doesn't imply the others pass.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">📏</span><h3>Eval methods &amp; metrics</h3><span class="cnt">9 terms</span></div>
+
+    <div class="term" data-doms="D3 D8">
+      <div class="t-head"><span class="t-name">Offline vs Online evaluation</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D8</span></span></div>
+      <p class="def"><b>Offline</b> = pre-deploy, in CI, on golden/benchmark sets (repeatable, known failures). <b>Online</b> = live traffic (A/B, canary, feedback, drift — novel failures).</p>
+      <p class="nv"><b>NVIDIA:</b> Offline via NeMo Evaluator / NAT gates; online via observability + Data Flywheel feedback.</p>
+      <p class="why"><b>Exam:</b> Complementary, not alternatives. "Catch novel real-world failures" → online; "block a bad change" → offline.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">Golden dataset</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">A curated, <b>version-controlled</b> set of input → expected-output/trajectory pairs covering edge cases &amp; past failures.</p>
+      <p class="nv"><b>NVIDIA:</b> Substrate for offline eval/CI gates; "every production bug becomes a test case."</p>
+      <p class="why"><b>Exam:</b> Scores are meaningless without a versioned golden set pinned to the prompt/config. Quality &gt; quantity.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">LLM-as-a-Judge</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">A strong LLM scores outputs against a rubric — pointwise, <b>pairwise</b> (A vs B), or reference-based.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT eval &amp; NeMo Evaluator with any <b>NIM</b> as judge.</p>
+      <p class="why"><b>Exam:</b> Scalable proxy for humans — but mind the three biases. Prefer pairwise + position-swapping.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">Judge biases</span><span class="t-alt">position · verbosity · self-preference</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def"><b>Position:</b> favors a fixed slot (often A). <b>Verbosity:</b> prefers longer answers. <b>Self-preference:</b> favors its own model family.</p>
+      <p class="nv"><b>NVIDIA:</b> Mitigate via position-swapping, conciseness rubrics, a <b>different</b> judge / jury.</p>
+      <p class="why"><b>Exam:</b> "Flipping order flips the winner" → position bias; fix = swap orderings. Near-guaranteed content.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D2">
+      <div class="t-head"><span class="t-name">Trajectory evaluation</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D2</span></span></div>
+      <p class="def">Scoring the <b>sequence of actions</b> (tools, args, order, recovery), not just the final answer.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT eval — exact / in-order / any-order match vs a reference trajectory.</p>
+      <p class="why"><b>Exam:</b> "Right answer via the wrong tools" → trajectory eval.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">Task completion rate (TSR)</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">% of tasks where the agent achieved the goal end-to-end (task = intent + constraints). The headline metric.</p>
+      <p class="nv"><b>NVIDIA:</b> Common gate ≥ <b>85%</b>; measure under normal, degraded &amp; ambiguous scenarios.</p>
+      <p class="why"><b>Exam:</b> Many gate questions reference an ≥85% TSR threshold.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D2">
+      <div class="t-head"><span class="t-name">Tool-call accuracy</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D2</span></span></div>
+      <p class="def">Right tool, <b>schema-valid correct arguments</b>? Includes detecting hallucinated tools &amp; overuse.</p>
+      <p class="nv"><b>NVIDIA:</b> Component of NAT trajectory/agent eval (target often &gt;90%).</p>
+      <p class="why"><b>Exam:</b> "Plan was right but the tool args were wrong" — a distinct failure layer.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D6">
+      <div class="t-head"><span class="t-name">Retrieval metrics</span><span class="t-alt">Recall@k · Precision@k · MRR · NDCG@k</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D6</span></span></div>
+      <p class="def"><b>Recall@k</b> = coverage of relevant docs in top-k; <b>Precision@k</b> = noise in top-k; <b>MRR</b> = how early the first relevant appears; <b>NDCG@k</b> = quality of the whole graded ranking.</p>
+      <p class="nv"><b>NVIDIA:</b> Computed by NeMo Evaluator retriever eval / NAT.</p>
+      <p class="why"><b>Exam:</b> Low recall → fix chunking/embeddings/k; recall fine but bad answers → fix generation. MRR/NDCG matter (LLMs weight earlier context).</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">pass@k vs pass^k</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def"><b>pass@k</b> = at least one success in k tries (capability). <b>pass^k</b> = all k succeed (reliability).</p>
+      <p class="nv"><b>NVIDIA:</b> Production gates care about <b>pass^k</b> (consistency).</p>
+      <p class="why"><b>Exam:</b> "Works sometimes, not reliably" → gate on pass^k, not pass@k.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🛠️</span><h3>NAT performance tools</h3><span class="cnt">2 terms</span></div>
+
+    <div class="term" data-doms="D3 D4 D8">
+      <div class="t-head"><span class="t-name">NAT Profiler</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D4</span><span class="dtag">D8</span></span></div>
+      <p class="def">Measures <b>tokens, latency, cost</b> at workflow/step/tool granularity to find bottlenecks.</p>
+      <p class="nv"><b>NVIDIA:</b> Pairs with the Sizing Calculator (Profiler finds the hot step; Sizing estimates GPUs).</p>
+      <p class="why"><b>Exam:</b> "One LLM step is 40% of latency" → Profiler; fixes = smaller model for that step, fewer chunks, caching.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D4">
+      <div class="t-head"><span class="t-name">Sizing Calculator (NAT)</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D4</span></span></div>
+      <p class="def">Estimates <b>compute</b> (GPU count, replicas) to hit a throughput/latency target at a given concurrency.</p>
+      <p class="nv"><b>NVIDIA:</b> <code>nat sizing calc</code>; slope-based across concurrency.</p>
+      <p class="why"><b>Exam:</b> "How many GPUs at 200 concurrent users?" → Sizing Calculator (capacity, not bottleneck-finding).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §5 TUNING ============ -->
+<section id="tuning">
+  <div class="kicker">Section 5 · Fixing what eval found</div>
+  <h2>Tuning &amp; customization</h2>
+  <p class="lede"><b>Climb the ladder, never jump it:</b> prompt → RAG → LoRA/QLoRA → SFT → DPO/RLHF, each ~10× the prior. Most "we need fine-tuning" is solved by prompting or RAG. <b>Fine-tuning = skills/behavior; RAG = knowledge/facts.</b></p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🪜</span><h3>The tuning ladder</h3><span class="cnt">6 terms</span></div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">Tuning ladder</span><span class="t-alt">prompt → RAG → fine-tune → align</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">Cheapest-fix-first escalation: (1) prompting → (2) RAG → (3) LoRA/QLoRA → (4) full SFT → (5) DPO/RLHF.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT parameter optimizer = rung 1; NeMo Customizer = rungs 3–5.</p>
+      <p class="why"><b>Exam:</b> The single most-tested tuning principle. Fine-tuning = skills; RAG = facts.</p>
+    </div>
+
+    <div class="term" data-doms="D2 D3">
+      <div class="t-head"><span class="t-name">Prompt engineering / Parameter optimization</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D3</span></span></div>
+      <p class="def">Shaping behavior via instructions, few-shot, schemas, sampling params — and <b>automating</b> that search vs an eval set.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT <b>Parameter / Agent Hyperparameter Optimizer</b> searches prompt wording, temperature, top-p, few-shot, tool descriptions.</p>
+      <p class="why"><b>Exam:</b> "Tune the agent without training" → parameter optimization (rung 1).</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">SFT (Supervised Fine-Tuning)</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">Training on labeled input→output pairs, updating weights toward a task/style. Full SFT updates all weights (rung 4).</p>
+      <p class="nv"><b>NVIDIA:</b> A NeMo Customizer job — best quality ceiling, most data/GPU.</p>
+      <p class="why"><b>Exam:</b> "Skill/format gap at scale with labeled data" — <b>after</b> prompting and RAG plateau.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">LoRA / QLoRA (PEFT)</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">Parameter-efficient: train small adapters (~0.1–1% of params). <b>QLoRA</b> quantizes the base to 4-bit to fit larger models on small GPUs.</p>
+      <p class="nv"><b>NVIDIA:</b> A NeMo Customizer technique (rung 3); ~100s–10k examples.</p>
+      <p class="why"><b>Exam:</b> "Consistent format at scale, labeled data, limited GPU" → LoRA/QLoRA.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">DPO (Direct Preference Optimization)</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def">Preference alignment trained <b>directly on (chosen, rejected) pairs</b> — no reward model, no RL loop.</p>
+      <p class="nv"><b>NVIDIA:</b> A NeMo Customizer job (NAT harness drives it); the <b>default</b> alignment method.</p>
+      <p class="why"><b>Exam:</b> "Align tone with preference pairs, minimal infra, no reward-model expertise" → DPO.</p>
+    </div>
+
+    <div class="term" data-doms="D3">
+      <div class="t-head"><span class="t-name">RLHF / GRPO</span><span class="t-doms"><span class="dtag">D3</span></span></div>
+      <p class="def"><b>RLHF:</b> reward model + RL (PPO), frontier-scale. <b>GRPO:</b> RL comparing a <b>group of rollouts</b> against a reward — no pairs, no reward model.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT's harness supports <b>GRPO via OpenPipe ART</b>.</p>
+      <p class="why"><b>Exam:</b> "Can auto-score each run (a reward) but no chosen/rejected pairs, want learning from experience" → GRPO.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §6 SAFETY ============ -->
+<section id="safety">
+  <div class="kicker">Section 6 · Safety, guardrails &amp; compliance</div>
+  <h2>Safety &amp; guardrails</h2>
+  <p class="lede"><b>Guardrails enforce at runtime; auditing/red-teaming catch issues before ship.</b> The biggest distractors here are the rail categories (it's <b>five</b>, and "topical" isn't one of them) and the exact Safety NIM names.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🛡️</span><h3>NeMo Guardrails &amp; the rails</h3><span class="cnt">4 terms</span></div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">Guardrail</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">A <b>runtime</b> mechanism that monitors/validates/modifies inputs, outputs, or actions to enforce policy.</p>
+      <p class="nv"><b>NVIDIA:</b> <b>NeMo Guardrails</b>, configured in <b>Colang</b>.</p>
+      <p class="why"><b>Exam:</b> Runtime control (vs pre-deployment auditing). Know what each rail catches.</p>
+    </div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">NeMo Guardrails</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">Open-source toolkit for <b>programmable guardrails</b> on LLM apps — five rail categories, Colang config.</p>
+      <p class="nv"><b>NVIDIA:</b> <b>library mode</b> (<code>pip install nemoguardrails</code>, CPU) or <b>microservice mode</b> (container, NGC, GPU for Safety NIMs). Core class <code>LLMRails</code>, configured by <code>RailsConfig</code>.</p>
+      <p class="why"><b>Exam:</b> Tests rail categories + Colang. Know the library/microservice split.</p>
+    </div>
+
+    <div class="term" data-doms="D9 D6">
+      <div class="t-head"><span class="t-name">The five rail categories</span><span class="t-alt">input · dialog · output · retrieval · execution</span><span class="t-doms"><span class="dtag">D9</span><span class="dtag">D6</span></span></div>
+      <p class="def"><b>Input</b> (screen/alter user input, mask PII) · <b>Dialog</b> (govern flow / prompting — includes <i>topical</i> control) · <b>Output</b> (fact-check, redact) · <b>Retrieval</b> (screen RAG chunks) · <b>Execution</b> (validate tool/action I/O).</p>
+      <p class="nv"><b>NVIDIA:</b> All implemented as <b>Colang flows</b>.</p>
+      <p class="why"><b>Exam:</b> <b>"Topical" is NOT a category</b> — it's a dialog-rail behavior. <b>Retrieval rails</b> are the forgotten fifth.</p>
+    </div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">Colang</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">NVIDIA's DSL for guardrail <b>flows, actions, event handlers</b> (Colang 2.0 = Python-like).</p>
+      <p class="nv"><b>NVIDIA:</b> The config language for NeMo Guardrails; all rails are Colang flows.</p>
+      <p class="why"><b>Exam:</b> "What configures NeMo Guardrails behaviors?" → Colang.</p>
+    </div>
+  </div>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🚨</span><h3>Safety NIMs, attacks &amp; auditing</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">Safety NIMs (NemoGuard family)</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">NIMs that classify content for safety: <b>Llama 3.1 NemoGuard 8B Content Safety</b> (harm taxonomy), <b>Topic Control</b> (stay on approved topics), <b>NemoGuard Jailbreak Detect</b>.</p>
+      <p class="nv"><b>NVIDIA:</b> Integrated as parallel input/output rails; reasoning-capable variants exist.</p>
+      <p class="why"><b>Exam:</b> Use <b>exact names</b>; map each NIM to its job (harm / topic / jailbreak).</p>
+    </div>
+
+    <div class="term" data-doms="D9 D2">
+      <div class="t-head"><span class="t-name">Jailbreak / Prompt injection</span><span class="t-doms"><span class="dtag">D9</span><span class="dtag">D2</span></span></div>
+      <p class="def">Attacks that <b>bypass safety/system-prompt constraints</b> — role-play, prompt extraction, encoding tricks, injected instructions in tool/RAG content.</p>
+      <p class="nv"><b>NVIDIA:</b> Detected by <b>NemoGuard Jailbreak Detect</b> + input rails; tested by <b>garak</b>.</p>
+      <p class="why"><b>Exam:</b> Jailbreak (bypass safety) vs injection (untrusted content hijacks) — know which rail/NIM defends each.</p>
+    </div>
+
+    <div class="term" data-doms="D9 D8">
+      <div class="t-head"><span class="t-name">PII &amp; redaction</span><span class="t-doms"><span class="dtag">D9</span><span class="dtag">D8</span></span></div>
+      <p class="def">Data identifying an individual; <b>redaction</b> masks it before storage/transmission/display.</p>
+      <p class="nv"><b>NVIDIA:</b> Guardrails PII detection (GLiNER, Presidio, Private AI) on input/output rails; NAT telemetry redaction masks PII in traces.</p>
+      <p class="why"><b>Exam:</b> Two redaction contexts — guardrail output rail (user-facing) and observability traces.</p>
+    </div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">garak</span><span class="t-alt">Generative AI Red-teaming &amp; Assessment Kit</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">NVIDIA's open-source <b>LLM vulnerability scanner</b> — probes jailbreaks, injection, leakage, toxicity, hallucination ("nmap for LLMs").</p>
+      <p class="nv"><b>NVIDIA:</b> Apache-2.0; integrates with NeMo Guardrails; NAT also ships red-teaming middleware.</p>
+      <p class="why"><b>Exam:</b> "NVIDIA tool to automate LLM red-teaming" → garak (garak tests; guardrails enforce).</p>
+    </div>
+
+    <div class="term" data-doms="D9">
+      <div class="t-head"><span class="t-name">Safety for Agentic AI (Blueprint)</span><span class="t-alt">+ pre-deployment auditing</span><span class="t-doms"><span class="dtag">D9</span></span></div>
+      <p class="def">NVIDIA Blueprint improving <b>safety, security &amp; privacy at build, deploy &amp; run</b> stages — the home for pre-deployment auditing (bias/safety/policy).</p>
+      <p class="nv"><b>NVIDIA:</b> Supersedes the older standalone "Safety Blueprint"; works with garak + Guardrails + Safety NIMs.</p>
+      <p class="why"><b>Exam:</b> Pre-deployment auditing (before ship) vs runtime guardrails (live) — both in the safety lifecycle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §7 SERVING ============ -->
+<section id="serving">
+  <div class="kicker">Section 7 · Deployment &amp; inference</div>
+  <h2>Deployment, serving &amp; inference</h2>
+  <p class="lede">Inference efficiency is a named exam lever. Know <b>Dynamo</b> (disaggregated prefill/decode + KV-cache reuse), <b>NIM</b> serving, and the three <b>structured-output</b> mechanisms.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">⚡</span><h3>Inference framework &amp; decoding</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D4">
+      <div class="t-head"><span class="t-name">NVIDIA Dynamo</span><span class="t-doms"><span class="dtag">D4</span></span></div>
+      <p class="def">Datacenter-scale, low-latency <b>distributed inference framework</b> for generative/reasoning models.</p>
+      <p class="nv"><b>NVIDIA:</b> <b>Disaggregated serving</b> (separate prefill/decode), <b>KV-cache-aware routing</b>, dynamic GPU scheduling, KV offload. Backends: TensorRT-LLM, vLLM, SGLang.</p>
+      <p class="why"><b>Exam:</b> "Scale inference, separate prefill/decode, reuse KV cache" → Dynamo.</p>
+    </div>
+
+    <div class="term" data-doms="D4">
+      <div class="t-head"><span class="t-name">Disaggregated serving</span><span class="t-alt">prefill / decode</span><span class="t-doms"><span class="dtag">D4</span></span></div>
+      <p class="def">Split inference into compute-bound <b>prefill</b> (process prompt) and memory-bound <b>decode</b> (generate), on <b>independently scaled</b> workers.</p>
+      <p class="nv"><b>NVIDIA:</b> A core Dynamo capability; KV cache moves prefill→decode over RDMA.</p>
+      <p class="why"><b>Exam:</b> "Why separate prefill and decode?" → different resource profiles → independent scaling.</p>
+    </div>
+
+    <div class="term" data-doms="D4">
+      <div class="t-head"><span class="t-name">KV cache / Prefix caching</span><span class="t-doms"><span class="dtag">D4</span></span></div>
+      <p class="def">Cached attention K/V for processed tokens; <b>prefix caching</b> reuses the cache for a shared prompt prefix to skip recomputation.</p>
+      <p class="nv"><b>NVIDIA:</b> Dynamo KV-aware routing reuses prefixes — big for agents that resend the same system prompt.</p>
+      <p class="why"><b>Exam:</b> "Many requests share a long system prompt — cut redundant compute" → prefix/KV reuse.</p>
+    </div>
+
+    <div class="term" data-doms="D4 D7">
+      <div class="t-head"><span class="t-name">TensorRT-LLM</span><span class="t-doms"><span class="dtag">D4</span><span class="dtag">D7</span></span></div>
+      <p class="def">NVIDIA's library for <b>optimized LLM inference</b> on GPUs (kernel fusion, quantization, in-flight batching).</p>
+      <p class="nv"><b>NVIDIA:</b> The engine inside many NIMs; a NIM/Dynamo backend (alongside vLLM/SGLang).</p>
+      <p class="why"><b>Exam:</b> The "why is the NIM fast?" optimization layer.</p>
+    </div>
+
+    <div class="term" data-doms="D2 D4">
+      <div class="t-head"><span class="t-name">Structured / guided decoding</span><span class="t-alt">nvext.guided_json</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D4</span></span></div>
+      <p class="def">Constraining the decoder so output <b>must</b> conform to a schema/grammar/regex/choice — guaranteed parse.</p>
+      <p class="nv"><b>NVIDIA:</b> On NIM, the <code>nvext</code> extension: <code>guided_json</code>, <code>guided_regex</code>, <code>guided_choice</code>, <code>guided_grammar</code> (xgrammar default). Pattern: Pydantic → schema → <code>guided_json</code> → validate.</p>
+      <p class="why"><b>Exam:</b> Three mechanisms — prompt-only (no guarantee), JSON mode (valid JSON, any shape), <b>guided decoding (schema-guaranteed)</b>. On NIM it's <code>nvext.guided_json</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §8 PROTOCOLS ============ -->
+<section id="protocols">
+  <div class="kicker">Section 8 · Interoperability</div>
+  <h2>Protocols — MCP &amp; A2A</h2>
+  <p class="lede">One line settles most protocol questions: <b>MCP connects an agent to tools; A2A connects an agent to other agents.</b> NAT is both client and server for each.</p>
+
+  <div class="grid c2">
+    <div class="catcard" data-cat style="margin:0">
+      <div class="cat-head"><span class="cat-ic">🔌</span><h3>MCP</h3><span class="cnt">1 term</span></div>
+      <div class="term" data-doms="D2 D7">
+        <div class="t-head"><span class="t-name">MCP (Model Context Protocol)</span><span class="t-doms"><span class="dtag">D2</span><span class="dtag">D7</span></span></div>
+        <p class="def">Open standard ("USB-C for AI tools") for <b>dynamic tool discovery + invocation</b>: a server exposes tools/resources/prompts; a client connects at runtime to discover and call them.</p>
+        <p class="nv"><b>NVIDIA:</b> NAT is both <b>MCP client</b> (consume remote tools) and <b>MCP server</b> (publish functions, incl. <b>FastMCP</b>). Transports: stdio (local) / streamable HTTP (remote).</p>
+        <p class="why"><b>Exam:</b> "Discover tools at runtime across a boundary" → MCP. Three primitives: tools/resources/prompts. Third-party servers = injection surface.</p>
+      </div>
+    </div>
+    <div class="catcard" data-cat style="margin:0">
+      <div class="cat-head"><span class="cat-ic">🤝</span><h3>A2A</h3><span class="cnt">1 term</span></div>
+      <div class="term" data-doms="D1 D7">
+        <div class="t-head"><span class="t-name">A2A (Agent-to-Agent)</span><span class="t-doms"><span class="dtag">D1</span><span class="dtag">D7</span></span></div>
+        <p class="def">Protocol for <b>inter-agent</b> messaging — typed payloads, task delegation, status tracking, agent <b>discovery</b> between deployed agent services.</p>
+        <p class="nv"><b>NVIDIA:</b> NAT as A2A <b>client</b> (delegate to remote agents) and <b>server</b> (publish a workflow as a discoverable agent), built on the <b>official A2A Python SDK</b> with auth.</p>
+        <p class="why"><b>Exam:</b> "Build a team of distributed agents that delegate to each other" → A2A. Don't swap with MCP.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §9 OBSERVABILITY ============ -->
+<section id="obs">
+  <div class="kicker">Section 9 · Run &amp; monitor</div>
+  <h2>Observability &amp; operations</h2>
+  <p class="lede">Production agents are debugged through <b>traces</b>. Know how NAT exports telemetry and how to localize a multi-step failure to a layer.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">📡</span><h3>Telemetry &amp; monitoring</h3><span class="cnt">4 terms</span></div>
+
+    <div class="term" data-doms="D8">
+      <div class="t-head"><span class="t-name">OpenTelemetry (OTel)</span><span class="t-doms"><span class="dtag">D8</span></span></div>
+      <p class="def">Open standard for collecting distributed <b>traces, metrics, logs</b>.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT exports via OTel to <b>Phoenix, Weave, Langfuse</b>, with workflow→step→tool granularity.</p>
+      <p class="why"><b>Exam:</b> "Standard, vendor-neutral way to trace an agent" → OpenTelemetry.</p>
+    </div>
+
+    <div class="term" data-doms="D8 D3">
+      <div class="t-head"><span class="t-name">Tracing / spans</span><span class="t-doms"><span class="dtag">D8</span><span class="dtag">D3</span></span></div>
+      <p class="def">A <b>trace</b> = one full agent run; <b>spans</b> = nested timed segments (workflow → step → tool).</p>
+      <p class="nv"><b>NVIDIA:</b> NAT emits spans at workflow/step/tool level (needs stable IDs).</p>
+      <p class="why"><b>Exam:</b> Tracing reconstructs the trajectory to debug <b>where</b> a run failed.</p>
+    </div>
+
+    <div class="term" data-doms="D8 D3">
+      <div class="t-head"><span class="t-name">Drift detection</span><span class="t-doms"><span class="dtag">D8</span><span class="dtag">D3</span></span></div>
+      <p class="def">Monitoring for <b>distribution shift</b> between eval data and live traffic, or degrading output quality over time.</p>
+      <p class="nv"><b>NVIDIA:</b> An online-eval signal; drifted failures feed back into the golden set (Data Flywheel).</p>
+      <p class="why"><b>Exam:</b> "Quality silently degrades after deploy as inputs change" → drift; fix loop = detect → add to golden set → re-tune.</p>
+    </div>
+
+    <div class="term" data-doms="D3 D8">
+      <div class="t-head"><span class="t-name">Failure-mode distribution</span><span class="t-doms"><span class="dtag">D3</span><span class="dtag">D8</span></span></div>
+      <p class="def">Breakdown of <b>where</b> failures occur — planning, tool call, or synthesis.</p>
+      <p class="nv"><b>NVIDIA:</b> Key diagnostic artifact from trajectory eval + tracing.</p>
+      <p class="why"><b>Exam:</b> "Most failures at the tool-call step" → harden tool schemas/args, not the model.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ §10 COGNITION ============ -->
+<section id="cognition">
+  <div class="kicker">Section 10 · Cognition, planning &amp; memory</div>
+  <h2>Cognition, memory &amp; planning</h2>
+  <p class="lede">Memory turns a chatbot into something that remembers you across sessions; test-time compute spends inference to think harder. Know NAT's memory backends and the hallucination link to faithfulness.</p>
+
+  <div class="catcard" data-cat>
+    <div class="cat-head"><span class="cat-ic">🧩</span><h3>Memory &amp; deliberation</h3><span class="cnt">5 terms</span></div>
+
+    <div class="term" data-doms="D5">
+      <div class="t-head"><span class="t-name">Memory (agent)</span><span class="t-doms"><span class="dtag">D5</span></span></div>
+      <p class="def">Retaining/recalling info across interactions — history, preferences, learned facts, task context.</p>
+      <p class="nv"><b>NVIDIA:</b> NAT memory system with multiple <b>Object Store</b> backends + the <b>Automatic Memory Wrapper</b>.</p>
+      <p class="why"><b>Exam:</b> Short-term (in-context) vs long-term (persisted, retrieved on demand).</p>
+    </div>
+
+    <div class="term" data-doms="D5">
+      <div class="t-head"><span class="t-name">Object Store (NAT)</span><span class="t-doms"><span class="dtag">D5</span></span></div>
+      <p class="def">NAT's <b>storage backend abstraction</b> for memory/state.</p>
+      <p class="nv"><b>NVIDIA:</b> Backends: <b>in-memory</b> (dev), <b>MySQL</b> (queryable), <b>Redis</b> (low-latency), <b>S3</b> (large objects).</p>
+      <p class="why"><b>Exam:</b> "Low-latency persistent memory" → Redis; "queryable" → MySQL; "dev" → in-memory; "big artifacts" → S3.</p>
+    </div>
+
+    <div class="term" data-doms="D5">
+      <div class="t-head"><span class="t-name">Automatic Memory Wrapper (NAT)</span><span class="t-doms"><span class="dtag">D5</span></span></div>
+      <p class="def"><b>Transparently</b> adds memory to any agent — intercepts I/O, stores to an Object Store, injects relevant memories later.</p>
+      <p class="nv"><b>NVIDIA:</b> Zero-code memory; less control than manual management.</p>
+      <p class="why"><b>Exam:</b> "Add memory without rewriting the agent" → Automatic Memory Wrapper (convenience vs control).</p>
+    </div>
+
+    <div class="term" data-doms="D5 D3">
+      <div class="t-head"><span class="t-name">Test-time compute</span><span class="t-doms"><span class="dtag">D5</span><span class="dtag">D3</span></span></div>
+      <p class="def">Spending <b>extra inference compute</b> (multiple calls, deliberation, candidate selection) to raise quality.</p>
+      <p class="nv"><b>NVIDIA:</b> Embodied in NAT's <b>Reasoning Agent</b> (plan / generate / select).</p>
+      <p class="why"><b>Exam:</b> "Spend more at inference for a better answer" → test-time compute (an inference-time lever, not training).</p>
+    </div>
+
+    <div class="term" data-doms="D5 D3 D6 D9">
+      <div class="t-head"><span class="t-name">Hallucination</span><span class="t-doms"><span class="dtag">D5</span><span class="dtag">D3</span><span class="dtag">D9</span></span></div>
+      <p class="def">Generating content <b>not supported</b> by context/training — fabricated facts/citations stated as real.</p>
+      <p class="nv"><b>NVIDIA:</b> Mitigated by RAG (grounding), Guardrails fact-check output rail, faithfulness eval.</p>
+      <p class="why"><b>Exam:</b> In RAG, hallucination = low faithfulness → a <b>generation</b> fix (assuming retrieval was good).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOURCE CORRECTIONS / TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 11 · Where third-party sheets go wrong</div>
+  <h2>Source corrections — verified against current NVIDIA docs</h2>
+  <p class="lede">These are the places where popular cram sheets (and the reference glossary we mined) are <b>stale or wrong</b>. Each was checked against current NVIDIA documentation — they make excellent distractors, so learn the correct version.</p>
+
+  <div class="trap">
+    <h4><span class="n">FIX 1</span> "NAT has seven agent types"</h4>
+    <p>Current NAT docs list <b>eight</b>: ReAct, Reasoning, ReWOO, Responses API Agent, Router, <b>Parallel Executor</b>, Sequential Executor, Tool Calling. <span class="fix">The Parallel Executor is the one most often dropped from "seven types" lists.</span></p>
+  </div>
+  <div class="trap">
+    <h4><span class="n">FIX 2</span> "The five rails are input / output / dialog / topical / execution"</h4>
+    <p>The five real categories are <b>input, dialog, output, retrieval, execution</b>. <b>"Topical" is not a top-level rail</b> — topic control is a <i>dialog-rail behavior</i> (or the Topic Control NIM). <span class="fix">Retrieval rails are the category most people forget.</span></p>
+  </div>
+  <div class="trap">
+    <h4><span class="n">FIX 3</span> Generic "Content Safety NIM / Jailbreak NIM" names</h4>
+    <p>The exact products are <b>Llama 3.1 NemoGuard 8B Content Safety</b>, <b>Llama 3.1 NemoGuard 8B Topic Control</b>, and <b>NemoGuard Jailbreak Detect</b>. NVIDIA's red-team tool is <b>garak</b>, and the current safety Blueprint is <b>Safety for Agentic AI</b>. <span class="fix">Use the exact names; generic ones are weaker distractors.</span></p>
+  </div>
+  <div class="callout warn"><b>⚠ Version-dependent:</b> NeMo Retriever's <code>llama-3.2-nv-embedqa-1b-v2</code> / <code>nv-rerankqa-1b-v2</code> APIs carry a 2026-05-18 deprecation date. The <i>roles</i> (embedding NIM, reranking NIM) are stable; verify the specific model name on the current model card before quoting it.</div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="drills">
+  <div class="kicker">Section 12 · Recall drills</div>
+  <h2>Glossary quiz — can you produce the term?</h2>
+  <p class="lede">Definitions are easy to recognize and hard to recall. These drills force <b>production</b> — given a scenario, name the exact term/product.</p>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>You need an agent that fans out three independent data lookups at once and merges them. Which NAT agent type — and why do "seven agent types" cheat sheets miss it?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Parallel Executor.</b><span class="why">There are eight NAT agent types; the Parallel Executor is the one most often dropped from third-party lists. Sequential runs stages in order; Router dispatches to one specialist; Parallel runs many at once.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>A colleague says NeMo Guardrails has five rails: input, output, dialog, topical, execution. What's wrong, and what's the real fifth?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>"Topical" is not a category</b> — it's a dialog-rail behavior. The real five are input, dialog, output, <b>retrieval</b>, execution.<span class="why">Retrieval rails screen/alter retrieved RAG chunks before they prompt the LLM — the forgotten category.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>Your RAG answers are fluent but contradict the retrieved docs; context relevance 0.9, faithfulness 0.55. Which metric named this, and which half do you fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Faithfulness (groundedness)</b> caught it; fix the <b>generation</b> side.<span class="why">Context is relevant (0.9), so retrieval is fine — the generator is hallucinating past good context. Tighten grounding/prompt or judge-gate regeneration.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>You can auto-score whether each agent run hit its goal (a reward) but have no chosen/rejected pairs, and want the agent to improve with experience. Which finetuning path, and via which NAT integration?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>GRPO via OpenPipe ART</b> (NAT finetuning harness).<span class="why">GRPO compares a group of rollouts against the reward — no preference pairs, no reward model. DPO would apply only if you <i>had</i> (chosen, rejected) pairs.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span>Two protocols: one lets your agent discover and call a partner team's tools at runtime; the other lets your agent delegate a subtask to a separate deployed agent. Name each.</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Tools → MCP; agent → agent → A2A.</b><span class="why">MCP = Model Context Protocol (tools/resources/prompts, stdio or HTTP). A2A = Agent-to-Agent (delegation/discovery, official A2A Python SDK). NAT is client and server for both.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>A 6-step agent shows 88% per-step accuracy yet ~46% end-to-end success. The team wants a bigger model. Name the phenomenon and the better levers.</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Compound error:</b> <code>0.88⁶ ≈ 0.46</code>.<span class="why">A bigger model barely moves per-step accuracy. Better: cut the number of steps, harden the weakest step (clearer tool schema, grounding), add a verification step. Use the failure-mode distribution to find the bleeding step.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q7</span><span>You must guarantee a NIM returns output that always parses against a Pydantic schema — not "please reply in JSON." What mechanism, and the exact NIM request field?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Guided (constrained) decoding</b> via <code>extra_body={"nvext": {"guided_json": schema}}</code>.<span class="why">Prompt-only gives no guarantee; JSON mode gives valid-but-any-shape JSON; guided decoding (xgrammar backend) constrains tokens to the schema. Pattern: Pydantic → <code>model_json_schema()</code> → guided_json → <code>model_validate_json()</code>.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q8</span><span>Leadership wants to cut inference cost on a high-volume tool-calling agent using traffic you already log, without losing accuracy. Which NVIDIA Blueprint, and which microservices does it wire?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Data Flywheel Blueprint.</b><span class="why">NAT collects logs (tagged by <code>workload_id</code>), NeMo Evaluator scores candidates, NeMo Curator builds datasets, NeMo Customizer fine-tunes/distills a smaller model that still clears the bar — promoted after human review.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q9</span><span>Profiler shows one LLM step is 40% of latency and most tokens. Name two fixes — and which tool answers "how many GPUs at 200 concurrent users?"</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Fixes:</b> route that step to a smaller/faster model, or retrieve fewer chunks (+reranker)/cache. <b>GPU count → NAT Sizing Calculator.</b><span class="why">Profiler finds the hotspot; Sizing Calculator does capacity planning. Both are system-level.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q10</span><span>Pairwise GPT-judge says prompt v2 wins 70%; flipping the answer order makes v1 win 65%. Name the bias and the standard fix.</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Position bias.</b><span class="why">Fix: judge both orderings (swap A/B) and count only consistent verdicts, or randomize positions. Also watch verbosity and self-preference bias.</span></div>
+  </details>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources — verified against current NVIDIA docs</h3>
+  <ul>
+    <li>NAT agent types (8) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html">docs.nvidia.com/nemo/agent-toolkit/…/agents</a></li>
+    <li>NAT overview &amp; install — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs.nvidia.com/nemo/agent-toolkit</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">github.com/NVIDIA/NeMo-Agent-Toolkit</a></li>
+    <li>NAT A2A (client/server, A2A Python SDK) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/a2a-client.html">a2a-client</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/develop/docs/source/components/integrations/a2a.md">a2a integration</a></li>
+    <li>NAT as MCP server / FastMCP — <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/mcp/mcp-server.html">mcp-server</a></li>
+    <li>NeMo Guardrails rail categories (input/dialog/output/retrieval/execution) — <a href="https://docs.nvidia.com/nemo/guardrails/latest/user-guides/guardrails-process.html">guardrails-process</a> · <a href="https://docs.nvidia.com/nemo/guardrails/latest/about/overview.html">overview</a></li>
+    <li>Safety NIMs — <a href="https://docs.nvidia.com/nim/llama-3-1-nemoguard-8b-contentsafety/latest/index.html">NemoGuard 8B Content Safety</a> · <a href="https://developer.nvidia.com/blog/safeguard-agentic-ai-systems-with-the-nvidia-safety-recipe/">Safety Recipe (Content Safety / Topic Control / Jailbreak Detect)</a></li>
+    <li>garak (LLM vulnerability scanner) — <a href="https://github.com/NVIDIA/garak">github.com/NVIDIA/garak</a> · <a href="https://docs.nvidia.com/nemo/guardrails/latest/evaluation/llm-vulnerability-scanning">LLM vulnerability scanning</a></li>
+    <li>Safety for Agentic AI Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai">github.com/NVIDIA-AI-Blueprints/safety-for-agentic-ai</a></li>
+    <li>NeMo Retriever models — <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard">embedqa-1b-v2</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard">rerankqa-1b-v2</a> · <a href="https://developer.nvidia.com/nemo-retriever">developer.nvidia.com/nemo-retriever</a></li>
+    <li>NVIDIA Dynamo (disaggregated prefill/decode, KV-aware routing) — <a href="https://developer.nvidia.com/blog/introducing-nvidia-dynamo-a-low-latency-distributed-inference-framework-for-scaling-reasoning-ai-models/">developer.nvidia.com/blog/introducing-nvidia-dynamo</a> · <a href="https://github.com/ai-dynamo/dynamo">github.com/ai-dynamo/dynamo</a></li>
+    <li>NeMo microservices (Customizer/Evaluator/Curator) — <a href="https://docs.nvidia.com/nemo/microservices/latest/about/index.html">docs.nvidia.com/nemo/microservices</a></li>
+    <li>Data Flywheel Blueprint — <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">github.com/NVIDIA-AI-Blueprints/data-flywheel</a></li>
+    <li>Companion notes — <code>../notes/glossary.md</code> + Domains 1–11 notes; cross-checked with our Domain 3 eval page.</li>
+  </ul>
+  <p class="fine">NCP-AAI study glossary · synthesized from personal domain notes + the course reference glossary, with every NAT/NeMo/NIM fact web-verified against current NVIDIA documentation. Terms grouped by job-to-be-done; filter by domain above.</p>
+</footer>
+
+<script>
+// ---- Domain filter ----
+(function(){
+  const chips = Array.from(document.querySelectorAll('.dchip'));
+  const terms = Array.from(document.querySelectorAll('.term'));
+  const cats  = Array.from(document.querySelectorAll('[data-cat]'));
+  const sections = Array.from(document.querySelectorAll('main > section'));
+  const fnum = document.getElementById('fnum');
+  const empty = document.getElementById('emptyState');
+
+  function apply(dom){
+    let shown = 0;
+    terms.forEach(t=>{
+      const doms = (t.getAttribute('data-doms')||'');
+      const hit = dom==='all' || doms.split(/\s+/).includes(dom);
+      t.classList.toggle('hidden', !hit);
+      if(hit) shown++;
+    });
+    // hide category cards with no visible terms
+    cats.forEach(c=>{
+      const anyVisible = c.querySelector('.term:not(.hidden)');
+      c.classList.toggle('hidden', !anyVisible);
+    });
+    // hide whole sections with no visible category cards (keeps traps/quiz always visible)
+    sections.forEach(s=>{
+      if(s.id==='traps' || s.id==='drills') return;
+      const anyCat = s.querySelector('[data-cat]:not(.hidden)');
+      s.style.display = anyCat ? '' : 'none';
+    });
+    fnum.textContent = shown;
+    if(empty) empty.style.display = shown===0 ? '' : 'none';
+  }
+
+  chips.forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      chips.forEach(c=>c.classList.remove('active'));
+      ch.classList.add('active');
+      apply(ch.getAttribute('data-dom'));
+    });
+  });
+  apply('all');
+})();
+</script>
+</body>
+</html>

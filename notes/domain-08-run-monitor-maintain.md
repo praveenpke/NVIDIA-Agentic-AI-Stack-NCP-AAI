@@ -62,6 +62,10 @@ Tool executions get their own `execute_tool` spans nested under the agent span �
 
 **Logging intermediate steps:** beyond spans, agents should log each intermediate step (thought/plan, chosen tool, tool input/output, retries) as structured events. NeMo Agent Toolkit does this with an `IntermediateStepManager` that publishes `IntermediateStep` events to a reactive stream which exporters subscribe to — meaning observability is event-driven and framework-agnostic. Always **redact PII/secrets** before export (NAT has redaction processors for this).
 
+**Where redaction runs (exam-tested):** NAT redaction processors operate at the **OTel exporter level — *before* telemetry leaves the process** — so every downstream backend (Phoenix, Langfuse, Weave, an OTLP collector) receives already-clean data. You configure regex patterns (SSN, email, phone, credit-card) and/or field-level rules (always strip `tool.input.password`); the processor rewrites matching span attributes. Two things the exam leans on: (1) redaction is **irreversible** — over-redact and you destroy the debugging signal (redact the SSN, *keep* the query topic/intent), so it is **defense-in-depth, not a substitute for access controls** on the trace store; (2) it is **not** done at the LLM-prompt level or at the dashboard — it is at the exporter, which is why "configure redaction in the Grafana panel" or "filter PII when displaying traces" are distractor answers.
+
+*Tiny example (regex redaction processor, conceptually):* on each finishing span, for sensitive attributes (`input.value`, `llm.input_messages`, `retrieval.documents`), substitute `\b\d{3}-\d{2}-\d{4}\b → [SSN_REDACTED]` and the email pattern → `[EMAIL_REDACTED]`, then mark `<attr>.redacted = true`. A query like *"My SSN is 123-45-6789"* must show as `[SSN_REDACTED]` in Phoenix while the surrounding question text survives.
+
 *Tiny example:* a support agent answers in 12 s. The trace shows: root span 12 s → `chat llama-3.3-70b` 1.2 s → `execute_tool search_orders` **9.4 s** → `chat llama-3.3-70b` 1.1 s. Verdict: the tool's downstream API is slow, not the LLM. Without spans you'd have blamed the model.
 
 ### 3.2 Monitoring metrics: the numbers wall
@@ -146,6 +150,69 @@ Key distinction the exam tests: **data drift = inputs changed; concept drift = t
 
 **Everything-is-versioned rule:** model, prompt, tools, RAG corpus/index, guardrails, agent code each have versions; a production "release" is a *pinned combination*, and any change to any element goes through the same eval-gate → canary → ramp → (rollback-ready) pipeline.
 
+**A few more maintenance moves the exam expects:**
+
+- **Config hot-reload (no restart).** Some config — notably **NeMo Guardrails** rail configs — can be updated *without restarting* the agent: mount the config from a Kubernetes **ConfigMap** as a volume and the running process picks up file changes. This makes a guardrail tweak a config change, not a redeploy — but it still must go through the eval gate (a rail change is a behavior change).
+- **RAG index freshness as a *monitored metric*.** Stale indexes silently serve outdated answers (a flavor of concept drift). Don't just re-index on a schedule — **emit index-staleness as a metric** (e.g., age of the newest document in the index) and **alert** when it exceeds a threshold. Pair scheduled/event-driven incremental upserts with the staleness alarm.
+- **The change-altitude ladder — tune prompt → change config → swap model → change architecture.** When quality drops, escalate in cost/risk order, *stopping at the cheapest fix that works*:
+  1. **Prompt tuning** — first response: fast, cheap, reversible (and a *label move*, §3.5).
+  2. **Configuration change** (guardrails, tool params, `top_k`, max-steps) — when the issue is **behavioral boundaries**, not raw LLM quality.
+  3. **Model swap** — when the current model **fundamentally cannot** do the task (e.g., a reasoning-capability gap), gated by regression evals + canary.
+  4. **Architecture change** — last resort: when the **agent type, memory strategy, or tool design** is wrong. Expensive and risky; never the first answer to "latency is high" or "tokens are high."
+- **Guardrail recalibration after a model swap.** A model update changes output *style/distribution*, so rails tuned for the old model can start **false-positive-blocking** good answers — block rate jumping (e.g. 2% → 15%) right after a model change is almost always **false positives**, not a wave of attacks. Recalibrate the rails against the new model rather than assuming the inputs got worse.
+
+### 3.6 Debugging agent failures from a trace — the five named failure modes
+
+When an agent goes wrong it almost never raises a clean HTTP 5xx; you localize the fault by reading the span tree. The exam tests a fixed taxonomy of failure shapes — learn the *trace signature* of each, not just the name:
+
+| Failure mode | Trace signature (what you see) | Likely cause | Fix |
+|---|---|---|---|
+| **LLM timeout** | an LLM/`chat` span whose duration ≈ the timeout, ending with an **error status** (or no end time recorded) | NIM overloaded / queued, input too long, network blip | shorter per-call timeout + retries with backoff (not one huge 120 s timeout); reduce context; add NIM replicas / scale on queue depth |
+| **Tool failure** | a `execute_tool` span with **error status**; read `error.message` / `error.type`; may show `retry_count` | API rate-limit, auth expiry, bad/invalid args, downstream 500 | retry+backoff, refresh creds, validate tool args, circuit-break a flaky tool |
+| **Infinite loop** | **repeated identical** tool or LLM spans (e.g. 12 consecutive same calls); trajectory length / step count explodes | bad plan, ambiguous instructions, tool returns same unhelpful result | enforce a **max-steps / recursion limit** in the workflow config; tighten agent instructions; detect repeated-state |
+| **Context overflow** | an LLM span failing with a **token-limit / max-context error** | accumulated history + RAG chunks + tool outputs exceed the model's context window | summarize/compress history, sliding window, cap RAG `top_k`, trim tool outputs |
+| **Guardrail false positive** | a guardrail span with **blocked** status on a *legitimate* answer; the correlated Guardrails sub-trace shows which rail fired | rail calibrated for a different model/output style; threshold too tight | tune the rail / Colang flow, add exceptions, recalibrate after any model swap (see §3.5 / trap 14) |
+
+**The single most testable signature: repeated identical spans = loop.** "An agent trace shows 12 consecutive identical tool calls — what is it?" → infinite loop; mitigation = a step limit, *not* a bigger timeout.
+
+**`nat_test_llm` — deterministic replay debugging (NVIDIA-specific).** NAT ships a test/CI LLM *provider* (`_type: nat_test_llm`) that returns a fixed, scripted sequence of responses instead of calling a real model — configured with `response_seq` (the ordered list of canned replies) and `delay_ms` (to simulate latency). Swap it in for the real LLM to **reproduce an exact failure trajectory deterministically and for free** (no token cost, no non-determinism) — the standard way to turn a flaky production trace into a repeatable regression test. It is explicitly **not for production**. Pair it with the **NAT profiler** (framework-level latency/token breakdown per tool/agent) to separate "the model is slow" from "our serialization/event-loop overhead is slow."
+
+*Example — scripting a loop bug for a regression test:*
+```yaml
+llms:
+  scripted:
+    _type: nat_test_llm
+    response_seq:                 # agent will "think" these in order, deterministically
+      - "I should call search_orders"
+      - "I should call search_orders"   # same plan again → reproduces the loop
+      - "I should call search_orders"
+    delay_ms: 0
+```
+
+### 3.7 NeMo Guardrails observability — correlating safety with the agent trace
+
+Guardrail block/violation rate is a first-class production metric (§3.4), but guardrails also emit **their own OpenTelemetry traces**, and the exam tests *how you tie them back to the agent run*.
+
+- **Enable it in `config.yml`** with a `tracing` block. Since NeMo Guardrails **v0.16.0** the default `span_format` is `opentelemetry` (GenAI semantic conventions; the old simple-dict format is `legacy` and deprecated). `enable_content_capture` controls whether prompts/outputs are recorded in spans (off by default — privacy). Adapters fan the spans out: `OpenTelemetry` (to an OTLP collector) and/or `FileSystem` (`.jsonl` traces for local debugging).
+- **Library-instrumentation pattern (key exam point):** the NeMo Guardrails library depends only on the **OTel API** — the **host application configures the SDK** (TracerProvider, span processor, OTLP exporter). Because the host owns the tracer, the guardrail spans become **children of the currently-active parent span**: guardrail checks share the **same trace ID** as the NAT/agent workflow they run inside. That shared-trace-ID is exactly how a "blocked" guardrail span lines up under the agent run that triggered it.
+- **What the spans capture:** which rails fired (input / dialog / output) and pass/fail, per-rail latency, LLM calls made *inside* self-check rails, and cache status. A blocked response shows the agent-side span as `blocked` and the Guardrails sub-trace shows *which* rail and *why*.
+
+*Example — guardrails `config.yml` tracing block:*
+```yaml
+tracing:
+  enabled: true
+  span_format: opentelemetry      # default since v0.16.0 (GenAI semconv); legacy = deprecated
+  enable_content_capture: false   # keep prompts/outputs out of spans unless you need them
+  adapters:
+    - name: OpenTelemetry
+      service_name: guardrails
+      exporter: otlp              # share the host app's OTLP endpoint → same trace as the agent
+    - name: FileSystem
+      filepath: ./traces/traces.jsonl
+```
+
+**Anti-pattern (exam):** if the Guardrails tracer is configured *independently* of the host (its own TracerProvider) instead of via the host's SDK, guardrail spans land as **separate traces** and you can no longer tell which agent execution a given block belongs to. Fix = let the host app own the OTel SDK so context propagates (shared trace ID).
+
 ## 4. NVIDIA-specific layer
 
 | NVIDIA product | Role in this domain |
@@ -158,7 +225,8 @@ Key distinction the exam tests: **data drift = inputs changed; concept drift = t
 | **GenAI-Perf** | NVIDIA's load-testing/benchmark CLI for LLM endpoints; reports TTFT, ITL, TPS, RPS. Use it to establish the latency/throughput baselines your SLOs and capacity plans are built on. |
 | **Data Flywheel Blueprint (build.nvidia.com)** | Production-traffic-driven continuous improvement: logs traffic (Elasticsearch), curates datasets, runs **NeMo Customizer** (LoRA fine-tune/distill) and **NeMo Evaluator** on candidate NIMs, and surfaces cheaper models that match accuracy — NVIDIA's flagship answer to "cost optimization over time" and "eval-in-production." |
 | **NeMo Evaluator (microservice)** | API-driven evaluation jobs (academic benchmarks + LLM-as-judge + custom datasets) — the gate for model/prompt rollouts in NVIDIA's stack. |
-| **NeMo Guardrails** | Operationally relevant because guardrail block/violation rates are a monitored production metric and guardrail configs are versioned artifacts that roll out/back like prompts. |
+| **NeMo Guardrails** | Operationally relevant because guardrail block/violation rates are a monitored production metric and guardrail configs are versioned artifacts that roll out/back like prompts. **Emits its own OTel traces** (config `tracing.enabled: true`, `span_format: opentelemetry` default since **v0.16.0**, adapters `OpenTelemetry`/`FileSystem`); via the **library-instrumentation pattern** the host app owns the OTel SDK so guardrail spans share the agent's **trace ID** (which rail fired, pass/fail, per-rail latency). Rail configs **hot-reload** from a ConfigMap; recalibrate rails after any model swap to avoid false-positive blocks. |
+| **`nat_test_llm` + NAT profiler** | Day-2 *debugging* tooling. `nat_test_llm` (`_type: nat_test_llm`, `response_seq`, `delay_ms`) is a test/CI LLM provider returning scripted responses for **deterministic replay** of a captured failure trajectory — turn a flaky prod trace into a repeatable regression test at zero token cost (not for production). The **profiler** breaks down latency/token usage per tool/agent to separate model slowness from framework overhead. |
 
 **When NVIDIA vs. generic:** GPU-level monitoring → always DCGM stack (there is no generic alternative with that fidelity). Agent tracing → NAT if you want config-driven multi-exporter telemetry across frameworks; plain OTel SDK or LangSmith/Langfuse if you're committed to one framework/vendor. Continuous cost optimization with fine-tuning → Data Flywheel; if you only need prompt/routing tweaks, lighter generic tooling suffices.
 
@@ -218,6 +286,10 @@ Key distinction the exam tests: **data drift = inputs changed; concept drift = t
 10. **SLO math.** 99.5% SLO ⇒ 0.5% error budget over the window. Burn rate > 1 = budget exhausted *early*. Burn-rate alerting (fast + slow windows) is preferred over single static thresholds — alerting on every p99 blip is the distractor answer.
 11. **An agent retry/`finish_reason: length`/tool-error is not always an HTTP error.** Error-rate SLIs based only on 5xx undercount agent failures; tool-call failure rate and refusal rate are separate SLIs.
 12. **"Eval once before launch" is never the right answer.** Production agents need *continuous* evals (sampled judge scoring, canary evals on every change) because models, data, and user behavior all drift.
+13. **Redaction lives at the OTel *exporter*, before telemetry leaves the process — and it's irreversible.** Not at the prompt, not at the dashboard. So "filter PII when the trace is displayed" / "configure redaction in Grafana" are distractors, and "redaction replaces access controls on the trace store" is false (it's defense-in-depth; combine with RBAC). Over-redacting (stripping all input) destroys debuggability — keep query topic/intent, drop the SSN.
+14. **Guardrail block-rate spike right after a model swap = false positives, not an attack.** A new model's output style trips rails calibrated for the old one. Recalibrate the rails; don't conclude "users got more malicious." (Contrast: a block-rate spike with no deploy *and* concentrated on one source can be a real targeted attack.)
+15. **Guardrails traces must share the agent's trace ID (context propagation).** Let the **host app own the OTel SDK** so NeMo Guardrails (which depends only on the OTel API) emits its spans as children of the active agent span. If guardrails get their own TracerProvider, their spans become *separate* traces and you can't correlate a block to the run that caused it. Timestamp-matching is the distractor; shared trace ID is the answer.
+16. **Repeated identical spans = infinite loop; the fix is a max-steps limit, not a longer timeout.** A token-limit error inside an LLM span = context overflow (fix: summarize/trim, cap `top_k`), not a loop. Don't confuse the two trace signatures.
 
 ## 7. Scenario drills
 
@@ -238,6 +310,18 @@ Key distinction the exam tests: **data drift = inputs changed; concept drift = t
 
 6. **Q:** You need GPU utilization, memory, and temperature for every GPU node of your agent cluster in Grafana. Which components?
    **A:** dcgm-exporter (DaemonSet, port 9400, typically installed by the GPU Operator) scraped by Prometheus, visualized with the NVIDIA DCGM Grafana dashboard (ID 12239) — DCGM is the NVIDIA-native GPU telemetry path.
+
+7. **Q:** A NAT agent trace shows the same `execute_tool search_db` span twelve times in a row before the run ends. What failure mode is this and what's the fix?
+   **A:** An **infinite loop** — repeated identical spans are its signature. Fix by enforcing a **max-steps / recursion limit** in the workflow config (and tightening the agent instructions). It is *not* a timeout (no error-status long span) and *not* context overflow (no token-limit error), so "increase the LLM timeout" and "enlarge the context window" are distractors.
+
+8. **Q:** After swapping the LLM behind a NAT agent to a newer NIM, the NeMo Guardrails block rate jumped from 2% to 15%. What's the most likely cause and response?
+   **A:** **False positives** — the new model's output style trips output rails calibrated for the old model; it is not a surge of harmful traffic. **Recalibrate the rails** (tune Colang flows / thresholds) against the new model, validated by reviewing a sample of blocked outputs. (Hot-reload the rail config via ConfigMap, then re-run the eval gate.)
+
+9. **Q:** A "blocked" guardrail event needs to be matched to the exact agent run that triggered it, but your guardrail spans are showing up as their own separate traces. What's misconfigured?
+   **A:** **Trace context propagation.** NeMo Guardrails depends only on the OTel API; the **host application must own the OTel SDK** (TracerProvider/exporter) so guardrail spans inherit the active parent context and share the **same trace ID** as the NAT workflow. A standalone Guardrails TracerProvider breaks correlation — fix by configuring the SDK once, in the host.
+
+10. **Q:** You captured a flaky production failure in a trace and want a deterministic, zero-cost regression test that reproduces it in CI. What NAT feature do you use?
+   **A:** The **`nat_test_llm`** provider — swap the real LLM for `_type: nat_test_llm` with a fixed `response_seq` (and optional `delay_ms`) so the exact trajectory replays deterministically with no token cost and no non-determinism. (Not for production.) Pair with the NAT profiler if you need to confirm the bottleneck is framework overhead vs. the model.
 
 ## 8. Builder's corner
 
@@ -268,6 +352,9 @@ Key distinction the exam tests: **data drift = inputs changed; concept drift = t
 - Grafana SLO docs (error budget, burn rate): https://grafana.com/docs/grafana-cloud/alerting-and-irm/slo/introduction/
 - NVIDIA Data Flywheel Blueprint: https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel/blueprintcard and https://github.com/NVIDIA-AI-Blueprints/data-flywheel
 - NVIDIA blog — Model distillation with Data Flywheel Blueprint (≈98% cost reduction example): https://developer.nvidia.com/blog/build-efficient-ai-agents-through-model-distillation-with-nvidias-data-flywheel-blueprint/
+- NeMo Guardrails — Tracing / Observability (OTel span format v0.16.0, adapters, library-instrumentation): https://docs.nvidia.com/nemo/guardrails/latest/observability/index.html
+- NeMo Agent Toolkit — LLMs (incl. `nat_test_llm` test provider, `response_seq`/`delay_ms`): https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/llms/index.html
+- NeMo Agent Toolkit — Running Tests (`run_workflow`, pytest harness): https://docs.nvidia.com/nemo/agent-toolkit/latest/resources/running-tests.html
 - FlashGenius NCP-AAI exam guide (domain weight context): https://flashgenius.net/blog-article/your-comprehensive-guide-to-the-nvidia-agentic-ai-llm-professional-certification-ncp-aai
 
 ## 10. Code Companion
@@ -452,6 +539,60 @@ langfuse.flush()
 ```
 
 What to notice: this is the continuous quality-SLO loop from §3.3/§3.4 — no ground truth in prod, so you sample, judge, and trend `llm_judge_pass` in the same UI as latency and cost; alert when the daily mean regresses. Scores attach to the *trace*, so a failing score links straight to the trajectory you need to debug, and failing cases feed the golden regression set.
+
+**9) NeMo Guardrails tracing that shares the agent's trace ID — host owns the OTel SDK**
+
+```python
+# 1) HOST APP configures the OTel SDK once (Guardrails depends only on the OTel API).
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+provider = TracerProvider()
+provider.add_span_processor(BatchSpanProcessor(
+    OTLPSpanExporter(endpoint="http://localhost:4317", insecure=True)))  # same collector as the agent
+trace.set_tracer_provider(provider)   # ← because the HOST sets this, guardrail spans inherit the
+                                      #   active parent context → SAME trace ID as the NAT workflow
+```
+
+```yaml
+# 2) guardrails config.yml — turn tracing on (v0.16.0+: opentelemetry span format is the default)
+tracing:
+  enabled: true
+  span_format: opentelemetry        # GenAI semconv; legacy dict format is deprecated
+  enable_content_capture: false     # don't put prompts/outputs in spans unless you must (privacy)
+  adapters:
+    - name: OpenTelemetry
+      service_name: guardrails
+      exporter: otlp
+    - name: FileSystem
+      filepath: ./traces/traces.jsonl   # local .jsonl for offline debugging
+```
+
+What to notice: the whole point is **context propagation via the host-owned SDK** — a blocked output rail then appears as a child span under the agent run that triggered it (shared trace ID), so you can answer "which execution did this block belong to?" If Guardrails set up *its own* TracerProvider, the spans would split into a separate trace (exam trap 15). `enable_content_capture: false` is the redaction-by-omission counterpart to §3.1's exporter-level redaction.
+
+**10) Deterministic replay with `nat_test_llm` — reproduce a failure in CI, no tokens, no flakiness**
+
+```yaml
+# A NAT workflow config that swaps the real LLM for a scripted test provider.
+llms:
+  agent_llm:
+    _type: nat_test_llm             # test/CI ONLY — never production
+    response_seq:                   # exact, ordered responses the "model" will return
+      - "Thought: I'll look up the order.\nAction: search_orders[4711]"
+      - "Final Answer: Order 4711 ships tomorrow."
+    delay_ms: 50                    # optionally simulate latency to exercise timeout handling
+
+functions:
+  search_orders:
+    _type: my_search_orders_tool
+workflow:
+  _type: react_agent
+  llm_name: agent_llm
+```
+
+What to notice: because the LLM output is **fixed**, the agent's trajectory is reproducible — feed it the response sequence pulled from a failing production trace and you get the *same* spans every run, which is what makes it a regression test rather than a coin flip. Combine with the NAT **profiler** to confirm whether remaining latency is the model (here, faked) or framework overhead. This is the NVIDIA-native answer to "how do I deterministically replay an agent failure" (the toolkit's `run_workflow` test helper drives such configs in pytest).
 
 ## 11. What top engineers are saying (2025-26)
 

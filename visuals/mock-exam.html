@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI — Mock Exam &amp; Practice Questions</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#141c2c; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25); --on-accent:#0b0f17;
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --border:#243349; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;overflow-x:clip}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:clip}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;padding-right:104px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+  .hero .stat-row{display:flex;gap:26px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+  .hero .stat{text-align:center}
+  .hero .stat .big{font-size:1.7rem;font-weight:800;color:var(--green)}
+  .hero .stat .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:52px 0 16px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:24px;font-size:.98rem}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid>*{min-width:0}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(min(215px,100%),1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green);overflow-wrap:anywhere;word-break:break-word}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* DOMAIN-WEIGHT BAR */
+  .weightbar{display:flex;width:100%;height:46px;border-radius:12px;overflow:hidden;border:1px solid var(--line);margin:14px 0 6px}
+  .weightbar .seg{display:flex;align-items:center;justify-content:center;font-size:.66rem;font-weight:800;color:var(--on-accent);position:relative;overflow:hidden;text-align:center;line-height:1;border-right:1px solid rgba(0,0,0,.25);cursor:default;transition:filter .15s}
+  .weightbar .seg:last-child{border-right:none}
+  .weightbar .seg:hover{filter:brightness(1.12)}
+  .weightbar .seg span{padding:0 2px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .weight-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:.76rem;color:var(--muted)}
+  .weight-legend .li{display:flex;gap:7px;align-items:center}
+  .weight-legend .sw{width:12px;height:12px;border-radius:3px;flex:0 0 12px}
+  .weight-legend b{color:var(--text)}
+
+  /* BAR CHART (per-domain question counts) */
+  .bars{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+  .bar-row{display:grid;grid-template-columns:230px 1fr 60px;gap:12px;align-items:center;font-size:.82rem}
+  .bar-row .label{text-align:right;color:var(--text);font-weight:600}
+  .bar-row .track{background:var(--bg3);border-radius:8px;height:22px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .bar-row .fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-left:10px;font-size:.68rem;font-weight:700;color:var(--on-accent);white-space:nowrap}
+  .bar-row .note{color:var(--muted);font-size:.74rem}
+  @media (max-width:640px){.bar-row{grid-template-columns:1fr;gap:3px}.bar-row .label{text-align:left}}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.92rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.86rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* DRILLS / QUIZ CARDS */
+  .quiz-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 16px}
+  .quiz-controls button{background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:7px 16px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+  .quiz-controls button:hover{border-color:var(--green);color:var(--green)}
+  .quiz-controls .count{margin-left:auto;font-size:.76rem;color:var(--muted)}
+  .quiz-controls .count b{color:var(--green)}
+
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.74rem;font-weight:800;padding:4px 9px}
+  details.drill summary .qtxt{flex:1}
+  details.drill summary .dtag{display:inline-block;font-size:.6rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:6px;padding:2px 7px;margin-bottom:6px;border:1px solid var(--line);color:var(--muted);background:var(--bg3)}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:8px;font-size:.83rem;padding-left:12px;border-left:2px solid color-mix(in srgb, var(--red) 50%, transparent)}
+  details.drill .answer .why b{color:var(--red)}
+  details.drill .answer .link{display:block;margin-top:8px;font-size:.78rem;color:var(--muted);font-style:italic}
+  details.drill .answer .link b{color:var(--blue);font-style:normal}
+
+  .dgroup-head{display:flex;align-items:center;gap:12px;margin:34px 0 4px}
+  .dgroup-head .num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--on-accent);font-size:.95rem}
+  .dgroup-head h3{margin:0;font-size:1.15rem}
+  .dgroup-head .wt{font-size:.74rem;color:var(--muted);font-weight:600}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+  .callout.red{background:linear-gradient(90deg,color-mix(in srgb, var(--red) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--red) 45%, transparent);border-left-color:var(--red)}
+  .callout.red b{color:var(--red)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · Mock</a>
+  <a href="#weights">Domain Weights</a>
+  <a href="#strategy">Strategy</a>
+  <a href="#traps">Trap Words</a>
+  <a href="#heuristic">NVIDIA-First</a>
+  <a href="#bank">Question Bank</a>
+  <a href="#capstones">Integrative</a>
+  <a href="#checklist">Last Mile</a>
+  <a href="#sources">Sources</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Capstone Drill <span class="pct">50 questions · all 10 domains</span></div>
+  <h1>Mock Exam <span class="accent">&amp;</span> Practice Questions</h1>
+  <p class="hook">Timed-condition reps plus the exam-craft you wrap around them: <b>map scenario → NVIDIA primitive → architectural call</b>, fast. Every fact here is <b>web-verified against current NVIDIA docs</b> — including two corrections where the third-party reference had drifted (see the <b>red warning</b> below).</p>
+  <div class="stat-row">
+    <div class="stat"><div class="big">~65</div><div class="lbl">questions</div></div>
+    <div class="stat"><div class="big">120 min</div><div class="lbl">≈ 2 min / Q</div></div>
+    <div class="stat"><div class="big">10</div><div class="lbl">domains</div></div>
+    <div class="stat"><div class="big">50</div><div class="lbl">reps here</div></div>
+  </div>
+</header>
+
+<main>
+
+<div class="callout red" style="margin-top:30px">
+  <b>⚠ Two version-drift corrections to burn in (the reference we mined was stale):</b>
+  <p style="margin-top:6px;color:var(--muted)"><b style="color:var(--red)">1.</b> NeMo Guardrails has <b>five</b> rail types — <b>input, dialog, retrieval, output, execution</b>. There is <b>no standalone "topical" rail</b>; topic control is a <i>use</i> of <b>dialog rails</b> (or the Topic Control NIM). Any answer listing "topical rail" as a type is wrong by current docs.</p>
+  <p style="margin-top:4px;color:var(--muted)"><b style="color:var(--red)">2.</b> NAT's agent/executor set (docs 1.7) includes a <b>Parallel Executor</b> alongside Sequential Executor, plus ReAct, Reasoning, ReWOO, Router, Tool Calling. Reason about <b>behavior</b>, not a memorized "exactly seven types" count — that framing is version-dependent.</p>
+</div>
+
+<!-- ============ DOMAIN WEIGHTS ============ -->
+<section id="weights">
+  <div class="kicker">Section 1 · The shape of the exam</div>
+  <h2>Domain-weight bar — where the questions live</h2>
+  <p class="lede">Memorize the <b>shape</b>, not the decimals. Domains 1+2 are <b>30%</b> of the exam — a third of your score rides on agent types, NAT YAML, tools, and architecture tradeoffs. The four 5–7% domains together are <b>22%</b>: skip them and you can lose 12–15 questions. "It's only 5%" is a trap — <i>two</i> 5% domains is 10%.</p>
+
+  <div class="weightbar" id="weightbar">
+    <div class="seg" style="width:15%;background:var(--green)" title="D1 Architecture 15%"><span>D1 · 15%</span></div>
+    <div class="seg" style="width:15%;background:var(--blue)" title="D2 Development 15%"><span>D2 · 15%</span></div>
+    <div class="seg" style="width:13%;background:var(--cyan)" title="D3 Evaluation 13%"><span>D3 · 13%</span></div>
+    <div class="seg" style="width:13%;background:var(--purple)" title="D4 Deployment 13%"><span>D4 · 13%</span></div>
+    <div class="seg" style="width:10%;background:var(--amber)" title="D5 Cognition 10%"><span>D5 · 10%</span></div>
+    <div class="seg" style="width:10%;background:var(--green-dim)" title="D6 Knowledge 10%"><span>D6 · 10%</span></div>
+    <div class="seg" style="width:7%;background:#3a78c2" title="D7 Platform 7%"><span>D7</span></div>
+    <div class="seg" style="width:5%;background:#2c9b91" title="D8 Monitor 5%"><span>D8</span></div>
+    <div class="seg" style="width:5%;background:#9a5ed6" title="D9 Safety 5%"><span>D9</span></div>
+    <div class="seg" style="width:5%;background:#c98a2e" title="D10 Human-AI 5%"><span>D10</span></div>
+  </div>
+  <div class="weight-legend">
+    <div class="li"><span class="sw" style="background:var(--green)"></span><b>D1</b> Architecture 15%</div>
+    <div class="li"><span class="sw" style="background:var(--blue)"></span><b>D2</b> Development 15%</div>
+    <div class="li"><span class="sw" style="background:var(--cyan)"></span><b>D3</b> Evaluation 13%</div>
+    <div class="li"><span class="sw" style="background:var(--purple)"></span><b>D4</b> Deployment 13%</div>
+    <div class="li"><span class="sw" style="background:var(--amber)"></span><b>D5</b> Cognition/Memory 10%</div>
+    <div class="li"><span class="sw" style="background:var(--green-dim)"></span><b>D6</b> Knowledge 10%</div>
+    <div class="li"><span class="sw" style="background:#3a78c2"></span><b>D7</b> Platform 7%</div>
+    <div class="li"><span class="sw" style="background:#2c9b91"></span><b>D8</b> Monitor 5%</div>
+    <div class="li"><span class="sw" style="background:#9a5ed6"></span><b>D9</b> Safety 5%</div>
+    <div class="li"><span class="sw" style="background:#c98a2e"></span><b>D10</b> Human-AI 5%</div>
+  </div>
+
+  <h3>This bank, weighted to the exam <span class="tag">50 questions distributed by weight</span></h3>
+  <div class="bars">
+    <div class="bar-row"><div class="label">D1 Architecture · 15%</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--green-dim),var(--green))">8 questions</div></div><div class="note">×8</div></div>
+    <div class="bar-row"><div class="label">D2 Development · 15%</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,#2c5a8f,var(--blue))">8 questions</div></div><div class="note">×8</div></div>
+    <div class="bar-row"><div class="label">D3 Evaluation · 13%</div><div class="track"><div class="fill" style="width:75%;background:linear-gradient(90deg,#2c9b91,var(--cyan))">6</div></div><div class="note">×6</div></div>
+    <div class="bar-row"><div class="label">D4 Deployment · 13%</div><div class="track"><div class="fill" style="width:75%;background:linear-gradient(90deg,#7a4fb0,var(--purple))">6</div></div><div class="note">×6</div></div>
+    <div class="bar-row"><div class="label">D5 Cognition/Memory · 10%</div><div class="track"><div class="fill" style="width:62%;background:linear-gradient(90deg,#b07a26,var(--amber))">5</div></div><div class="note">×5</div></div>
+    <div class="bar-row"><div class="label">D6 Knowledge · 10%</div><div class="track"><div class="fill" style="width:62%;background:linear-gradient(90deg,#3d5e08,var(--green-dim))">5</div></div><div class="note">×5</div></div>
+    <div class="bar-row"><div class="label">D7 Platform · 7%</div><div class="track"><div class="fill" style="width:50%;background:linear-gradient(90deg,#274f80,#3a78c2)">4</div></div><div class="note">×4</div></div>
+    <div class="bar-row"><div class="label">D9 Safety · 5%</div><div class="track"><div class="fill" style="width:37%;background:linear-gradient(90deg,#6a40a0,#9a5ed6)">3</div></div><div class="note">×3</div></div>
+    <div class="bar-row"><div class="label">D10 Human-AI · 5%</div><div class="track"><div class="fill" style="width:37%;background:linear-gradient(90deg,#8a601f,#c98a2e)">3</div></div><div class="note">×3</div></div>
+    <div class="bar-row"><div class="label">D8 Monitor · 5%</div><div class="track"><div class="fill" style="width:25%;background:linear-gradient(90deg,#1f6b64,#2c9b91)">2</div></div><div class="note">×2</div></div>
+  </div>
+</section>
+
+<!-- ============ STRATEGY ============ -->
+<section id="strategy">
+  <div class="kicker">Section 2 · Exam strategy</div>
+  <h2>Timing &amp; tactics — ~2 minutes per question</h2>
+  <p class="lede">~65 questions in 120 minutes ≈ <b>~110 seconds each</b>. You can't derive answers from first principles; you need instant pattern recognition. Hold ~10 minutes back for a review pass.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">⏱️</span>Budget the clock</h4><p>65 × 110s ≈ 119 min. Target <b>~100s/Q</b> on pass 1, keep <b>~10 min</b> for pass 2.</p></div>
+    <div class="card blue"><h4><span class="icon">🚩</span>Flag &amp; move</h4><p>Anything you'd spend &gt;2 min on, <b>flag it</b>. Never sink 4 min into a 1.5%-of-score question while easy ones wait.</p></div>
+    <div class="card cyan"><h4><span class="icon">🔁</span>Pass 2 unlocks pass 1</h4><p>A later question often jogs the concept an earlier one needed. Return to flags with fresh context.</p></div>
+    <div class="card amber"><h4><span class="icon">✅</span>Never blank</h4><p>No negative marking on MCQ. <b>Eliminate, then guess</b> — a flagged blank is a guaranteed zero.</p></div>
+  </div>
+
+  <h3>Tier reading — study order by leverage</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Tier</th><th>Domains</th><th>Weight</th><th>Why first</th></tr>
+    <tr><td><b>1</b></td><td>Architecture (15%) + Development (15%)</td><td class="good">30%</td><td>A third of the exam. NAT agent types, YAML, tools, tradeoffs.</td></tr>
+    <tr><td><b>2</b></td><td>Evaluation (13%) + Deployment (13%)</td><td class="good">26%</td><td>Dev → prod: metrics, profiler, servers, NIM Operator.</td></tr>
+    <tr><td><b>3</b></td><td>Cognition (10%) + Knowledge (10%)</td><td class="mid">20%</td><td>Strong NVIDIA docs: ReWOO, memory, RAG, AI-Q.</td></tr>
+    <tr><td><b>4</b></td><td>Platform 7% + Monitor/Safety/Human-AI 5% ea.</td><td class="mid">22%</td><td>Don't neglect — together &gt;⅕ of the exam, ~12–15 Q.</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ TRAP WORDS ============ -->
+<section id="traps">
+  <div class="kicker">Section 3 · Wording traps</div>
+  <h2>The three trap words that flip the answer</h2>
+  <p class="lede">These are <b>wording</b> traps, not knowledge traps. A single word inverts the correct choice. Most "I knew this and still missed it" errors live here.</p>
+
+  <div class="trap">
+    <h4><span class="n">TRAP 1</span> NOT / EXCEPT / LEAST — you're picking the <b>wrong</b> one</h4>
+    <p>Three options are <b>correct facts</b>; the answer is the <b>false / worst / odd-one-out</b>. <span class="fix">Fix: underline the negative word before reading the options.</span> Example: "Which is <b>NOT</b> a reason to go multi-agent?" → the right answer is the <i>single-agent</i> scenario.</p>
+  </div>
+  <div class="trap">
+    <h4><span class="n">TRAP 2</span> BEST / MOST appropriate / FIRST — many work, one is <b>purpose-built</b></h4>
+    <p>Multiple options technically function; choose the one <b>designed for exactly this</b> scenario. "Could work" loses to "built for it." On <b>FIRST</b> questions (error rate jumped, latency spiked) the answer is almost always <b>observe / diagnose before you act</b> — read traces, then change prompt/model. <span class="fix">Changing the model first is the classic wrong answer.</span></p>
+  </div>
+  <div class="trap">
+    <h4><span class="n">TRAP 3</span> True-but-irrelevant distractor</h4>
+    <p>A statement that is <b>factually correct</b> but doesn't answer <i>this</i> question. <span class="fix">Fix: re-read the stem — correctness ≠ relevance.</span> "MCP makes tools faster" can be true and still be the wrong answer to "what problem does MCP solve?"</p>
+  </div>
+</section>
+
+<!-- ============ NVIDIA-FIRST HEURISTIC ============ -->
+<section id="heuristic">
+  <div class="kicker">Section 4 · The elimination engine</div>
+  <h2>The NVIDIA-first heuristic</h2>
+  <p class="lede">For any "which tool / how would you" question with 4 plausible options, eliminate by <b>layer</b> and <b>lifecycle</b>, then prefer the <b>most specific NVIDIA primitive</b>.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">①</span>Wrong layer?</h4><p><b>NIM = inference</b>. <b>NAT = orchestration</b>. They never swap. "NIM orchestrates the agent" is always wrong; so is "NAT runs the weights."</p></div>
+    <div class="card blue"><h4><span class="icon">②</span>Wrong lifecycle?</h4><p>Eval tools (Eval Framework, Profiler, Sizing Calc) aren't deployment tools; deployment servers aren't safety tools.</p></div>
+    <div class="card purple"><h4><span class="icon">③</span>Two left? Be specific</h4><p>Prefer the named primitive over a generic best practice: <b>execution rail</b> &gt; "add validation"; <b>NeMo Curator</b> &gt; "preprocess"; <b>NIM Operator</b> &gt; "write K8s YAML".</p></div>
+    <div class="card amber"><h4><span class="icon">④</span>Tie-break</h4><p>A documented NVIDIA feature beats an inferred best practice. The exam tests <b>NVIDIA-documented</b> behavior.</p></div>
+  </div>
+
+  <h3>Scenario → tool cheat table <span class="tag">memorize — answers the rapid-fire cluster</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Scenario</th><th>NVIDIA answer</th></tr>
+    <tr><td>Orchestrate agent / workflow logic</td><td class="good"><b>NAT</b> (NeMo Agent Toolkit)</td></tr>
+    <tr><td>Serve the LLM (inference)</td><td class="good"><b>NIM</b> microservice</td></tr>
+    <tr><td>Automate NIM lifecycle on Kubernetes</td><td class="good"><b>NIM Operator</b></td></tr>
+    <tr><td>Accelerate inference (batching, prefix cache, disaggregated serve)</td><td class="good"><b>NVIDIA Dynamo</b> / TensorRT-LLM</td></tr>
+    <tr><td>Safety rails / content filtering</td><td class="good"><b>NeMo Guardrails</b> (+ Safety NIMs)</td></tr>
+    <tr><td>Expose an agent as an MCP tool</td><td class="good"><b>NAT MCP / FastMCP server</b></td></tr>
+    <tr><td>Distributed multi-agent communication</td><td class="good"><b>NAT A2A server</b></td></tr>
+    <tr><td>Human approval before a tool fires</td><td class="good"><b>Guardrails execution rail</b> (+ NAT WebSocket)</td></tr>
+    <tr><td>GPU data prep at corpus scale</td><td class="good"><b>NeMo Curator</b></td></tr>
+    <tr><td>GPU-accelerated vector search</td><td class="good"><b>Milvus + cuVS</b></td></tr>
+    <tr><td>Trace visualization</td><td class="good"><b>Phoenix / Weave / Langfuse</b> (OpenTelemetry)</td></tr>
+    <tr><td>Strip PII from telemetry</td><td class="good"><b>NAT redaction processors</b></td></tr>
+    <tr><td>Capacity planning (GPUs for N users)</td><td class="good"><b>NAT Sizing Calculator</b></td></tr>
+    <tr><td>Find the latency / token hotspot</td><td class="good"><b>NAT Profiler</b></td></tr>
+    <tr><td>Continuous improvement on prod logs</td><td class="good"><b>Data Flywheel Blueprint</b> (Curator + Customizer + Evaluator)</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ QUESTION BANK ============ -->
+<section id="bank">
+  <div class="kicker">Section 5 · The bank</div>
+  <h2>50 questions — click any card to reveal</h2>
+  <p class="lede">Try to answer before revealing. Each card gives the <b>correct answer</b>, the <b style="color:var(--red)">distractor analysis</b> (why the wrong options are wrong — this is where the learning is), a <b>domain tag</b>, and a <b style="color:var(--blue)">concept link</b> back to the relevant domain page.</p>
+
+  <div class="quiz-controls">
+    <button onclick="setAll(true)">▾ Expand all</button>
+    <button onclick="setAll(false)">▴ Collapse all</button>
+    <div class="count">Revealed: <b id="revcount">0</b> / 50</div>
+  </div>
+
+  <!-- D1 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--green)">D1</div><h3>Agent Architecture &amp; Design</h3><span class="wt">15% · 8 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span class="qtxt"><span class="dtag">D1 · BEST</span>A support system handles 5 distinct request categories, each needing different tools and prompts. One ReAct agent with all tools, or a Router dispatching to 5 specialists?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Router + 5 specialists.</b> One agent holding all tools bloats the prompt and tool-selection accuracy degrades past ~8–12 tools. The Router classifies intent once (cheap) and dispatches to a focused specialist that scales and is evaluated independently.<span class="why"><b>Distractors:</b> "single ReAct is simpler" is true but loses on accuracy at scale; "Sequential Executor" is wrong because the categories are <i>alternatives</i>, not a fixed pipeline.</span><span class="link"><b>Concept link:</b> D1 — Router pattern &amp; single-vs-multi-agent.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q2</span><span class="qtxt"><span class="dtag">D1 · select</span>Minimize total LLM calls on a predictable multi-tool task where mid-run adaptation is rarely needed. Which agent type, and what do you give up?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>ReWOO.</b> It plans all tool calls up front in one reasoning pass, then executes (independent tools in parallel within a dependency level) without re-reasoning between steps — far fewer LLM calls than ReAct's per-step loop. You give up <b>adaptivity</b>: a fixed plan can't course-correct on surprises.<span class="why"><b>Distractors:</b> ReAct minimizes errors on <i>unpredictable</i> tasks, not LLM calls; the Reasoning agent still centers a single function; Sequential Executor isn't an LLM-reasoning pattern.</span><span class="link"><b>Concept link:</b> D1/D5 — ReWOO plan-then-execute vs ReAct interleave.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q3</span><span class="qtxt"><span class="dtag">D1 · BEST</span>A research agent queries flaky databases where ~10% of calls fail. ReAct or ReWOO?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>ReAct.</b> Reasoning after each step lets it retry, reformulate, or switch sources on failure. ReWOO's pre-baked plan breaks on the first unexpected failure with no recovery path.<span class="why"><b>Distractor:</b> "ReWOO is cheaper" is the bait — cheaper-but-brittle loses when 1-in-10 steps fail.</span><span class="link"><b>Concept link:</b> D1 — adaptivity vs efficiency tradeoff.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q4</span><span class="qtxt"><span class="dtag">D1 · compare</span>The architectural difference between a Sequential Executor and a Router agent?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Sequential Executor = fixed ordered pipeline</b> (output of N → input of N+1, every step always runs, no decision logic). <b>Router = examines input, classifies, dispatches to one of several agents</b> (a routing decision). Sequential for "extract→transform→validate→store"; Router for "this type here, that type there."<span class="why"><b>Distractor:</b> "both make routing decisions" is false — only the Router decides; that's the trap.</span><span class="link"><b>Concept link:</b> D1 — executor vs router.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q5</span><span class="qtxt"><span class="dtag">D1/D6 · why</span>AI-Q uses two-stage retrieval (embed → rerank). Why is the rerank stage worth it when you already have a good embedding model?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Bi-encoder embedding scores query and document independently — fast over millions of docs but coarse. The reranker is a cross-encoder that processes the query and each candidate together,</b> capturing fine-grained interaction the bi-encoder misses. Two-stage = bi-encoder recall + cross-encoder precision on top-N.<span class="why"><b>Distractor:</b> "rerank replaces the embedder" is wrong — it <i>follows</i> it on a small candidate set.</span><span class="link"><b>Concept link:</b> D6 — bi-encoder vs cross-encoder, AI-Q architecture.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q6</span><span class="qtxt"><span class="dtag">D1 · NOT</span>Which is <b>NOT</b> a reason to prefer multi-agent over single-agent?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">Choices: (a) large, easily-confused tool set · (b) sub-tasks need independent scaling · (c) sub-tasks need different prompts/models · (d) <b>a simple linear pipeline with one tool.</b> → Answer is <b>(d)</b>: that's the textbook single-agent (or Sequential Executor) case; multi-agent there is over-engineering.<span class="why"><b>Why the others are valid drivers:</b> (a)(b)(c) all genuinely justify multi-agent — the NOT-trap hides the single-agent case among them.</span><span class="link"><b>Concept link:</b> D1 — when multi-agent earns its complexity.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q7</span><span class="qtxt"><span class="dtag">D1 · recall</span>Name the four phases of the agent loop and where the LLM "thinks."</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Perceive → Reason → Act → Observe</b>, looping. The LLM does the <b>Reason</b> (decide next action) and interprets the <b>Observe</b> (tool result) to decide loop-or-finish.<span class="why"><b>Distractor:</b> "the LLM executes the tool" is wrong — the <i>runtime</i> executes; the LLM only chooses the tool and reads the result.</span><span class="link"><b>Concept link:</b> D1 — perceive/reason/act/observe.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q8</span><span class="qtxt"><span class="dtag">D1/D4 · BEST</span>Multi-agent system: a Router that only classifies intent, and a Code-Analysis agent that finds subtle security bugs. Best LLM-size allocation?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Small model (~8B) for the Router, large model (~70B) for Code Analysis.</b> Classification is easy and high-traffic — a big model there wastes GPU and adds latency. Nuanced reasoning needs the big model.<span class="why"><b>Distractor:</b> "use 70B everywhere for consistency" is the trap — uniformity isn't the goal; fit-for-purpose is.</span><span class="link"><b>Concept link:</b> D1/D4 — model-size-per-agent.</span></div>
+  </details>
+
+  <!-- D2 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--blue)">D2</div><h3>Agent Development</h3><span class="wt">15% · 8 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q9</span><span class="qtxt"><span class="dtag">D2 · concept</span>In NAT, what is a Function Group, and what do Per-User Functions add?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>A Function Group is a named, reusable bundle of tools you assign to an agent as a unit</b> instead of listing tools individually. <b>Per-User Functions</b> make specific tools available based on the authenticated user (admin gets <code>delete_record</code>, a regular user doesn't) — role-based tool access without forking the config per role.<span class="why"><b>Distractor:</b> "function groups are middleware" conflates two different concepts.</span><span class="link"><b>Concept link:</b> D2 — function registry, function groups, per-user functions.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q10</span><span class="qtxt"><span class="dtag">D2/D7 · concept</span>What problem does NAT's MCP client solve that a static tool registry does not?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Dynamic, runtime tool discovery across organizational boundaries.</b> A static registry binds tools at build time; an MCP client connects to an MCP server at runtime, discovers tools, and invokes them — even tools added after deploy. NAT can also be an <b>MCP/FastMCP server</b>, publishing its workflow as a tool for other agents.<span class="why"><b>Distractor:</b> "MCP makes tools faster" is true-but-irrelevant to the actual problem MCP solves.</span><span class="link"><b>Concept link:</b> D2/D7 — MCP client vs server.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q11</span><span class="qtxt"><span class="dtag">D2 · recall</span>Name the main NAT middleware uses (function pre/post-invoke hooks), one line each.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">NAT exposes a function-middleware interface (pre/post-invoke hooks) with several documented uses: <b>Caching</b> (reuse responses for identical/similar inputs — FAQ agents), <b>Defense</b> (input validation / attack detection before the LLM — prompt-injection screening), <b>Logging</b> (structured audit of I/O, tool-calls, timing — compliance), and <b>Red-teaming</b> (auto-generate adversarial inputs pre-deploy). Reason about the <i>purpose</i> of each rather than memorizing a fixed count — the exact catalog evolves across releases.<span class="why"><b>Distractor:</b> "rate-limiting" / "load-balancing" are not the documented agent-middleware uses — generic-infra bait.</span><span class="link"><b>Concept link:</b> D2 — middleware stack.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q12</span><span class="qtxt"><span class="dtag">D2/D7 · BEST</span>A team has a working LangChain agent and wants NVIDIA eval, guardrails, and prod deployment <b>without rewriting</b>. Fastest path?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Wrap it with the NAT plugin for LangChain.</b> The plugin adapts the framework interface into a NAT workflow, gaining NAT's deployment servers, Evaluation Framework, Profiler, middleware, and Guardrails — zero logic rewrite. Plugins exist for LlamaIndex, CrewAI, AutoGen, Semantic Kernel, etc.<span class="why"><b>Distractor:</b> "rebuild it as a native NAT ReAct agent" ignores the explicit "without rewriting" constraint.</span><span class="link"><b>Concept link:</b> D2/D7 — plugin / framework interop.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q13</span><span class="qtxt"><span class="dtag">D2/D3 · concept</span>What does the NAT Agent Hyperparameter (Parameter) Optimizer tune, and how?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>It searches YAML-configurable parameters</b> — system-prompt wording, temperature, top-p, max tokens, # few-shot examples, tool descriptions — by running the agent against an eval dataset and keeping the config that maximizes a target metric.<span class="why"><b>Distractor:</b> "it fine-tunes model weights" is wrong — it tunes <i>config</i>, not weights.</span><span class="link"><b>Concept link:</b> D2/D3 — config optimization vs fine-tuning.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q14</span><span class="qtxt"><span class="dtag">D2 · NOT</span>Which NAT authentication mechanism is <b>NOT</b> standard? (API Key, OAuth2, Bearer, HTTP Basic, MCP accounts, SAML federation)</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>"SAML federation"</b> is not in the documented NAT auth set. The documented mechanisms are <b>API Key, OAuth2, Bearer, HTTP Basic, and MCP accounts.</b><span class="why"><b>Why a trap:</b> SAML <i>sounds</i> enterprise-correct, but the exam tests the documented list — always confirm against current docs, as auth surfaces evolve.</span><span class="link"><b>Concept link:</b> D2 — auth mechanisms.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q15</span><span class="qtxt"><span class="dtag">D2/D9 · concept</span>You want tool calls to always have well-formed parameters. What's the <b>generation-time</b> lever (vs the runtime guardrail)?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>NAT structured outputs / function-calling with JSON schemas</b> constrain the LLM to emit schema-valid tool calls at generation time. The complementary <b>runtime</b> lever is a Guardrails <b>execution rail</b> that validates the call before it fires. Defense in depth = both.<span class="why"><b>Distractor:</b> picking only the execution rail misses that the stem asks for the <i>generation-time</i> control.</span><span class="link"><b>Concept link:</b> D2/D9 — structured output + execution rail.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q16</span><span class="qtxt"><span class="dtag">D2 · recall</span>What must a minimal NAT agent YAML declare?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Agent type, model/LLM endpoint, tools (functions or a function group), and a system prompt</b> — optionally middleware, parameters, memory, guardrails. The YAML is the declarative spec of <i>what the agent does</i>; <code>nat</code> builds the runnable workflow from it.<span class="why"><b>Distractor:</b> "the YAML contains the model weights" is nonsense bait — weights live in the NIM, not the config.</span><span class="link"><b>Concept link:</b> D2 — YAML workflow structure.</span></div>
+  </details>
+
+  <!-- D3 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--cyan)">D3</div><h3>Evaluation &amp; Tuning</h3><span class="wt">13% · 6 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q17</span><span class="qtxt"><span class="dtag">D3 · diagnose</span>RAG system: faithfulness 0.95, answer-relevance 0.60. Where is the fault?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Retrieval.</b> High faithfulness = the answer faithfully reflects the retrieved passages; low relevance = those passages don't address the question. The generator is honestly summarizing the <i>wrong</i> context. Fix retrieval (embeddings, reranking, query reformulation).<span class="why"><b>Distractor:</b> "raise temperature / change the prompt" attacks the generator and makes it <i>worse</i>.</span><span class="link"><b>Concept link:</b> D3 — faithfulness vs relevance diagnosis.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q18</span><span class="qtxt"><span class="dtag">D3 · FIRST</span>Profiler: retrieval 0.5s, rerank 0.8s, LLM generation 9.0s, guardrails 1.5s (p95 ≈ 12s). Optimize <b>first</b>?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>LLM generation (75% of latency).</b> Options: smaller NIM if quality allows, enable Dynamo prefix-caching, trim max output tokens, or add NIM replicas if queuing. Guardrails (1.5s) is the secondary target (parallelize the safety NIMs).<span class="why"><b>Distractor:</b> "optimize retrieval" — it's already fast; touching it is wasted effort. The FIRST-trap rewards attacking the dominant cost.</span><span class="link"><b>Concept link:</b> D3 — Profiler hotspot → fix.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q19</span><span class="qtxt"><span class="dtag">D3 · concept</span>What does trajectory evaluation catch that output-only evaluation misses?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Process errors:</b> wrong tool, wrong order, or wasteful calls — even when the final answer is right ("right answer via the wrong path"), or right but via 10 calls when 3 would do. You define expected trajectories and compare actual ones.<span class="why"><b>Distractor:</b> "trajectory eval measures answer correctness" — that's output eval; trajectory eval scores the <i>path</i>.</span><span class="link"><b>Concept link:</b> D3 — trajectory vs output eval.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q20</span><span class="qtxt"><span class="dtag">D3 · compare</span>Profiler vs Evaluation Framework — which answers which question?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Profiler = "how fast / how expensive?"</b> (tokens + latency at workflow/step/tool level, cost). <b>Evaluation Framework = "how good?"</b> (faithfulness, relevance, accuracy, trajectory correctness). Use both: eval guards quality, profiler guards resources.<span class="why"><b>Distractor:</b> "Profiler measures faithfulness" swaps the two — a classic conflation trap.</span><span class="link"><b>Concept link:</b> D3 — profiler vs eval split.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q21</span><span class="qtxt"><span class="dtag">D3 · BEST</span>No labeled test set exists for a RAG agent. Best practical evaluation bootstrap?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>(1)</b> Generate synthetic Q&amp;A from the corpus (passage → questions it answers). <b>(2)</b> Use the <b>Evaluation Framework with LLM-as-Judge</b> for reference-free metrics — faithfulness and relevance need no labels. <b>(3)</b> Use synthetic pairs as pseudo-ground-truth for recall@k. <b>(4)</b> Later, have experts label a real-query subset.<span class="why"><b>Distractor:</b> "wait until you have human labels" stalls forever — the cold-start trap.</span><span class="link"><b>Concept link:</b> D3 — LLM-as-judge, synthetic eval.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q22</span><span class="qtxt"><span class="dtag">D3 · tool</span>Cut inference cost on a high-volume tool-calling agent using traffic you already log, without losing accuracy. Which NVIDIA pattern?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The Data Flywheel Blueprint.</b> It mines tagged production logs, builds eval/finetune datasets, finds a smaller distilled model that still clears the accuracy bar (NeMo Evaluator + Customizer), and promotes it after human review.<span class="why"><b>Distractor:</b> "just switch to a smaller model" skips the <i>measure-it-still-passes</i> step the flywheel exists to provide.</span><span class="link"><b>Concept link:</b> D3 — Data Flywheel loop.</span></div>
+  </details>
+
+  <!-- D4 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--purple)">D4</div><h3>Deployment &amp; Scaling</h3><span class="wt">13% · 6 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q23</span><span class="qtxt"><span class="dtag">D4 · select</span>NAT offers FastAPI, MCP, FastMCP, and A2A servers. When A2A over FastAPI?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>When agents must talk to other agents via the Agent-to-Agent protocol</b> — typed inter-agent messages, task delegation/lifecycle, agent discovery, automatic trace propagation. FastAPI is for <i>external</i> clients over REST/WebSocket. Typical shape: FastAPI gateway on the Router (external), A2A between specialists (internal).<span class="why"><b>Distractor:</b> "A2A is just FastAPI with extra steps" ignores the typed-contract / discovery / lifecycle features.</span><span class="link"><b>Concept link:</b> D4 — server type selection.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q24</span><span class="qtxt"><span class="dtag">D4 · concept</span>What does the NIM Operator automate that raw Kubernetes YAML does not?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>GPU discovery/allocation, model caching across pod restarts (PVCs), LLM-aware health probes</b> (model-load / inference readiness, not just TCP), and inference-load-based scaling. It encapsulates NVIDIA's operational know-how for serving on K8s.<span class="why"><b>Distractor:</b> "it orchestrates the agent logic" — no, that's NAT; the Operator manages <i>NIM</i> lifecycle.</span><span class="link"><b>Concept link:</b> D4 — NIM Operator.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q25</span><span class="qtxt"><span class="dtag">D4 · concept</span>Which Dynamo optimization is especially valuable for <b>agents</b>?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Prefix caching</b> — agents reuse the same long system prompt every request, so caching the KV-cache for that shared prefix avoids recomputation. Dynamo also does dynamic batching, disaggregated prefill/decode serving, and multi-node inference.<span class="why"><b>Distractor:</b> "Dynamo replaces NAT orchestration" is a layer error — Dynamo optimizes inference, not orchestration.</span><span class="link"><b>Concept link:</b> D4 — Dynamo for agents.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q26</span><span class="qtxt"><span class="dtag">D4 · feasibility</span>A 70B model on 2×H100 handles ~20–40 concurrent. You have 8×H100, need 500 concurrent on a 70B model. Feasible?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>No.</b> 8×H100 ≈ 4 NIM instances ≈ 80–160 concurrent for 70B. Options: drop to an 8B/13B model (could clear 500+), raise GPUs to ~24–32×H100, add aggressive caching, or queue with timeouts. <b>Validate with the NAT Sizing Calculator.</b><span class="why"><b>Distractor:</b> "yes, just add replicas" ignores that you have no more GPUs to give them.</span><span class="link"><b>Concept link:</b> D4 — sizing, GPU planning.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q27</span><span class="qtxt"><span class="dtag">D4 · concept</span>Why is request-count autoscaling insufficient for agent endpoints?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Agent requests have wildly variable resource cost</b> — one complex multi-step request can consume 100× the tokens/GPU of a simple one — so request count doesn't track load. Scale on <b>token throughput / GPU queue depth / utilization</b> instead.<span class="why"><b>Distractor:</b> "agents don't get requests" / "K8s can't count requests" are nonsense baits.</span><span class="link"><b>Concept link:</b> D4 — variable-length scaling.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q28</span><span class="qtxt"><span class="dtag">D4/D7 · select</span>Which NAT server exposes your agent <b>as a callable MCP tool</b> for other MCP-compatible agents?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The MCP server (or FastMCP server runtime).</b> FastAPI serves humans/apps; A2A is agent-to-agent; the MCP server publishes the workflow as an MCP tool.<span class="why"><b>Distractor:</b> "A2A" is the near-miss — A2A is for agent <i>peers</i>, MCP is for <i>tool</i> exposure.</span><span class="link"><b>Concept link:</b> D4/D7 — MCP/FastMCP publishing.</span></div>
+  </details>
+
+  <!-- D5 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--amber)">D5</div><h3>Cognition, Planning &amp; Memory</h3><span class="wt">10% · 5 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q29</span><span class="qtxt"><span class="dtag">D5 · concept</span>What is Test-Time Compute in the NAT Reasoning Agent, and what does it cost?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Spending extra inference compute to improve quality: generate multiple candidates, plan/deliberate, select the best</b> — a deliberation step instead of single-pass generation. It trades <b>latency and tokens (often 3–5×)</b> for accuracy on hard reasoning.<span class="why"><b>Distractor:</b> "it fine-tunes at inference" — no weights change; it's extra forward passes.</span><span class="link"><b>Concept link:</b> D5 — test-time compute.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q30</span><span class="qtxt"><span class="dtag">D5 · match</span>Match each NAT Object Store backend to its best fit: in-memory, Redis, MySQL, S3.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>In-memory:</b> dev/test, ephemeral sessions (fast, volatile). <b>Redis:</b> production session memory needing low-latency reads + survival across restarts (+ TTL). <b>MySQL:</b> long-term, queryable, auditable, backed-up memory (compliance). <b>S3:</b> large artifacts not needing low-latency random access (archival).<span class="why"><b>Distractor:</b> "use S3 for hot session reads" — wrong latency profile; S3 is archival, not hot-path.</span><span class="link"><b>Concept link:</b> D5 — object store selection.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q31</span><span class="qtxt"><span class="dtag">D5 · NOT</span>What is the Automatic Memory Wrapper, and when should you <b>NOT</b> use it?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>It transparently adds memory to any agent</b> — intercepting I/O, storing relevant info, injecting retrieved memories into context — with no logic change. <b>Don't</b> use it when: memory needs are highly specific/structured; injected memories would blow the context budget and evict important context; you need fine-grained retain/forget control; or the agent is intentionally stateless.<span class="why"><b>Distractor:</b> "never use it in production" overstates — it's fine when its automatic policy matches your needs.</span><span class="link"><b>Concept link:</b> D5 — automatic memory wrapper.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q32</span><span class="qtxt"><span class="dtag">D5 · recall</span>ReWOO's three phases?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Planning</b> (create the full plan + all tool calls), <b>Execution</b> (run each step; independent tools can run in parallel within a dependency level), <b>Solution</b> (synthesize gathered evidence into the final answer).<span class="why"><b>Distractor:</b> "Perceive/Reason/Act" is the <i>generic</i> agent loop, not ReWOO's named phases.</span><span class="link"><b>Concept link:</b> D5 — ReWOO internals.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q33</span><span class="qtxt"><span class="dtag">D5 · BEST</span>A conversational agent must remember preferences across sessions with sub-millisecond reads. Which memory config?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>NAT memory on the Redis object store + the Automatic Memory Wrapper.</b> Redis persists across restarts, reads in &lt;1ms, supports TTL for aging out stale memories; the wrapper handles store-on-turn and retrieve-into-context. Add MySQL as a secondary store only if you need a queryable audit trail.<span class="why"><b>Distractor:</b> "in-memory store" loses everything on restart — the cross-session requirement fails.</span><span class="link"><b>Concept link:</b> D5 — cross-session memory.</span></div>
+  </details>
+
+  <!-- D6 -->
+  <div class="dgroup-head"><div class="num" style="background:var(--green-dim)">D6</div><h3>Knowledge Integration &amp; Data</h3><span class="wt">10% · 5 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q34</span><span class="qtxt"><span class="dtag">D6 · recall</span>Name the AI-Q / NVIDIA RAG Blueprint retrieval stack (embed, rerank, vector store) and the default generation model class.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Embed:</b> <code>llama-3.2-nv-embedqa-1b-v2</code>. <b>Rerank:</b> <code>llama-3.2-nv-rerankqa-1b-v2</code>. <b>Vector store:</b> Milvus (GPU-accelerated via cuVS). Default generation in the current AI-Q Blueprint is <b>Llama-3.3-Nemotron-Super-49B-v1.5</b> (older docs said a generic "Llama 3" — always verify the model on the specific Blueprint page).<span class="why"><b>Distractor:</b> "FAISS / OpenAI embeddings" — not the NVIDIA stack.</span><span class="link"><b>Concept link:</b> D6 — AI-Q components.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q35</span><span class="qtxt"><span class="dtag">D6 · when</span>When does sparse retrieval (BM25) beat dense (embeddings)?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>On rare exact tokens</b> — error codes, identifiers, SKUs ("error NV-4231") the embedder never learned vectors for; very short 1–2 word queries with little semantic signal; specialized vocab outside the embedder's training. Production answer for technical corpora: <b>hybrid</b> (dense + sparse, fused) usually beats either alone.<span class="why"><b>Distractor:</b> "dense always wins" is the over-generalization trap.</span><span class="link"><b>Concept link:</b> D6 — dense/sparse/hybrid.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q36</span><span class="qtxt"><span class="dtag">D6 · concept</span>What does cuVS do for Milvus, and when does the GPU pay off?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>cuVS is NVIDIA's CUDA library for GPU-accelerated approximate-nearest-neighbor search;</b> in Milvus it replaces CPU ANN (CPU-HNSW/IVF), parallelizing distance computation across many concurrent queries. It pays off at <b>high concurrency</b> (e.g. &gt;50 QPS with tight SLAs) or very large indexes; for single-digit-QPS dev, CPU-HNSW is fine.<span class="why"><b>Distractor:</b> "cuVS makes single queries asymptotically faster" — the win is <i>throughput under concurrency</i>, not single-query big-O.</span><span class="link"><b>Concept link:</b> D6 — Milvus + cuVS.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q37</span><span class="qtxt"><span class="dtag">D6 · tool</span>5M documents; CPU preprocessing takes 72 hours. Which NVIDIA tool, and what does it accelerate?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>NeMo Curator</b> (GPU-accelerated): fuzzy dedup (MinHash LSH), language ID/filtering, quality scoring, extraction/cleaning — typically 10–100× over CPU. Pair with <b>NIM embedding</b> endpoints (batch) and <b>Milvus+cuVS</b> indexing for an end-to-end GPU ingestion pipeline.<span class="why"><b>Distractor:</b> "NeMo Customizer" is <i>fine-tuning</i>, not data prep — the Curator/Customizer swap is the deliberate trap.</span><span class="link"><b>Concept link:</b> D6 — NeMo Curator.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q38</span><span class="qtxt"><span class="dtag">D6 · MOST-LIKELY</span>Users report outdated answers from a RAG policy agent. Most likely cause?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The index wasn't refreshed with recent policy updates</b> — stale index is the most common cause of stale answers. Fix: re-run ingestion; long-term, automate freshness.<span class="why"><b>Distractors:</b> "LLM is outdated," "embedding model too small," "wrong chunking" are all <i>possible</i> but far less likely than an unrefreshed index — the MOST-LIKELY trap rewards the operational cause.</span><span class="link"><b>Concept link:</b> D6 — index freshness / operations.</span></div>
+  </details>
+
+  <!-- D7 -->
+  <div class="dgroup-head"><div class="num" style="background:#3a78c2">D7</div><h3>NVIDIA Platform Implementation</h3><span class="wt">7% · 4 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q39</span><span class="qtxt"><span class="dtag">D7 · recall</span>The four phases of the end-to-end NAT workflow?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Configure</b> (YAML: type, model, tools, prompt, middleware, guardrails) → <b>Build</b> (instantiate, register functions, connect NIM, test locally, tune with the optimizer) → <b>Evaluate</b> (RAG/trajectory/red-team eval, profile, size) → <b>Deploy</b> (pick FastAPI/MCP/A2A, containerize, K8s via NIM Operator or Docker Compose, wire observability).<span class="why"><b>Distractor:</b> "Train → Serve" skips the eval gate the exam emphasizes.</span><span class="link"><b>Concept link:</b> D7 — NAT lifecycle.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q40</span><span class="qtxt"><span class="dtag">D7 · match</span>Map each NeMo microservice to its role: Retriever, Curator, Customizer, Evaluator, Guardrails.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Retriever:</b> embedding + reranking + extraction for RAG. <b>Curator:</b> GPU data prep/curation. <b>Customizer:</b> fine-tuning (SFT/LoRA/DPO). <b>Evaluator:</b> benchmark / LLM-as-judge evaluation. <b>Guardrails:</b> runtime safety rails.<span class="why"><b>Distractor:</b> swapping Curator↔Customizer is the deliberate near-homophone trap — <b>Curator = data, Customizer = training.</b></span><span class="link"><b>Concept link:</b> D7 — NeMo microservice ecosystem.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q41</span><span class="qtxt"><span class="dtag">D7 · layer</span>In the NAT+NIM split, which component holds orchestration / tool-routing / state?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>NAT.</b> NIM only serves inference. "NIM orchestrates the agent" is always wrong.<span class="why"><b>Distractor:</b> "NVIDIA Dynamo orchestrates" — Dynamo optimizes <i>inference</i>, not orchestration. Both wrong answers are layer errors.</span><span class="link"><b>Concept link:</b> D7 — NAT vs NIM responsibilities.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q42</span><span class="qtxt"><span class="dtag">D7 · trace</span>Trace a request end-to-end through the platform, naming each layer.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>User → NAT (input guardrails → retrieval/tools → NIM inference → output guardrails) → response,</b> with NAT exporting OpenTelemetry traces to the observability backend throughout.<span class="why"><b>Distractor:</b> "User → NIM → NAT → response" inverts the layers — NAT fronts NIM, not the reverse.</span><span class="link"><b>Concept link:</b> D7 — request path.</span></div>
+  </details>
+
+  <!-- D8 -->
+  <div class="dgroup-head"><div class="num" style="background:#2c9b91">D8</div><h3>Run, Monitor &amp; Maintain</h3><span class="wt">5% · 2 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q43</span><span class="qtxt"><span class="dtag">D8 · recall</span>Name NAT's three tracing levels and the redaction processor's job.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Workflow level</b> (whole request: total latency, total tokens, status), <b>Step level</b> (each reasoning step / ReAct iteration), <b>Tool level</b> (each tool call: name, params, response, time) — drill from "request took 8s" to "the DB query tool took 5s." A <b>redaction processor</b> masks/removes sensitive data (API keys, PII, proprietary content) from traces <i>before</i> export.<span class="why"><b>Distractor:</b> "two levels (request + tool)" omits the step level — a count trap.</span><span class="link"><b>Concept link:</b> D8 — trace granularity + redaction.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q44</span><span class="qtxt"><span class="dtag">D8 · diagnose</span>An agent occasionally loops, calling the same tool repeatedly. Which metric detects it, and which backends does NAT export to?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>A sudden spike in steps-per-execution</b> flags looping (token cost rises too, but as a secondary signal). NAT exports OpenTelemetry traces to <b>Phoenix, Weave, Langfuse</b> (and raw OTel).<span class="why"><b>Distractor:</b> "CPU utilization" doesn't isolate a reasoning loop — it's a true-but-irrelevant signal.</span><span class="link"><b>Concept link:</b> D8 — loop detection, exporters.</span></div>
+  </details>
+
+  <!-- D9 -->
+  <div class="dgroup-head"><div class="num" style="background:#9a5ed6">D9</div><h3>Safety, Ethics &amp; Compliance</h3><span class="wt">5% · 3 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q45</span><span class="qtxt"><span class="dtag">D9 · recall ⚠</span>Name the <b>five</b> NeMo Guardrails rail types and place "topic control" correctly.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The five are: input, dialog, retrieval, output, execution.</b> <b>Topic control is a use of dialog rails</b> (or the Topic Control NIM) — there is <b>no separate "topical rail" type.</b> Input rails screen/alter user input; retrieval rails filter RAG chunks; output rails screen/alter the response; execution rails validate tool/action calls.<span class="why"><b>Distractor:</b> any option listing "topical" as one of the five canonical types is wrong by current docs — the single most common exam-trap in this domain.</span><span class="link"><b>Concept link:</b> D9 — five rail types.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q46</span><span class="qtxt"><span class="dtag">D9 · concept</span>How do execution rails provide agentic security? Give a concrete blocked action.</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>They intercept a tool call before it executes and validate name, parameters, and context against policy</b> — so even a prompt-injected or buggy LLM can't fire an unauthorized call. Concrete: an injection makes the LLM emit <code>delete_record("*")</code>; the execution rail validates the id is a real UUID (not a wildcard), checks the user's permission, and/or requires human approval — blocking the mass delete.<span class="why"><b>Distractor:</b> "an output rail would catch it" — output rails act on <i>text</i>, not the <i>action</i>; the action layer is the execution rail.</span><span class="link"><b>Concept link:</b> D9 — execution rails.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q47</span><span class="qtxt"><span class="dtag">D9 · BEST</span>Public-facing agent facing adversarial users: Colang-only rules, or Colang <b>plus</b> Safety NIMs?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Colang rules + Safety NIMs (Content Safety, Jailbreak Detection, Topic Control).</b> Colang patterns handle topic/flow/simple filtering; the ML-based Safety NIMs catch novel phrasings, encoding tricks, and multi-turn manipulation that pattern-matching misses. Colang-only is acceptable only for internal, trusted, structured-input agents.<span class="why"><b>Distractor:</b> "Safety NIMs alone, drop Colang" loses dialog/flow control — defense-in-depth wants both.</span><span class="link"><b>Concept link:</b> D9 — safety NIMs + rails.</span></div>
+  </details>
+
+  <!-- D10 -->
+  <div class="dgroup-head"><div class="num" style="background:#c98a2e">D10</div><h3>Human-AI Interaction &amp; Oversight</h3><span class="wt">5% · 3 questions</span></div>
+
+  <details class="drill"><summary><span class="qn">Q48</span><span class="qtxt"><span class="dtag">D10 · primitive</span>An execution rail decides a tool call needs human approval. How does NAT deliver the request to the human in real time?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>A NAT WebSocket interactive workflow</b> sends the pending action to the connected client and waits for approve/reject (bidirectional, real-time). On approve the rail lets the call proceed; on reject it blocks and returns feedback.<span class="why"><b>Distractor:</b> "email notification" / "write to a DB and poll" aren't the NAT real-time primitive — the specific-primitive trap.</span><span class="link"><b>Concept link:</b> D10 — WebSocket approval gate.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q49</span><span class="qtxt"><span class="dtag">D10 · BEST</span>An agent does both low-risk password resets and high-risk Active Directory edits. Best oversight architecture?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Risk-proportional:</b> auto-execute the low-risk resets; gate the AD edits behind a human approval via a Guardrails execution rail (+ WebSocket). Log everything via logging middleware for the audit trail.<span class="why"><b>Distractors:</b> "approve everything" kills throughput on safe actions; "approve nothing" is reckless on AD; "log but never gate" provides no real control — all three are BEST-trap foils.</span><span class="link"><b>Concept link:</b> D10 — risk-proportional oversight.</span></div>
+  </details>
+
+  <details class="drill"><summary><span class="qn">Q50</span><span class="qtxt"><span class="dtag">D10 · NOT</span>Which is <b>NOT</b> a NVIDIA-documented HITL <i>primitive</i> (vs an inferred design pattern)?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">Choices: WebSocket interactive workflows · execution-rail approval gates · per-user functions/auth · <b>a built-in escalation-routing dashboard.</b> → Answer: <b>the escalation-routing dashboard.</b> NVIDIA provides the <i>primitives</i>; escalation paths, approval queues, and feedback loops are <b>design patterns you build on those primitives</b>, not shipped components.<span class="why"><b>Why it matters:</b> this is the exam's weakest-coverage domain — prefer the answer anchored to a documented primitive over an inferred pattern.</span><span class="link"><b>Concept link:</b> D10 — primitives vs patterns.</span></div>
+  </details>
+</section>
+
+<!-- ============ CAPSTONES ============ -->
+<section id="capstones">
+  <div class="kicker">Section 6 · Cross-domain</div>
+  <h2>Integrative challenges — the two capstones</h2>
+  <p class="lede">The exam's hardest questions cross domain boundaries. These two scenarios are the shape of those questions. The drill: walk <b>every domain</b> and name the NVIDIA primitive that implements your choice. Do both end-to-end and you can answer any cross-domain item.</p>
+
+  <div class="callout warn"><b>⚠ Why these matter:</b> a guardrails question may need deployment knowledge; a memory question may need evaluation knowledge. Studying modules in isolation answers isolated questions; studying them as a <b>system</b> answers the harder cross-boundary questions that separate passing from failing.</div>
+
+  <h3>Challenge A — Production RAG Agent <span class="tag">single-agent · knowledge-heavy · D6/D2/D3/D9/D7</span></h3>
+  <p class="lede">Citation-grounded research assistant over 500–2,000 technical docs that never hallucinates, refuses off-domain queries, and evaluates itself on every change.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Domain</th><th>Decision</th><th>NVIDIA primitive</th></tr>
+    <tr><td><b>Knowledge (D6)</b></td><td>GPU ingest → adaptive chunk (~512 tok / 64 overlap) → embed → index → two-stage retrieve</td><td class="good">NeMo Curator → <code>nv-embedqa-1b-v2</code> (NIM) → Milvus+cuVS → <code>nv-rerankqa-1b-v2</code></td></tr>
+    <tr><td><b>Development (D2)</b></td><td>Citation-required system prompt; tool registry; external API</td><td class="good">NAT YAML + FastAPI server</td></tr>
+    <tr><td><b>Evaluation (D3)</b></td><td>Retriever (recall@5≥0.85, MRR≥0.80) + RAG (faithfulness≥0.90) + adversarial + latency; CI gate</td><td class="good">NAT Evaluation Framework + Profiler</td></tr>
+    <tr><td><b>Safety (D9)</b></td><td><b>input</b> (Content Safety + Jailbreak NIM + topic-control dialog rail), <b>retrieval</b> (filter chunks), <b>output</b> (fact-check + PII redaction), <b>execution</b> (validate tool calls)</td><td class="good">NeMo Guardrails (Colang) + Safety NIMs</td></tr>
+    <tr><td><b>Platform (D7)</b></td><td>Configure→Build→Evaluate→Deploy; OTel traces</td><td class="good">NAT lifecycle + Phoenix/Langfuse</td></tr>
+  </table></div>
+  <div class="callout red"><b>Integrative trap:</b> "The grounding/fact-check rail is blocking <i>correct</i> answers — why?" → the faithfulness threshold is too strict <b>or</b> retrieval returned thin context. Fix the <i>retrieval/threshold</i>, don't loosen safety blindly. A D3+D6+D9 cross-question.</div>
+
+  <h3>Challenge B — Multi-Agent Code Review <span class="tag">distributed · governance-heavy · D1/D2/D4/D8/D10/D9</span></h3>
+  <p class="lede">Router + Code-Analysis + Documentation + Review agents as separate A2A services; distributed tracing; secrets never leak; publication needs human approval; low-confidence findings escalate.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Domain</th><th>Decision</th><th>NVIDIA primitive</th></tr>
+    <tr><td><b>Architecture (D1)</b></td><td>Router classifies + dispatches; specialists are focused Tool Calling agents</td><td class="good">NAT Router + Tool Calling agents</td></tr>
+    <tr><td><b>Development (D2)</b></td><td>Per-agent YAML, domain-restricted prompts, shared state</td><td class="good">NAT YAML + Redis object store</td></tr>
+    <tr><td><b>Deployment (D4)</b></td><td>Each agent a separate service for independent scaling/fault-isolation; shared NIM</td><td class="good">NAT <b>A2A</b> servers + NIM (+ Docker Compose)</td></tr>
+    <tr><td><b>Monitor (D8)</b></td><td>One <code>trace_id</code> from the Router propagated across hops → one Phoenix view</td><td class="good">NAT OpenTelemetry, trace correlation</td></tr>
+    <tr><td><b>Oversight (D10)</b></td><td>Publication → human approval; confidence &lt;0.7 → escalate; auto-approve low-risk</td><td class="good">Execution rail + WebSocket + logging middleware</td></tr>
+    <tr><td><b>Safety (D9)</b></td><td>Secret-scan execution rail on generated docs; domain isolation per agent</td><td class="good">Guardrails execution + dialog rails</td></tr>
+  </table></div>
+  <div class="callout red"><b>Integrative traps:</b> "Why A2A and not FastAPI everywhere?" → typed inter-agent contracts, task lifecycle, agent discovery, automatic trace propagation. "90% of traffic hits one specialist — what now?" → scale that specialist's replicas independently (the payoff of A2A service separation), and verify the router with <b>trajectory evaluation</b> before assuming a bug. "Where's the real bottleneck under a doc-spike?" → not a technical layer — the <b>human approval queue</b>; technical scaling can't fix a human gate, only batching/delegation can.</div>
+</section>
+
+<!-- ============ CHECKLIST ============ -->
+<section id="checklist">
+  <div class="kicker">Section 7 · Final reps</div>
+  <h2>Last-mile checklist — can you do each cold?</h2>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🗂️</span>Recall &amp; mapping</h4><ul>
+      <li>Recite the <b>scenario→tool cheat table</b> without peeking.</li>
+      <li>Name the <b>5 Guardrails rail types</b> and explain why "topical" isn't one.</li>
+      <li>Map the <b>5 NeMo microservices</b> without swapping <b>Curator (data)</b> / <b>Customizer (training)</b>.</li>
+      <li>Match the <b>4 object stores</b> to their use cases.</li>
+    </ul></div>
+    <div class="card blue"><h4><span class="icon">🧠</span>Diagnosis &amp; selection</h4><ul>
+      <li>Distinguish <b>ReAct vs ReWOO</b> (predictable vs flaky tasks).</li>
+      <li>Diagnose a RAG failure from <b>faithfulness vs relevance</b>.</li>
+      <li>State what <b>Profiler</b> answers vs the <b>Evaluation Framework</b>.</li>
+      <li>Pick a <b>NAT server</b> (FastAPI / MCP / FastMCP / A2A) per scenario.</li>
+    </ul></div>
+    <div class="card amber"><h4><span class="icon">🪤</span>Trap discipline</h4><ul>
+      <li>Underline <b>NOT / EXCEPT / LEAST</b> before reading options.</li>
+      <li>On <b>FIRST</b> questions: observe/diagnose before changing model.</li>
+      <li>On <b>BEST</b>: prefer the purpose-built primitive over "could work".</li>
+      <li>Apply the <b>NVIDIA-first elimination</b> (layer → lifecycle → specificity).</li>
+    </ul></div>
+    <div class="card purple"><h4><span class="icon">🧩</span>Integration</h4><ul>
+      <li>Walk <b>both capstones</b> domain-by-domain, naming each primitive.</li>
+      <li>Recognize the human-approval <b>queue</b> as the true bottleneck.</li>
+      <li>Trace a request: <b>User → NAT → NIM → guardrails → response</b>.</li>
+      <li>Never leave a blank — eliminate, then guess.</li>
+    </ul></div>
+  </div>
+  <div class="callout warn"><b>⚠ Reminder:</b> these are <b>synthesized study reps</b>, not official questions — NVIDIA publishes none. Verify any number (question count, time, price, exact model names) against the live NVIDIA certification and docs pages before exam day; those values change.</div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources — every NVIDIA fact web-verified against these</h3>
+  <ul>
+    <li>NCP-AAI certification overview — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">nvidia.com/…/agentic-ai-professional</a></li>
+    <li>NAT agents (ReAct, Reasoning, ReWOO, Router, Tool Calling, Sequential/Parallel Executor) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/components/agents/index.html">docs.nvidia.com/nemo/agent-toolkit/…/agents</a></li>
+    <li>NAT ReWOO agent (planning / execution / solution phases, parallel within a level) — <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.5/components/agents/rewoo-agent/index.html">docs.nvidia.com/…/rewoo-agent</a></li>
+    <li>NAT object stores (in-memory, MySQL, Redis, S3) &amp; memory providers — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/object-store.html">object-store</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/memory.html">memory</a></li>
+    <li>NAT A2A server &amp; FastMCP server runtimes — <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.5/run-workflows/a2a-server.html">a2a-server</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/run-workflows/fastmcp-server.html">fastmcp-server</a></li>
+    <li>NAT evaluation, profiler &amp; sizing calculator — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html">evaluate</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/sizing-calc.html">sizing-calc</a> · <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a></li>
+    <li>NeMo Guardrails — five rail types (input, dialog, retrieval, output, execution) — <a href="https://docs.nvidia.com/nemo/guardrails/latest/user-guides/guardrails-process.html">guardrails-process</a> · <a href="https://docs.nvidia.com/nemo/guardrails/latest/configure-rails/colang/index.html">Colang guide</a> · <a href="https://github.com/NVIDIA-NeMo/Guardrails">GitHub</a></li>
+    <li>NVIDIA AI-Q Blueprint (Llama-3.3-Nemotron-Super-49B, nv-embedqa/nv-rerankqa 1b v2, Milvus) — <a href="https://build.nvidia.com/nvidia/aiq">build.nvidia.com/nvidia/aiq</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/rag">NVIDIA-AI-Blueprints/rag</a></li>
+    <li>Enterprise RAG Pipeline Blueprint &amp; release notes — <a href="https://build.nvidia.com/nvidia/build-an-enterprise-rag-pipeline">build.nvidia.com enterprise RAG</a> · <a href="https://docs.nvidia.com/rag/2.3.0/release-notes.html">RAG release notes</a></li>
+    <li>Data Flywheel Blueprint (Curator + Customizer + Evaluator) — <a href="https://github.com/NVIDIA-AI-Blueprints/data-flywheel">github.com/NVIDIA-AI-Blueprints/data-flywheel</a></li>
+    <li>NIM Operator (Kubernetes lifecycle) — <a href="https://docs.nvidia.com/nim-operator/latest/index.html">docs.nvidia.com/nim-operator</a></li>
+    <li>NVIDIA Dynamo (inference acceleration) — <a href="https://developer.nvidia.com/dynamo">developer.nvidia.com/dynamo</a></li>
+    <li>NeMo Curator (GPU data curation) — <a href="https://developer.nvidia.com/nemo-curator">developer.nvidia.com/nemo-curator</a></li>
+    <li>Course reference mined &amp; corrected for version drift — <code>_ref-akshan/course/final_review/mock_exam_prep.md</code>, <code>02_exam_mapping.md</code>, <code>module_13_certification_prep.md</code>, <code>capstones/capstone_01.md</code>, <code>capstone_02.md</code></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Mock Exam &amp; Practice Questions · 50 synthesized scenario + knowledge questions spanning all 10 domains in exam-weight proportion. NVIDIA publishes no official sample questions — all items are study reps, web-verified against current NVIDIA docs (June 2026). Verify exam logistics and exact model/version names on the live pages before exam day.</p>
+</footer>
+
+<script>
+  // Quiz card reveal counter + expand/collapse all
+  const drills = Array.from(document.querySelectorAll('details.drill'));
+  const revEl = document.getElementById('revcount');
+  function updateCount(){ if(revEl) revEl.textContent = drills.filter(d=>d.open).length; }
+  drills.forEach(d => d.addEventListener('toggle', updateCount));
+  function setAll(open){ drills.forEach(d => d.open = open); updateCount(); }
+  updateCount();
+</script>
+</body>
+</html>

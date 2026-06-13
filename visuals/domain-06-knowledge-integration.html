@@ -6,10 +6,10 @@
 <title>NCP-AAI Domain 6 — Knowledge Integration &amp; Data Handling</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#141c2c; --panel:#141c2c; --panel2:#182236;
     --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
     --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --on-accent:#0b0f17;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --border:#243349; --on-accent:#0b0f17;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -368,6 +368,14 @@
     <tr><td><b>IVF (IVFFlat)</b></td><td>k-means partitions vectors into <code>lists</code> (Voronoi cells); search only <code>nprobe</code> nearest cells</td><td class="mid">Faster build, lower memory; recall drops if right cell unprobed; <b>needs training data</b>, degrades on distribution shift</td><td><code>lists</code> (≈ √rows), <code>nprobe</code></td></tr>
   </table></div>
   <div class="callout"><b>Rule of thumb:</b> HNSW = quality-first default (recall, incremental data); IVF = scale/memory-constrained, bulk-loaded data; <b>quantization (PQ/SQ, e.g. IVF_PQ)</b> trades recall for big memory cuts.</div>
+
+  <h3>GPU-accelerated search: cuVS &amp; the Milvus GPU index family <span class="tag">NVIDIA-specific</span></h3>
+  <p class="lede"><b>cuVS (CUDA Vector Search)</b>, part of <b>RAPIDS</b>, is the library Milvus calls for GPU indexes (it also accelerates FAISS's GPU path). The GPU index types: <code>GPU_CAGRA</code>, <code>GPU_IVF_FLAT</code>, <code>GPU_IVF_PQ</code>, <code>GPU_BRUTE_FORCE</code>.</p>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">⚡</span>CAGRA = GPU-native HNSW</h4><p><b>CUDA-Accelerated Graph index</b> — the flagship GPU graph index the AI-Q/RAG Blueprints use. ~<b>12× faster build</b>, ~<b>4.7× faster search</b> than CPU HNSW; up to ~<b>100× throughput</b> under heavy batched load.</p></div>
+    <div class="card amber"><h4><span class="icon">📊</span>Throughput, not latency</h4><p>GPU indexes win on <b>high QPS / large query batches</b> and fast builds — for a single low-traffic query a tuned CPU HNSW can match them. The trigger is <b>QPS, not just corpus size</b>.</p></div>
+    <div class="card red"><h4><span class="icon">🧠</span>GPU-memory bound</h4><p>The index must (largely) <b>fit in GPU memory</b>, with weak OOM protection — oversubscribing can crash the query node. Hybrid pattern: <b>build with CAGRA on GPU, serve as HNSW on CPU</b> (CAGRA graphs beat native HNSW latency at &gt;512D).</p></div>
+  </div>
 </section>
 
 <!-- ============ HYBRID + RRF ============ -->
@@ -408,9 +416,15 @@
   <p class="lede">The unglamorous but highest-leverage stage. You cannot retrieve what was destroyed at parse time, you cannot un-leak PII once it's embedded, and a vector index is just a snapshot that answers last year's questions unless you update it.</p>
 
   <div class="grid c3">
-    <div class="card amber"><h4><span class="icon">📄</span>Multimodal extraction</h4>
-      <p><b>NV-Ingest (NeMo Retriever extraction)</b>: splits docs into pages, classifies elements, uses specialized NIMs (page-element detection, table-structure, OCR) to extract <b>text, tables (as markdown), charts, infographics</b> into a uniform JSON/DataFrame schema — then optionally chunks, embeds, uploads to Milvus in one fluent pipeline.</p>
-      <p style="margin-top:8px">Tables as <b>structured markdown</b> embed and retrieve dramatically better than tables flattened to whitespace soup.</p></div>
+    <div class="card amber"><h4><span class="icon">📄</span>Multimodal extraction <span class="pill a">named NIMs</span></h4>
+      <p><b>NV-Ingest (NeMo Retriever extraction)</b>: splits docs into pages, classifies elements, uses specialized NIMs to extract <b>text, tables (as markdown), charts, infographics</b> into a uniform JSON/DataFrame schema — then optionally chunks, embeds, uploads to Milvus in one fluent pipeline.</p>
+      <ul>
+        <li><code>nemoretriever-page-elements-v2</code> — detects text/table/chart boxes (layout)</li>
+        <li><code>nemoretriever-table-structure-v1</code> — recovers rows/cols → markdown</li>
+        <li><code>nemoretriever-graphic-elements-v1</code> — chart/figure elements</li>
+        <li><b><code>PaddleOCR</code></b> — the OCR engine reading characters from scans/images (Apache-2.0; the Blueprint's named document-OCR component)</li>
+      </ul>
+      <p style="margin-top:8px">Tables as <b>structured markdown</b> retrieve dramatically better than whitespace soup. <b>Detectors find layout; PaddleOCR reads characters</b> — a scanned table needs both.</p></div>
     <div class="card red"><h4><span class="icon">🔒</span>PII redaction</h4>
       <p>Redact <b>at ingestion time, before indexing</b> — once PII is embedded and stored, every retrieval can leak it, and embeddings themselves can be inverted.</p>
       <p style="margin-top:8px">Tooling: <b>NeMo Curator's <code>PiiModifier</code></b> (built on Microsoft <b>Presidio</b>) for pattern/NER detection; <code>LLMPiiModifier</code> / <code>AsyncLLMPiiModifier</code> for LLM-based detection via a NIM. Runtime <b>NeMo Guardrails</b> checks are defense in depth, not the load-bearing control.</p></div>
@@ -423,6 +437,16 @@
       </ul></div>
   </div>
   <div class="callout warn"><b>Stale-data symptom:</b> confidently outdated answers citing superseded docs — filterable by <code>effective_date</code> metadata until re-ingestion lands. The most common production RAG complaint isn't hallucination — it's confidently citing the superseded policy.</div>
+
+  <h3>NeMo Curator — the GPU data-prep stage <span class="tag">more than PII</span></h3>
+  <p class="lede">PII redaction is just one modifier. <b>NeMo Curator</b> is a GPU-accelerated curation toolkit (RAPIDS <b>cuDF</b> + <b>Dask</b>, ~10–100× CPU throughput) that cleans the corpus <i>between</i> raw extraction and chunking — distinct from NeMo Retriever (which serves embed/rerank/extract) and Milvus (storage/search).</p>
+  <div class="grid c4">
+    <div class="card cyan"><h4><span class="icon">🧬</span>Deduplication</h4><p><b>Exact</b> (MD5), <b>fuzzy</b> (<b>MinHash + LSH</b>, near-dups), <b>semantic</b> (embedding clusters). Stops the same content being embedded 5× and biasing retrieval.</p></div>
+    <div class="card blue"><h4><span class="icon">🌐</span>Language ID</h4><p>Detect &amp; filter/route documents by language before embedding.</p></div>
+    <div class="card amber"><h4><span class="icon">🧹</span>Quality filtering</h4><p>Heuristic + classifier-based removal of boilerplate, garbled OCR, spam.</p></div>
+    <div class="card red"><h4><span class="icon">🔒</span>PII redaction</h4><p><code>PiiModifier</code> (Presidio) / <code>LLMPiiModifier</code> (NIM) — one stage among many. Also: domain classification &amp; transforms.</p></div>
+  </div>
+  <div class="callout"><b>Exam separation:</b> "Which NVIDIA tool deduplicates / quality-filters / language-filters the corpus at scale?" → <b>NeMo Curator</b>. "Which serves the embedding &amp; reranking models?" → <b>NeMo Retriever</b>. Don't conflate the prep stage with the serving stage.</div>
 </section>
 
 <!-- ============ GRAPHRAG ============ -->
@@ -454,13 +478,69 @@
     <tr><th>NVIDIA tool</th><th>Role</th><th>Key facts</th></tr>
     <tr><td><b>NeMo Retriever embedding NIMs</b></td><td>Embedding stage as a container</td><td><code>llama-3.2-nv-embedqa-1b-v2</code> (26 langs, 8192-token input, Matryoshka 384–2048, asymmetric <code>input_type</code>); also <code>nv-embedqa-e5-v5</code>, <code>nv-embedqa-mistral-7b-v2</code>. LangChain: <code>NVIDIAEmbeddings</code></td></tr>
     <tr><td><b>NeMo Retriever reranking NIM</b></td><td>Precision stage (cross-encoder)</td><td><code>llama-3.2-nv-rerankqa-1b-v2</code> (current), <code>nv-rerankqa-mistral-4b-v3</code> (prior). LangChain: <code>NVIDIARerank</code> → <code>ContextualCompressionRetriever</code></td></tr>
-    <tr><td><b>NV-Ingest / extraction</b></td><td>Multimodal document extraction</td><td>Fluent <code>Ingestor</code>: <code>.files().extract(...).embed().vdb_upload().ingest()</code>; detection/table/OCR NIMs; newest releases ship as <code>nemo-retriever</code> (<code>create_ingestor</code>)</td></tr>
-    <tr><td><b>Milvus (+ GPU CAGRA)</b></td><td>NVIDIA's default vector DB</td><td>Dense + sparse(BM25) + <code>hybrid_search</code> with <code>RRFRanker</code>/<code>WeightedRanker</code>; metadata filters; <b>CAGRA</b> = GPU-native graph ANN index</td></tr>
-    <tr><td><b>NeMo Curator (PII)</b></td><td>Ingestion-time PII redaction</td><td><code>PiiModifier</code> (Presidio) and <code>LLMPiiModifier</code> (NIM-backed) chained in a <code>Sequential</code> curation pipeline</td></tr>
+    <tr><td><b>NV-Ingest / extraction</b></td><td>Multimodal document extraction</td><td>Fluent <code>Ingestor</code>: <code>.files().extract(...).embed().vdb_upload().ingest()</code>; named NIMs <code>nemoretriever-page-elements-v2</code> / <code>-table-structure-v1</code> / <code>-graphic-elements-v1</code> + <b>PaddleOCR</b>; newest releases ship as <code>nemo-retriever</code> (<code>create_ingestor</code>)</td></tr>
+    <tr><td><b>PaddleOCR</b></td><td>The OCR engine inside NV-Ingest / Blueprints</td><td>Reads characters from scanned pages &amp; images (Apache-2.0); pairs with the detector NIMs that handle layout. The exam's named "document-processing OCR" component</td></tr>
+    <tr><td><b>Milvus (+ cuVS / CAGRA)</b></td><td>NVIDIA's default vector DB</td><td>Dense + sparse(BM25) + <code>hybrid_search</code> with <code>RRFRanker</code>/<code>WeightedRanker</code>; metadata filters; GPU indexes via <b>cuVS</b> (<code>GPU_CAGRA</code>/<code>GPU_IVF_FLAT</code>/<code>GPU_IVF_PQ</code>); CAGRA ≈ GPU-native HNSW (~12× build, ~4.7× search)</td></tr>
+    <tr><td><b>NeMo Curator</b></td><td>GPU data-prep (dedup, lang ID, quality, PII)</td><td>RAPIDS cuDF + Dask, ~10–100× CPU; dedup exact(MD5)/fuzzy(MinHash+LSH)/semantic; <code>PiiModifier</code> (Presidio)/<code>LLMPiiModifier</code>. <b>Prep the data — not the same as Retriever</b></td></tr>
     <tr><td><b>NeMo Guardrails</b></td><td>Runtime complement</td><td>Input/output PII checks, grounding rails — defense in depth atop ingestion-time redaction</td></tr>
-    <tr><td><b>NVIDIA RAG Blueprint</b></td><td>The reference architecture</td><td>NIM LLM + NeMo Retriever embed/rerank + Milvus + NV-Ingest — the exam's mental picture of "NVIDIA's RAG stack"</td></tr>
+    <tr><td><b>NVIDIA RAG Blueprint</b></td><td>Foundational retrieve→rerank→generate workflow</td><td>NIM LLM + NeMo Retriever embed/rerank + vector DB (Milvus/Elasticsearch) + NV-Ingest + reflection — the exam's "NVIDIA RAG stack"</td></tr>
+    <tr><td><b>AI-Q Research Assistant Blueprint</b></td><td>Agentic deep-research layer <b>on top of</b> RAG Blueprint</td><td>Orchestrated by <b>NeMo Agent Toolkit (NAT)</b>: plan report → search (RAG corpus + <b>Tavily web</b>) → write → reflect on gaps → re-query → cite. The "agentic RAG architecture" reference</td></tr>
     <tr><td><b>NeMo Evaluator</b></td><td>Measures this domain's output</td><td>Retriever evals (Recall@K, NDCG@K on BEIR-format) and RAG evals (RAGAS-style) — Domain 3 crossover</td></tr>
   </table></div>
+
+  <h3>AI-Q Blueprint RAG architecture <span class="tag">two tiers</span></h3>
+  <p class="lede">The exam expects you to recognize NVIDIA's reference RAG stack as a <b>layered Blueprint</b> and tell the two tiers apart: the <b>foundational RAG Blueprint</b> answers a single grounded question; the <b>AI-Q Research Assistant</b> wraps it in an agentic deep-research loop.</p>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🏗️</span>RAG Blueprint (foundation)</h4>
+      <p>The production retrieve→rerank→generate pipeline, by stage:</p>
+      <ul>
+        <li><b>NV-Ingest</b> (page-element / table / graphic detectors + <b>PaddleOCR</b>)</li>
+        <li>optional <b>NeMo Curator</b> prep (dedup / quality / PII)</li>
+        <li><b>Embedding NIM</b> <code>llama-3.2-nv-embedqa-1b-v2</code></li>
+        <li><b>Vector DB</b> — Milvus (+ <b>cuVS</b>) or Elasticsearch</li>
+        <li>hybrid retrieval → <b>Reranking NIM</b> <code>llama-3.2-nv-rerankqa-1b-v2</code></li>
+        <li><b>NIM LLM</b> generation (grounded + cited)</li>
+      </ul>
+      <p style="margin-top:8px">The embed+rerank pair is tuned together for high BEIR/TechQA accuracy, multilingual + cross-lingual.</p></div>
+    <div class="card purple"><h4><span class="icon">🔬</span>AI-Q Research Assistant (agentic layer)</h4>
+      <p><i>Extends</i> the RAG Blueprint into a deep-research agent, orchestrated by <b>NeMo Agent Toolkit (NAT)</b>:</p>
+      <ul>
+        <li>① draft a <b>report plan</b></li>
+        <li>② <b>search</b> internal RAG corpus <b>+ web (Tavily)</b></li>
+        <li>③ <b>write</b> a draft</li>
+        <li>④ <b>reflect on gaps</b> → issue follow-up queries</li>
+        <li>⑤ <b>finalize</b> with a source list</li>
+      </ul>
+      <p style="margin-top:8px">The canonical "retrieval-in-the-reasoning-loop" reference (ties to §8 agentic-RAG).</p></div>
+  </div>
+  <div class="callout warn"><b>Version-dependent — don't memorize SKUs.</b> The Blueprints' generation LLMs and embedding model versions refresh often (course-era: Llama 3.3 Nemotron Super 49B / Llama 3.3 70B generation, Llama 3.2 NV EmbedQA/RerankQA 1B retrieval, ~2×H100 80GB self-hosted; current builds moved to Nemotron-3 / Nemotron embed-VL and default to API-Catalog hosting with <i>no local GPU requirement</i>). <b>Memorize the architecture and component roles, not the model string</b>; verify hardware on the specific Blueprint page.</div>
+
+  <h3>NIM &amp; NAT config shapes <span class="tag">recognize the payloads</span></h3>
+  <div class="grid c2">
+    <div class="card cyan"><h4><span class="icon">🔌</span>Embedding vs ranking endpoints</h4>
+      <pre class="code-block"><code># Embedding NIM — asymmetric input_type
+POST {base}/v1/embeddings
+{ "model": "nvidia/llama-3.2-nv-embedqa-1b-v2",
+  "input": ["...chunk..."],
+  "input_type": "passage" }   # "query" at search time
+
+# Reranking NIM — DIFFERENT route + payload
+POST {base}/v1/ranking
+{ "model": "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+  "query":    {"text": "warranty for model X?"},
+  "passages": [{"text":"..."},{"text":"..."}] }
+# -> {"rankings":[{"index":2,"logit":8.1}, ...]}</code></pre>
+      <p>Reranking lives at <code>/v1/ranking</code> (not <code>/v1/embeddings</code>), scores by <b><code>logit</code></b> (sort desc, keep top-N). <code>input_type</code> is the asymmetry knob (trap #5).</p></div>
+    <div class="card blue"><h4><span class="icon">🧩</span>NAT retriever = two-stage as config</h4>
+      <pre class="code-block"><code>retriever:
+  type: nim
+  embedder: { model: nvidia/llama-3.2-nv-embedqa-1b-v2 }
+  reranker: { model: nvidia/llama-3.2-nv-rerankqa-1b-v2 }
+  vector_store: { type: milvus }   # or faiss (local dev)
+  top_k: 40          # stage 1: retrieve wide &amp; cheap
+  rerank_top_n: 5    # stage 2: rank narrow &amp; expensive</code></pre>
+      <p>The two-stage mantra expressed declaratively: <code>top_k</code> wide → <code>rerank_top_n</code> narrow, with embedder/reranker/vector_store as swappable blocks.</p></div>
+  </div>
 </section>
 
 <!-- ============ DECISION FRAMEWORKS ============ -->
@@ -524,6 +604,9 @@
     <div class="trap"><h4><span class="n">13</span>Vector RAG for multi-hop</h4><p>Similarity retrieves chunks that <i>look like</i> the question; multi-hop answers live in chains of facts that individually don't. <span class="fix">"Joining facts across documents" → GraphRAG/KG (local search for entity-hops, global for themes).</span></p></div>
     <div class="trap"><h4><span class="n">14</span>GraphRAG everywhere</h4><p>Also a trap: full GraphRAG indexing is LLM-expensive and high-maintenance. <span class="fix">Single-hop factual QA → plain vector RAG; occasional graph queries → LazyGraphRAG-style deferred approaches.</span></p></div>
     <div class="trap"><h4><span class="n">15</span>Pre- vs post-filtering</h4><p>Post-filtering (search, then discard) can leave fewer than k results and wastes compute; production engines <b>pre-filter</b>. <span class="fix">Metadata filters are your ACL boundary, not the LLM's discretion.</span></p></div>
+    <div class="trap"><h4><span class="n">16</span>Curator vs Retriever confusion</h4><p><b>NeMo Curator</b> = GPU data <i>prep</i> (dedup, language ID, quality filter, PII) before chunking; <b>NeMo Retriever</b> = embedding + reranking + extraction NIMs that <i>serve</i> retrieval. <span class="fix">"Which dedups / quality-filters the corpus?" → Curator. "Which serves embed/rerank?" → Retriever. And Curator ≠ just PII.</span></p></div>
+    <div class="trap"><h4><span class="n">17</span>GPU search = "only for huge data"</h4><p>The trigger is <b>QPS/throughput</b>, not raw corpus size; cuVS/CAGRA help at 1M+ vectors under <i>high query pressure</i>, and the index must fit in GPU memory. <span class="fix">"Sub-10ms at very high QPS" → GPU (cuVS/CAGRA); "occasional latency-sensitive queries, tight GPU budget" → CPU HNSW (optionally CAGRA-built).</span></p></div>
+    <div class="trap"><h4><span class="n">18</span>PaddleOCR is the whole extraction</h4><p>Extraction is a <b>team</b>: detector NIMs (<code>page-elements</code>, <code>table-structure</code>, <code>graphic-elements</code>) find <i>where</i> &amp; recover <i>structure</i>; <b>PaddleOCR reads the characters</b>. <span class="fix">A scanned table needs both — layout detection to find it, OCR to read its cells.</span></p></div>
   </div>
 </section>
 
@@ -554,6 +637,15 @@
   <details class="drill"><summary><span class="qn">D7</span><span>Docs change daily; nightly full re-embedding of 10M chunks is blowing the GPU budget. Better pattern?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
     <div class="answer"><b>Incremental upsert</b>: hash each source doc, on change delete its chunks by stable ID prefix and re-embed only that doc; schedule a periodic diff sync.<span class="why">Reserve full re-embeds for model/chunking changes.</span></div></details>
 
+  <details class="drill"><summary><span class="qn">D8</span><span>A 5M-doc Common-Crawl-style dump: heavy near-duplicates, mixed languages, lots of low-quality pages. Retrieval surfaces the same content five times and confidence is low. Which NVIDIA tool, and what operations?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>NeMo Curator</b> (the GPU data-prep stage, before chunking): <b>fuzzy dedup (MinHash + LSH)</b> to collapse near-duplicates, <b>language ID</b> to keep target languages, <b>quality filtering</b> to drop boilerplate — all GPU-accelerated via RAPIDS cuDF/Dask.<span class="why">A <i>data-preparation</i> fix, not a retrieval-architecture one — reranking/hybrid won't undo a 5×-duplicated corpus. Don't answer "NeMo Retriever" (that serves embed/rerank).</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D9</span><span>Serve vector search at very high QPS over 8M vectors with strict throughput SLOs, and you have spare H100 capacity. Which index / library?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Milvus GPU index via cuVS — <code>GPU_CAGRA</code></b> (GPU-native graph index): built for batched high throughput (~12× build, ~4.7× search vs CPU HNSW, up to ~100× throughput). Watch GPU memory (index must fit).<span class="why">If queries were occasional &amp; latency-sensitive instead, a tuned CPU <b>HNSW</b> (optionally CAGRA-built, HNSW-served) is more economical — GPU's edge is throughput, not single-query latency.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D10</span><span>You need an agent that produces a sourced research report: plan it, pull from the internal RAG corpus and the live web, then revise based on gaps. Which NVIDIA blueprint, and what orchestrates it?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>AI-Q Research Assistant Blueprint</b>, extending the foundational <b>RAG Blueprint</b> with a deep-research loop — plan → search (RAG corpus + <b>Tavily web</b>) → write → reflect-on-gaps → re-query → finalize with citations — orchestrated by <b>NeMo Agent Toolkit (NAT)</b>.<span class="why">Plain RAG Blueprint answers one grounded question; AI-Q adds the agentic multi-step report workflow on top.</span></div></details>
+
   <h3>Quick quiz <span class="tag">one-liners</span></h3>
 
   <details class="drill"><summary><span class="qn">Q1</span><span>Which fuser needs no score normalization across cosine and BM25, and why?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
@@ -573,7 +665,7 @@
 <section id="code-companion">
   <div class="kicker">Section 7 · Hands-on</div>
   <h2>Code Companion — the domain in runnable snippets</h2>
-  <p class="lede">Every core idea reduced to the smallest piece of code that exercises it: the two-stage pipeline, chunking comparison, Milvus hybrid + RRF, NV-Ingest multimodal extraction, metadata-filtered retrieval, incremental upsert, GraphRAG multi-hop, and pgvector HNSW in plain SQL.</p>
+  <p class="lede">Every core idea reduced to the smallest piece of code that exercises it: the two-stage pipeline, chunking comparison, Milvus hybrid + RRF, NV-Ingest multimodal extraction, metadata-filtered retrieval, incremental upsert, GraphRAG multi-hop, pgvector HNSW in plain SQL, and the NeMo Curator data-prep pipeline.</p>
 
   <div class="cc-grid">
     <div class="card green">
@@ -643,7 +735,7 @@ ingestor = (
 )
 chunks = ingestor.ingest()                                # pandas DataFrame of extracted elements
 print(chunks.iloc[0]["text"])</code></pre>
-      <p><b>What to notice:</b> one fluent chain covers ingestion → extraction → embedding → indexing, with specialized NIMs (page-element detection, table structure, OCR) doing the heavy lifting per modality. The exam point: tables/charts are extracted as <i>structured</i> artifacts, not flattened text — fixing retrieval failures that no chunking tweak can.</p>
+      <p><b>What to notice:</b> one fluent chain covers ingestion → extraction → embedding → indexing, with specialized NIMs (<code>page-elements</code> for layout, <code>table-structure</code> for tables, <code>graphic-elements</code> for charts, <b>PaddleOCR</b> for character recognition) doing the heavy lifting per modality. The exam point: tables/charts are extracted as <i>structured</i> artifacts, not flattened text — fixing retrieval failures that no chunking tweak can.</p>
     </div>
 
     <div class="card purple">
@@ -710,6 +802,25 @@ FROM chunks WHERE tenant = 'acme'
 ORDER BY embedding &lt;=&gt; $1 LIMIT 5;</code></pre>
       <p><b>What to notice:</b> vectors as a column type means filtering, joins, and transactions are just SQL — the pgvector pitch. The §3.3 knobs appear literally: <code>m</code>/<code>ef_construction</code> at build, <code>ef_search</code> at query; switching to IVFFlat is one index swap (<code>lists ≈ √rows</code>, bulk-load before building).</p>
     </div>
+
+    <div class="card amber">
+      <h4><span class="icon">🧹</span>9 · NeMo Curator data-prep pipeline <span class="pill a">dedup → lang ID → quality → PII, before chunking</span></h4>
+      <pre class="code-block"><code>from nemo_curator import Sequential
+from nemo_curator.modules import FuzzyDuplicatesRemoval     # MinHash + LSH, GPU
+from nemo_curator.filters import FastTextLangId, QualityFilter
+from nemo_curator.modifiers import PiiModifier
+
+# Runs on RAPIDS cuDF/Dask — composes as ordered stages
+curate = Sequential([
+    FuzzyDuplicatesRemoval(threshold=0.8),                  # collapse near-duplicates
+    FastTextLangId(keep={"en"}),                            # language identification
+    QualityFilter(),                                        # drop boilerplate / garbled OCR
+    PiiModifier(entities=["PERSON", "EMAIL", "US_SSN"]),    # Presidio-backed PII redaction, pre-index
+])
+clean_docs = curate(raw_docs)                               # deduped, filtered, redacted
+# only NOW: chunk -> embed (llama-3.2-nv-embedqa-1b-v2) -> upsert to Milvus</code></pre>
+      <p><b>What to notice:</b> this is the stage <i>between</i> raw extraction and chunking — and it's <b>NeMo Curator</b>, not Retriever (trap #16). Fuzzy dedup is <b>MinHash + LSH</b>; all GPU-accelerated for ~10–100× CPU throughput. PII redaction here is the load-bearing control (trap #12); skipping dedup is what returns the same passage 5× (drill D8). Class names illustrative — verify against the current Curator API.</p>
+    </div>
   </div>
 </section>
 
@@ -764,7 +875,10 @@ ORDER BY embedding &lt;=&gt; $1 LIMIT 5;</code></pre>
   <h3>Sources</h3>
   <ul>
     <li>NeMo Retriever overview &amp; models — <a href="https://docs.nvidia.com/nim/#nemo-retriever" target="_blank" rel="noopener">docs.nvidia.com/nim — NeMo Retriever</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard" target="_blank" rel="noopener">embedqa-1b-v2 card</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard" target="_blank" rel="noopener">rerankqa-1b-v2 card</a></li>
-    <li>NV-Ingest / NeMo Retriever extraction — <a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener">github.com/NVIDIA/nv-ingest</a> · <a href="https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/" target="_blank" rel="noopener">extraction overview</a></li>
+    <li>NV-Ingest / NeMo Retriever extraction (PaddleOCR + detector NIMs) — <a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener">github.com/NVIDIA/nv-ingest</a> · <a href="https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/" target="_blank" rel="noopener">extraction overview</a></li>
+    <li>NVIDIA RAG &amp; AI-Q Research Assistant Blueprints — <a href="https://github.com/NVIDIA-AI-Blueprints/rag" target="_blank" rel="noopener">github — RAG blueprint</a> · <a href="https://github.com/NVIDIA-AI-Blueprints/aiq-research-assistant" target="_blank" rel="noopener">github — AI-Q research assistant</a> · <a href="https://build.nvidia.com/nvidia/aiq" target="_blank" rel="noopener">build.nvidia.com/nvidia/aiq</a></li>
+    <li>Milvus GPU indexes &amp; cuVS (CAGRA / GPU_IVF_*) — <a href="https://milvus.io/docs/gpu_index.md" target="_blank" rel="noopener">Milvus GPU index</a> · <a href="https://milvus.io/docs/gpu-cagra.md" target="_blank" rel="noopener">GPU_CAGRA</a> · <a href="https://zilliz.com/blog/milvus-on-gpu-with-nvidia-rapids-cuvs" target="_blank" rel="noopener">Milvus on GPU w/ RAPIDS cuVS</a></li>
+    <li>NeMo Curator (dedup / language ID / quality / PII on GPU) — <a href="https://docs.nvidia.com/nemo/curator/" target="_blank" rel="noopener">docs.nvidia.com/nemo/curator</a> · <a href="https://github.com/NVIDIA-NeMo/Curator" target="_blank" rel="noopener">github.com/NVIDIA-NeMo/Curator</a></li>
     <li>NVIDIA reranking blogs — <a href="https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/" target="_blank" rel="noopener">enhancing RAG with re-ranking</a> · <a href="https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/" target="_blank" rel="noopener">reranking microservice accuracy &amp; costs</a></li>
     <li>NVIDIA chunking study — <a href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/" target="_blank" rel="noopener">finding-the-best-chunking-strategy</a></li>
     <li>Milvus hybrid search &amp; RRF — <a href="https://milvus.io/docs/multi-vector-search.md" target="_blank" rel="noopener">multi-vector-search</a> · <a href="https://milvus.io/docs/rrf-ranker.md" target="_blank" rel="noopener">rrf-ranker</a> · <a href="https://milvus.io/blog/get-started-with-hybrid-semantic-full-text-search-with-milvus-2-5.md" target="_blank" rel="noopener">hybrid search Milvus 2.5</a></li>

@@ -166,6 +166,8 @@
   <a href="#blueprints">Blueprints</a>
   <a href="#devcloud">Workbench &amp; DGX</a>
   <a href="#mcp">MCP / A2A</a>
+  <a href="#nat-internals">NAT Internals</a>
+  <a href="#handson">Hands-On Path</a>
   <a href="#decide">Decisions</a>
   <a href="#traps">Exam Traps</a>
   <a href="#quiz">Quiz</a>
@@ -826,10 +828,155 @@ resp = client.chat.completions.create(
   </div>
 </section>
 
+<!-- ============ NAT INTERNALS ============ -->
+<section id="nat-internals">
+  <div class="kicker">Section 10</div>
+  <h2><span class="num">10</span>NeMo Agent Toolkit — Orchestration Internals</h2>
+  <p class="sub">Section 4 says <i>what</i> NAT is ("not a framework"). This is <b>how it's wired</b> — the part the exam drills hardest, because NAT spans Domain 2 (Agent Development) and Domain 7. Everything is a named component referenced by <code>_type</code> in a YAML workflow (or built with <code>nat.builder</code>).</p>
+
+  <h3>Agent (workflow) types — the named choices</h3>
+  <div class="tablewrap"><table>
+    <tr><th><code>_type</code></th><th>Pattern</th><th>Pick when</th></tr>
+    <tr><td><b>tool_calling</b></td><td>Uses the LLM's <b>native</b> function-calling API — implicit, fewest tokens</td><td class="cell-good">Model supports tool calling; you want speed</td></tr>
+    <tr><td><b>react</b></td><td>Explicit <b>Thought → Action → Observation</b> loop, visible in the trace</td><td class="cell-good">Transparent reasoning / models without native tool calling</td></tr>
+    <tr><td><b>reasoning</b></td><td>Plans the whole approach <b>up front</b>, then invokes a function (not between every step)</td><td class="cell-mid">A reasoning model should plan-then-act</td></tr>
+    <tr><td><b>rewoo</b></td><td><b>R</b>easoning <b>W</b>ith<b>o</b>ut <b>O</b>bservation — plans all tool calls before executing any</td><td class="cell-mid">Token/latency-sensitive multi-tool plans</td></tr>
+    <tr><td><b>router</b></td><td>Classifies the request and routes to the right sub-agent/tool set</td><td class="cell-mid">One endpoint serving several specialized agents</td></tr>
+  </table></div>
+  <div class="warn"><h4>⚠ Agent-type trap</h4><p><b>tool_calling = implicit/native; react = explicit Thought-Action-Observation trace.</b> Swap one YAML line (<code>type: tool_calling</code> → <code>type: react</code>) and the trace changes from <code>[llm_call]/[tool_call]</code> to <code>[thought]/[action]/[observation]/[answer]</code>. The trick option labels the native-function-calling agent as "ReAct."</p></div>
+
+  <div class="grid g2">
+    <div class="card" style="border-top:4px solid var(--green)">
+      <h4>The canonical "first workflow" (CPU-only, hosted NIM)</h4>
+      <pre><code>functions:
+  get_current_time:
+    _type: python        # docstring = tool description
+llms:
+  nim_llm:
+    _type: nim           # hosted build.nvidia.com or self-hosted
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.1
+workflow:
+  _type: tool_calling    # swap to react to see the trace
+  llm_name: nim_llm
+  tool_names: [get_current_time]</code></pre>
+      <pre><code>nat run   --config_file workflow.yaml --input "What time is it?"
+nat serve --config_file workflow.yaml   # REST + chat UI
+nat console --config workflow.yaml       # interactive terminal</code></pre>
+    </div>
+    <div class="card" style="border-top:4px solid var(--blue)">
+      <h4><code>nat.builder</code> vs YAML — same runtime</h4>
+      <p>Two authoring styles that compile to the <b>identical internal representation</b>. <b>YAML</b> = declarative, diffable, config-as-code, the deployment default. <b>nat.builder</b> (Python) = needed for <i>dynamic</i> behavior YAML can't express (conditional tool registration, runtime-computed middleware) and natural for pytest.</p>
+      <p style="margin-top:8px"><b>Trap:</b> "YAML behaves differently / runs faster than nat.builder" is false — choosing one changes nothing at runtime.</p>
+      <p style="margin-top:8px"><b>Field-name caveat:</b> NAT keys shift across releases (<code>tools:</code> vs <code>tool_names:</code>). Memorize the <i>agent-type names and concepts</i>; verify exact keys per version.</p>
+    </div>
+  </div>
+
+  <h3>Middleware chain — order is a security property</h3>
+  <p class="sub" style="margin-bottom:10px">Middleware intercepts every request/response (like HTTP middleware), adding cross-cutting concerns <b>without touching agent logic</b>. Request flows down the chain, response flows back up. Built-ins: <b>logging · defense · caching · red teaming · dynamic dispatch · timeout</b>.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 960 250" font-family="system-ui,sans-serif">
+      <defs><marker id="arrm" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" style="fill:var(--green)"/></marker></defs>
+      <g font-size="12.5" font-weight="700" text-anchor="middle">
+        <rect x="20"  y="30" width="150" height="44" rx="9" style="fill:var(--bg3);stroke:var(--green)"/><text x="95" y="51" style="fill:var(--green)">1 · Logging</text><text x="95" y="67" style="fill:var(--muted)" font-weight="400" font-size="10.5">audits blocked too</text>
+        <rect x="200" y="30" width="150" height="44" rx="9" style="fill:var(--bg3);stroke:var(--red)"/><text x="275" y="51" style="fill:var(--red)">2 · Defense</text><text x="275" y="67" style="fill:var(--muted)" font-weight="400" font-size="10.5">Guardrails + PII</text>
+        <rect x="380" y="30" width="150" height="44" rx="9" style="fill:var(--bg3);stroke:var(--blue)"/><text x="455" y="51" style="fill:var(--blue)">3 · Caching</text><text x="455" y="67" style="fill:var(--muted)" font-weight="400" font-size="10.5">tool results only</text>
+        <rect x="560" y="30" width="160" height="44" rx="9" style="fill:var(--bg3);stroke:var(--purple)"/><text x="640" y="51" style="fill:var(--purple)">4 · Dynamic dispatch</text><text x="640" y="67" style="fill:var(--muted)" font-weight="400" font-size="10.5">route by intent</text>
+        <rect x="760" y="22" width="170" height="60" rx="11" style="fill:color-mix(in srgb,var(--green) 15%,var(--panel));stroke:var(--green)"/><text x="845" y="48" style="fill:var(--green)">AGENT CORE</text><text x="845" y="66" style="fill:var(--muted)" font-weight="400" font-size="10.5">LLM + tools</text>
+      </g>
+      <g style="stroke:var(--green)" stroke-width="2.5" fill="none">
+        <line x1="170" y1="52" x2="196" y2="52" marker-end="url(#arrm)"/>
+        <line x1="350" y1="52" x2="376" y2="52" marker-end="url(#arrm)"/>
+        <line x1="530" y1="52" x2="556" y2="52" marker-end="url(#arrm)"/>
+        <line x1="720" y1="52" x2="756" y2="52" marker-end="url(#arrm)"/>
+      </g>
+      <text x="475" y="120" text-anchor="middle" style="fill:var(--muted)" font-size="12">response flows back up the same chain — defense re-checks output, caching stores, logging records</text>
+      <g font-size="11.5" text-anchor="start">
+        <rect x="60" y="150" width="840" height="80" rx="11" style="fill:var(--panel);stroke:var(--line)"/>
+        <text x="80" y="174" style="fill:var(--red)" font-weight="800">Why order matters (the trap):</text>
+        <text x="80" y="196" style="fill:var(--muted)">• Defense <tspan style="fill:var(--text)" font-weight="700">after</tspan> caching → a cached response is served to a new user/context with <tspan style="fill:var(--text)" font-weight="700">no safety check</tspan>.</text>
+        <text x="80" y="216" style="fill:var(--muted)">• Logging <tspan style="fill:var(--text)" font-weight="700">not first</tspan> → blocked requests go unlogged. • Cache <tspan style="fill:var(--text)" font-weight="700">tool results, never LLM responses</tspan> (context-dependent).</text>
+      </g>
+    </svg>
+  </div>
+  <div class="warn"><h4>⚠ "Order doesn't matter" is wrong</h4><p>For a production deployment the canonical order is <b>logging → defense → caching → (red teaming, staging only) → dynamic dispatch</b>. Defense is NAT's bridge to NeMo Guardrails; red teaming runs adversarial probes in staging and is usually off in production.</p></div>
+
+  <div class="grid g2">
+    <div class="card" style="border-top:4px solid var(--green)">
+      <h4>Plugin system — frameworks as packages</h4>
+      <p>The framework-agnostic claim is <b>architectural</b>: each framework is a <b>separate plugin distribution</b>, not built into core. Install standalone (<code>nvidia-nat-langchain</code>) or via extra: <code>nvidia-nat[adk|agno|crewai|langchain|llama-index|semantic-kernel]</code>; <code>nvidia-nat[all]</code> pulls everything.</p>
+      <p style="margin-top:8px">Each plugin gives four adapters: <b>LLM wrapper</b> (framework uses NAT's LLM), <b>tool conversion</b> (framework tool → NAT function), <b>callback handlers</b> (events → NAT middleware/observability), <b>parser adapters</b>. A public <b>Plugin API</b> lets third parties add new frameworks without forking (how Agno was added).</p>
+      <p style="margin-top:8px"><b>Trap:</b> a plugin adapts <i>components</i>, not the whole framework runtime — orchestration/memory/middleware stay NAT's. "A LangChain agent runs identically inside NAT" is wrong.</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--amber)">
+      <h4>Authentication — multi-provider</h4>
+      <p>A production workflow authenticates to several services at once. Providers are declared (each named) under <code>authentication:</code>; credentials are <b>loaded at runtime, accessed by name, never logged or persisted</b>. Built-ins:</p>
+      <p style="margin-top:6px">• <b>API Key</b> — simple service (NIM)<br>
+      • <b>OAuth2</b> (Authorization-Code Grant) — enterprise SSO<br>
+      • <b>Bearer Token</b> — pre-issued service tokens<br>
+      • <b>HTTP Basic</b> — legacy (TLS only)<br>
+      • <b>MCP</b> — <code>mcp_oauth2</code> built-in; needs <b>streamable-HTTP</b> transport (SSE can't carry auth)</p>
+      <p style="margin-top:8px">Secrets stay out of YAML via <code>_env</code> / <code>${VAR}</code> refs, filled from Vault/Secrets Manager/K8s at deploy.</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--cyan)">
+      <h4><code>nat_test_llm</code> — deterministic testing</h4>
+      <p>LLM output is non-deterministic, so you can't unit-test an agent against a real model. <code>nat_test_llm</code> is a <b>mock LLM</b> returning pre-scripted responses — assert <b>exact tool-call sequences and arguments</b> and test the middleware chain repeatably.</p>
+      <p style="margin-top:8px"><b>The rule:</b> real LLM for <i>evaluation</i> (quality, via NeMo Evaluator); <code>nat_test_llm</code> for <i>testing</i> (correctness, in CI).</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--purple)">
+      <h4>Interactive Workflows &amp; cron</h4>
+      <p><b>Interactive Workflows</b> run over a bidirectional <b>WebSocket</b>: the agent can pause mid-task for clarification or an <b>approval gate</b> (e.g. "refund \$750 &gt; \$500 — approve?") before a sensitive action. Persist state in the Redis memory backend so a dropped socket doesn't lose context (<code>ping_interval</code>/<code>max_idle</code>).</p>
+      <p style="margin-top:8px"><b>Cron integration</b> runs a workflow on a schedule (daily reports, periodic data-quality checks) — for non-reactive monitoring/maintenance agents.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HANDS-ON PATH ============ -->
+<section id="handson">
+  <div class="kicker">Section 11</div>
+  <h2><span class="num">11</span>The Hands-On Path — Account → Self-Hosted</h2>
+  <p class="sub">The "build the thing" ladder. Every step except self-hosting runs on a <b>CPU laptop with just an <code>NVIDIA_API_KEY</code></b> (the <code>nvapi-</code> key from build.nvidia.com). Self-hosting needs a separate <b>NGC API key</b>.</p>
+
+  <div class="ladder">
+    <div class="rung"><span class="lvl">1</span><span class="nm">Account + API key</span><span class="rl">NVIDIA account → <code>nvapi-</code> key at build.nvidia.com → <code>export NVIDIA_API_KEY=nvapi-...</code></span></div>
+    <div class="rung"><span class="lvl">2</span><span class="nm">First NIM call</span><span class="rl"><code>pip install openai</code>; point the OpenAI client at <code>https://integrate.api.nvidia.com/v1</code></span></div>
+    <div class="rung"><span class="lvl">3</span><span class="nm">First NAT workflow</span><span class="rl"><code>pip install nvidia-nat</code>; minimal YAML; <code>nat run</code>. Toggle <code>tool_calling</code>↔<code>react</code> to compare traces</span></div>
+    <div class="rung"><span class="lvl">4</span><span class="nm">First Guardrails run</span><span class="rl"><code>pip install nemoguardrails langchain-nvidia-ai-endpoints</code>; build a <code>config/</code> folder; <code>nemoguardrails chat --config config/</code></span></div>
+    <div class="rung wrap-r"><span class="lvl">5</span><span class="nm">Self-hosted NIM (GPU)</span><span class="rl">NGC key → <code>docker login nvcr.io -u '$oauthtoken'</code> → <code>docker pull nvcr.io/nim/...</code> → run <code>--gpus all -p 8000:8000</code>; multi-model prod = <b>NIM Operator</b> on K8s</span></div>
+  </div>
+
+  <div class="callout"><h4>⚠ Two different keys — a favorite exam trap</h4><p><code>NVIDIA_API_KEY</code> (<code>nvapi-...</code>, build.nvidia.com) calls <b>hosted endpoints</b>. <code>NGC_API_KEY</code> (ngc.nvidia.com) pulls <b>containers</b> from <code>nvcr.io</code> — and the docker-login username is the literal string <code>$oauthtoken</code>. Using the build.nvidia.com key to <code>docker pull</code> is wrong.</p></div>
+
+  <h3>Feature → install matrix</h3>
+  <p class="sub" style="margin-bottom:10px">Base <code>nvidia-nat</code> is <b>not</b> enough for every feature. Extras names are version-dependent — verify in current NAT docs.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Feature</th><th>Install</th></tr>
+    <tr><td>NAT core (agent types, YAML, functions, middleware)</td><td><code>pip install nvidia-nat</code></td></tr>
+    <tr><td>LangChain / LangGraph plugin</td><td><code>pip install "nvidia-nat[langchain]" langchain-nvidia-ai-endpoints</code> (or <code>nvidia-nat-langchain</code>)</td></tr>
+    <tr><td>Evaluation / red-teaming / RAG eval</td><td><code>pip install "nvidia-nat[eval]"</code> (or <code>nvidia-nat-eval</code>)</td></tr>
+    <tr><td>Profiler + sizing calculator</td><td><code>pip install "nvidia-nat[profiling]"</code></td></tr>
+    <tr><td>MCP client/server</td><td><code>pip install "nvidia-nat[mcp]"</code></td></tr>
+    <tr><td>Observability (Phoenix)</td><td><code>pip install nvidia-nat arize-phoenix</code></td></tr>
+    <tr><td>Everything</td><td><code>pip install "nvidia-nat[all]"</code></td></tr>
+    <tr><td>Guardrails (library mode, hosted models)</td><td><code>pip install nemoguardrails langchain-nvidia-ai-endpoints</code></td></tr>
+    <tr><td>Guardrails server mode</td><td><code>pip install "nemoguardrails[server]"</code></td></tr>
+  </table></div>
+
+  <h3>Troubleshooting tells (exam-flavored)</h3>
+  <div class="grid g3">
+    <div class="card"><h4>🔑 <code>401</code> Unauthorized</h4><p>Key unset, expired, or has trailing whitespace/newline. Regenerate at build.nvidia.com.</p></div>
+    <div class="card"><h4>🔍 <code>404</code> / "model not found"</h4><p>Wrong model id or <code>api.nvidia.com</code> instead of <code>integrate.api.nvidia.com</code>. NAT/Guardrails model names need the <b>provider prefix</b>: <code>meta/llama-3.3-70b-instruct</code>.</p></div>
+    <div class="card"><h4>⏳ <code>429</code> Too Many Requests</h4><p>Free-tier rate limit (~40 req/min class). Back off; don't load-test the catalog.</p></div>
+    <div class="card"><h4>🐳 NGC <code>unauthorized</code></h4><p>Forgot the docker-login username is the literal <code>$oauthtoken</code>, or used the build.nvidia.com key instead of the NGC key.</p></div>
+    <div class="card"><h4>🛡 Guardrails "engine not recognized"</h4><p>Version mismatch: <code>engine: nim</code> (newer) vs <code>engine: nvidia_ai_endpoints</code> (older). Or missing <code>colang_version: "2.x"</code>, or rail name in <code>config.yml</code> ≠ name in <code>.co</code>.</p></div>
+    <div class="card"><h4>💥 Self-hosted "CUDA out of memory"</h4><p>Model too big for the GPU. A 70B needs ~140GB FP16 → two H100s. Use a smaller model or quantized profile.</p></div>
+  </div>
+</section>
+
 <!-- ============ DECISIONS ============ -->
 <section id="decide">
-  <div class="kicker">Section 10</div>
-  <h2><span class="num">10</span>Decision Frameworks — Highest-Yield Ideas</h2>
+  <div class="kicker">Section 12</div>
+  <h2><span class="num">12</span>Decision Frameworks — Highest-Yield Ideas</h2>
 
   <h3>The verb test (memorize this first)</h3>
   <div class="verbs">
@@ -894,9 +1041,9 @@ resp = client.chat.completions.create(
 
 <!-- ============ TRAPS ============ -->
 <section id="traps">
-  <div class="kicker">Section 11</div>
-  <h2><span class="num">11</span>Exam Traps &amp; Gotchas</h2>
-  <p class="sub">Twelve ways the exam will try to fool you. Read each one twice.</p>
+  <div class="kicker">Section 13</div>
+  <h2><span class="num">13</span>Exam Traps &amp; Gotchas</h2>
+  <p class="sub">Nineteen ways the exam will try to fool you. Read each one twice.</p>
   <div class="grid g2">
     <div class="trap"><h4><span class="tnum">1</span>NIM ≠ a model</h4><p>A NIM is the <b>container/microservice packaging</b> (engine + weights + API). "Nemotron" is the model; "Nemotron NIM" is its deployable form. "Download the model from build.nvidia.com" usually means <i>pull the NIM container from NGC</i>.</p></div>
     <div class="trap"><h4><span class="tnum">2</span>NeMo Agent Toolkit is NOT an agent framework</h4><p>It does not replace LangGraph/CrewAI; it wraps and profiles them. "Rewrite your agents in its framework" = wrong. Rename chain: <b>AgentIQ → AIQ → NeMo Agent Toolkit</b> (same tech).</p></div>
@@ -910,13 +1057,20 @@ resp = client.chat.completions.create(
     <div class="trap"><h4><span class="tnum">10</span>AI Workbench vs DGX Cloud</h4><p>Workbench = free local/portable <b>dev environment manager</b>; DGX Cloud (Lepton) = paid <b>GPU compute platform/marketplace</b>. Neither is a model-serving product.</p></div>
     <div class="trap"><h4><span class="tnum">11</span>Hosted endpoints are not production-private</h4><p>If the scenario mentions regulated/PII data, the hosted build.nvidia.com endpoint is the wrong answer regardless of convenience — <b>self-host the NIM</b>.</p></div>
     <div class="trap"><h4><span class="tnum">12</span>Blueprints are reference code, not managed services</h4><p>You deploy and own them (Docker/Helm); "NVIDIA operates the virtual assistant for you" is false.</p></div>
+    <div class="trap"><h4><span class="tnum">13</span>NAT middleware order is a correctness property</h4><p>Defense <b>before</b> caching, logging <b>first</b>. "Order doesn't matter if all are present" is wrong: defense-after-caching skips safety on cached hits; logging-after-defense loses blocked-request logs. And <b>cache tool results, never LLM responses</b>.</p></div>
+    <div class="trap"><h4><span class="tnum">14</span>NAT agent types</h4><p><b>tool_calling = implicit/native</b>; <b>react = explicit Thought→Action→Observation</b>. Don't confuse with <b>reasoning</b> (plans up front) or <b>rewoo</b> (plans all calls before any execution). The trick option calls the native agent "ReAct."</p></div>
+    <div class="trap"><h4><span class="tnum">15</span><code>nat.builder</code> ≡ YAML at runtime</h4><p>They compile to the same internal representation — authoring style only. "YAML runs faster / behaves differently" is false.</p></div>
+    <div class="trap"><h4><span class="tnum">16</span>NAT plugins adapt components, not frameworks</h4><p>A wrapped LangChain tool does <b>not</b> bring LangChain's runtime/memory/orchestration — those stay NAT's. "A LangChain agent runs identically inside NAT" is wrong.</p></div>
+    <div class="trap"><h4><span class="tnum">17</span><code>nat_test_llm</code> is testing, not evaluation</h4><p>Mock the LLM for <b>deterministic correctness</b> (assert tool-call sequences). Real LLMs are non-deterministic — reserve them for <b>quality evaluation</b> (NeMo Evaluator), not unit tests.</p></div>
+    <div class="trap"><h4><span class="tnum">18</span>Two different keys</h4><p><code>NVIDIA_API_KEY</code> (<code>nvapi-</code>, build.nvidia.com) calls hosted endpoints; <code>NGC_API_KEY</code> (ngc.nvidia.com) pulls containers from <code>nvcr.io</code> — login username is literally <code>$oauthtoken</code>. Using the build key to <code>docker pull</code> is wrong.</p></div>
+    <div class="trap"><h4><span class="tnum">19</span>Model ids need the provider prefix</h4><p><code>meta/llama-3.3-70b-instruct</code>, not <code>llama-3.3-70b-instruct</code> — the bare name yields a <code>404</code> in NAT/Guardrails configs.</p></div>
   </div>
 </section>
 
 <!-- ============ QUIZ ============ -->
 <section id="quiz">
-  <div class="kicker">Section 12</div>
-  <h2><span class="num">12</span>Scenario Drills — Test Yourself</h2>
+  <div class="kicker">Section 14</div>
+  <h2><span class="num">14</span>Scenario Drills — Test Yourself</h2>
   <p class="sub">Read the scenario, decide your answer, then reveal. These are the exact question shapes the exam uses.</p>
 
   <details class="drill"><summary><span class="qnum">1</span>A fintech must run Llama-class inference fully on-prem on H100s, with CVE-patched containers and someone to call when it breaks.</summary>
@@ -936,13 +1090,25 @@ resp = client.chat.completions.create(
 
   <details class="drill"><summary><span class="qnum">6</span>A developer with no GPUs wants to prototype an agent today and later deploy the exact same model in the company VPC unchanged.</summary>
     <div class="ans"><b>Start on build.nvidia.com hosted endpoint (OpenAI-compatible, nvapi key); later pull the same NIM from NGC and just change <code>base_url</code>.</b> The try-hosted-then-self-host path is NIM's core story.</div></details>
+
+  <details class="drill"><summary><span class="qnum">7</span>Order these NAT middleware for production: caching, defense, logging, dynamic dispatch.</summary>
+    <div class="ans"><b>logging → defense → caching → dynamic dispatch.</b> Logging first (capture blocked requests too), defense before caching (never serve an unchecked cached response), caching before routing.</div></details>
+
+  <details class="drill"><summary><span class="qnum">8</span>A NAT workflow must call NIM for inference, a corporate SSO for user identity, and a remote MCP tool server.</summary>
+    <div class="ans"><b>Three providers under <code>authentication:</code> — API Key (NIM via <code>${NVIDIA_API_KEY}</code>), OAuth2 Authorization-Code (the SSO), and <code>mcp_oauth2</code> (the MCP server, over streamable-HTTP).</b> Secrets via <code>_env</code>/<code>${VAR}</code> refs, never inline.</div></details>
+
+  <details class="drill"><summary><span class="qnum">9</span>You need a CI test that deterministically asserts your agent calls <code>order_lookup</code> with <code>{order_id:"12345"}</code> before answering.</summary>
+    <div class="ans"><b>Mock the model with <code>nat_test_llm</code> (script the tool-call response) and assert the tool name + args.</b> Real LLMs are non-deterministic — use them for evaluation, not unit tests.</div></details>
+
+  <details class="drill"><summary><span class="qnum">10</span>Your support agent must pause and get a human's approval before issuing refunds over $500, mid-conversation.</summary>
+    <div class="ans"><b>A NAT Interactive Workflow over WebSocket with an approval gate;</b> persist state in the Redis memory backend so a dropped connection doesn't lose the conversation.</div></details>
 </section>
 
 <!-- ============ CODE COMPANION ============ -->
 <section id="code">
-  <div class="kicker">Section 13</div>
-  <h2><span class="num">13</span>Code Companion — The Stack in Executable Form</h2>
-  <p class="sub">Seven snippets that turn the domain's biggest exam facts into runnable code: the hosted→self-hosted swap, the NeMo Retriever pipeline, rails-as-config, NAT wrapping LangGraph, the Nemotron reasoning toggle, and LoRA multiplexing on one NIM.</p>
+  <div class="kicker">Section 15</div>
+  <h2><span class="num">15</span>Code Companion — The Stack in Executable Form</h2>
+  <p class="sub">Eight snippets that turn the domain's biggest exam facts into runnable code: the hosted→self-hosted swap, the NeMo Retriever pipeline, rails-as-config, NAT wrapping LangGraph, the Nemotron reasoning toggle, LoRA multiplexing, and the NAT production surface (middleware + auth + deterministic test).</p>
 
   <div class="grid g2">
     <div class="card" style="border-top:4px solid var(--green)">
@@ -1099,13 +1265,46 @@ curl -s http://localhost:8000/v1/chat/completions -H 'Content-Type: application/
   "max_tokens": 128}'</code></pre>
       <p><b>What to notice:</b> one base-model NIM multiplexes many NeMo Customizer (or HF PEFT) LoRA adapters — <code>NIM_PEFT_SOURCE</code> points at the adapter directory, each subdirectory name becomes a servable model id, and the client <i>selects the adapter purely via the <code>model</code> field</i>. Add <code>NIM_PEFT_REFRESH_INTERVAL</code> to hot-load new adapters at runtime — that's the deployment endpoint of the data-flywheel loop (Customizer output → drop folder → live traffic).</p>
     </div>
+
+    <div class="card" style="border-top:4px solid var(--green);grid-column:1/-1">
+      <h4><span class="qnum">8</span>NAT production surface — middleware chain + multi-provider auth + deterministic test</h4>
+      <pre><code># pipeline.yaml — concept-level; verify exact keys per NAT version
+llm:
+  _type: nim
+  model_name: meta/llama-3.3-70b-instruct
+  api_key: ${NVIDIA_API_KEY}          # secret via env ref — never inline
+workflow:
+  _type: tool_calling                 # or react / reasoning / rewoo / router
+  llm_name: llm
+  max_iterations: 10                  # cap the loop so it can't spin forever
+  middleware:                         # ORDER IS A SECURITY PROPERTY
+    - type: logging                   # 1. first — even blocked requests get audited
+    - type: defense                   # 2. before caching — Guardrails input/output + PII
+      config: { input_guardrail: nemo_guardrails, block_pii: true }
+    - type: caching                   # 3. cache TOOL results, not LLM responses
+      config: { cache_tool_results: true, cache_llm_responses: false, ttl: 3600 }
+    - type: dynamic_dispatch          # 4. closest to the agent — route by intent
+authentication:                       # several providers, each named, secrets via _env
+  nvidia_nim:     { type: api_key,   key_env: NVIDIA_API_KEY }
+  enterprise_sso: { type: oauth2,    client_id_env: OAUTH_CLIENT_ID, client_secret_env: OAUTH_CLIENT_SECRET }
+  mcp_tools:      { type: mcp_oauth2 }  # streamable-HTTP (SSE can't carry auth)</code></pre>
+      <pre><code># Deterministic test — assert the tool-call sequence WITHOUT a real LLM
+mock = nat_test_llm(responses=[
+    {"tool_calls": [{"name": "order_lookup", "args": {"order_id": "12345"}}]},
+    {"text": "Your order #12345 ships March 15th."},
+])
+result = WorkflowTestHarness(config="pipeline.yaml", llm_override=mock).run("Where is order 12345?")
+assert result.tool_calls[0].name == "order_lookup"
+assert result.middleware_logs["defense"].blocked is False</code></pre>
+      <p><b>What to notice:</b> this is the orchestration layer the exam tests in Domains 2 + 7. The middleware list order is the answer to "place these middleware correctly" — <b>logging → defense → caching → dispatch</b>. <code>authentication:</code> shows three providers coexisting with secrets pulled from env, never hardcoded. <code>nat_test_llm</code> makes the agent deterministic so CI can assert the exact tool name + args — <i>testing</i> (correctness), distinct from NeMo Evaluator (<i>quality</i>). Exact YAML keys (<code>middleware:</code>, <code>dynamic_dispatch</code>) are version-dependent; the concepts and ordering are what's stable.</p>
+    </div>
   </div>
 </section>
 
 <!-- ============ VOICES ============ -->
 <section id="voices">
-  <div class="kicker">Section 14</div>
-  <h2><span class="num">14</span>What Top Engineers Are Saying (2025-26)</h2>
+  <div class="kicker">Section 16</div>
+  <h2><span class="num">16</span>What Top Engineers Are Saying (2025-26)</h2>
   <p class="sub">Practitioner takes from outside the marketing — why NVIDIA builds open models, why MCP won, and what independent engineers found when they actually ran the NeMo Agent Toolkit and the data flywheel.</p>
 
   <div class="grid g2">
