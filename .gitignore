@@ -4,3 +4,10 @@ agent-plan.md
 # tooling
 .vercel/
 .claude/
+
+# verification/QA artifacts (page screenshots, scratch scripts)
+.shots/
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store

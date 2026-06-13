@@ -222,7 +222,7 @@ Practical resolution circulating in the discourse:
 
 **What happened.** The trace-everything market matured and consolidated around a handful of platforms:
 - **LangSmith** — deepest LangChain/LangGraph integration: node-level state diffs, full execution graphs, trajectory replay against new model versions.
-- **Langfuse** — the open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached ~6M SDK installs/month, and was acquired by ClickHouse in January 2026.
+- **Langfuse** — the open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached ~23M SDK installs/month (6M+ Docker pulls), and was acquired by ClickHouse in January 2026.
 - **Arize Phoenix** — open-source, OpenTelemetry-native via the OpenInference conventions; strongest for notebook- and eval-heavy workflows.
 - **Braintrust** — closed-source, eval-first (regression harness as the center of gravity) with tracing attached.
 - Datadog and Honeycomb pulled LLM traces into general-purpose observability for teams that want infra correlation.

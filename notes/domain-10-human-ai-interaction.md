@@ -345,7 +345,7 @@ async def _gated_deploy(service: str) -> str:
 nat run --config_file configs/config-hitl.yml --input "ship the payments service"
 ```
 
-What to notice: NAT makes HITL a *framework-level* capability acquired from `Context`, so any wrapped framework (LangGraph, CrewA­I, ...) gets the same gate. Exam details: `nat run` supports only `HumanPromptText`; the full interaction-model set (approval widgets etc.) needs `nat serve` over WebSocket, and prompts can carry a timeout that raises `TimeoutError`.
+What to notice: NAT makes HITL a *framework-level* capability acquired from `Context`, so any wrapped framework (LangGraph, CrewAI, ...) gets the same gate. Exam details: `nat run` supports only `HumanPromptText`; the full interaction-model set (approval widgets etc.) needs `nat serve` over WebSocket, and prompts can carry a timeout that raises `TimeoutError`.
 
 **4) Streaming progress: `astream_events` surfacing node-level status**
 

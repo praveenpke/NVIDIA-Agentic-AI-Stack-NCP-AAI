@@ -31,7 +31,7 @@
 
   /* nav */
   nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 88%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  nav .wrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:4px;padding:10px 16px;overflow-x:auto;white-space:nowrap}
+  nav .wrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:4px;padding:10px 104px 10px 16px;overflow-x:auto;white-space:nowrap}
   nav .brand{font-weight:800;color:var(--txt);margin-right:12px;font-size:.9rem}
   nav .brand b{color:var(--green)}
   nav a{color:var(--muted);font-size:.82rem;padding:6px 10px;border-radius:7px}
@@ -70,12 +70,14 @@
   #tooltip b{color:#76b900}
 
   /* cards & grids */
-  .grid{display:grid;gap:16px}
+  .grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  .grid>*{min-width:0}
   .g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
   .g3{grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
   .g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
   .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
-  .card h4{color:var(--txt);font-size:1rem;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+  .card h4{color:var(--txt);font-size:1rem;margin-bottom:8px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+  .card h4>span:not(.ic):not(.pill){min-width:0;overflow-wrap:anywhere}
   .card p{font-size:.88rem;color:var(--muted)}
   .card .big{font-size:1.5rem;font-weight:800;color:var(--green)}
   .ic{width:30px;height:30px;flex:none;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;background:var(--green-glow);border:1px solid var(--green-dim)}
@@ -709,39 +711,39 @@ animate();
       <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#76b900"/></marker></defs>
       <g>
         <rect x="10" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
-        <text x="100" y="28" text-anchor="middle" class="svg-g" font-weight="800">1</text>
-        <text x="100" y="65" text-anchor="middle" class="svg-t" font-weight="700">Fits in GPU memory</text>
-        <text x="100" y="85" text-anchor="middle" class="svg-m" font-size="11">memory-aware selector</text>
+        <text x="100" y="28" text-anchor="middle" class="svg-g" font-weight="800">0 · filter</text>
+        <text x="100" y="65" text-anchor="middle" class="svg-t" font-weight="700">GPU-runnable only</text>
+        <text x="100" y="85" text-anchor="middle" class="svg-m" font-size="11">device/VRAM + gpu-tag match</text>
       </g>
       <line x1="192" y1="75" x2="218" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
       <g>
         <rect x="222" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
-        <text x="312" y="28" text-anchor="middle" class="svg-g" font-weight="800">2</text>
-        <text x="312" y="65" text-anchor="middle" class="svg-t" font-weight="700">Lower precision</text>
-        <text x="312" y="85" text-anchor="middle" class="svg-m" font-size="11">FP8 preferred over FP16</text>
+        <text x="312" y="28" text-anchor="middle" class="svg-g" font-weight="800">1</text>
+        <text x="312" y="65" text-anchor="middle" class="svg-t" font-weight="700">Backend</text>
+        <text x="312" y="85" text-anchor="middle" class="svg-m" font-size="11">trtllm &gt; vllm &gt; sglang</text>
       </g>
       <line x1="404" y1="75" x2="430" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
       <g>
         <rect x="434" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
-        <text x="524" y="28" text-anchor="middle" class="svg-g" font-weight="800">3</text>
-        <text x="524" y="65" text-anchor="middle" class="svg-t" font-weight="700">Latency-optimized</text>
-        <text x="524" y="85" text-anchor="middle" class="svg-m" font-size="11">NOT throughput — trap!</text>
+        <text x="524" y="28" text-anchor="middle" class="svg-g" font-weight="800">2</text>
+        <text x="524" y="65" text-anchor="middle" class="svg-t" font-weight="700">Precision</text>
+        <text x="524" y="85" text-anchor="middle" class="svg-m" font-size="11">MXFP4&gt;FP8&gt;INT8&gt;FP16&gt;…&gt;INT4_AWQ</text>
       </g>
       <line x1="616" y1="75" x2="642" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
       <g>
         <rect x="646" y="35" width="180" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
-        <text x="736" y="28" text-anchor="middle" class="svg-g" font-weight="800">4</text>
-        <text x="736" y="65" text-anchor="middle" class="svg-t" font-weight="700">Higher tensor parallelism</text>
-        <text x="736" y="85" text-anchor="middle" class="svg-m" font-size="11">uses more of your GPUs</text>
+        <text x="736" y="28" text-anchor="middle" class="svg-g" font-weight="800">3</text>
+        <text x="736" y="65" text-anchor="middle" class="svg-t" font-weight="700">Latency-optimized</text>
+        <text x="736" y="85" text-anchor="middle" class="svg-m" font-size="11">NOT throughput — trap!</text>
       </g>
       <line x1="828" y1="75" x2="854" y2="75" stroke="#76b900" stroke-width="2" marker-end="url(#arr2)"/>
       <g>
         <rect x="858" y="35" width="190" height="80" rx="10" fill="#13202e" stroke="#3a5c00"/>
-        <text x="953" y="28" text-anchor="middle" class="svg-g" font-weight="800">5</text>
-        <text x="953" y="65" text-anchor="middle" class="svg-t" font-weight="700">Backend preference</text>
-        <text x="953" y="85" text-anchor="middle" class="svg-m" font-size="11">tensorrt_llm &gt; vllm &gt; sglang</text>
+        <text x="953" y="28" text-anchor="middle" class="svg-g" font-weight="800">4</text>
+        <text x="953" y="65" text-anchor="middle" class="svg-t" font-weight="700">Highest TP</text>
+        <text x="953" y="85" text-anchor="middle" class="svg-m" font-size="11">supported by GPU count</text>
       </g>
-      <text x="530" y="140" text-anchor="middle" class="svg-m" font-size="11.5">Override with <tspan fill="#a8e063" font-family="monospace">NIM_MODEL_PROFILE</tspan> (ID or name like vllm-fp16-tp1-pp1) · "Optimized" profiles = prebuilt TRT-LLM engines for specific GPUs · "generic" = vLLM/SGLang on any supported GPU</text>
+      <text x="530" y="138" text-anchor="middle" class="svg-m" font-size="11">Current LLM-NIM order (backend <b>before</b> precision); NIM 1.x used memory→precision→latency→TP→backend. Override with <tspan fill="#a8e063" font-family="monospace">NIM_MODEL_PROFILE</tspan> (profile ID, or <tspan fill="#a8e063" font-family="monospace">default</tspan> to re-select) · "optimized" = prebuilt TRT-LLM engine per GPU · "generic" = vLLM/SGLang anywhere</text>
     </svg>
   </div>
 
@@ -993,7 +995,8 @@ animate();
   </div>
   <div class="grid g3" style="margin-top:16px">
     <div class="card"><h4><span class="ic">📐</span>Rule of thumb</h4><p><code>TP = GPUs per node</code>, <code>PP = number of nodes</code> for models too big for one node. Combine TP×PP multi-node — e.g., 405B: <b>TP8 × PP2</b>.</p></div>
-    <div class="card"><h4><span class="ic">🧩</span>Also exists</h4><p><b>Expert parallelism</b> for MoE models; <b>data parallelism</b> = just more replicas behind a load balancer — that's horizontal scaling, not model splitting.</p></div>
+    <div class="card"><h4><span class="ic">🧩</span>Also exists</h4><p><b>Expert parallelism</b> for MoE models; <b>data parallelism</b> = just more replicas behind a load balancer — that's horizontal scaling, not model splitting.</p>
+      <p style="margin-top:8px"><b>MIG (Multi-Instance GPU)</b> = the <b>opposite</b>: hardware-partition <b>one</b> A100/H100 into up to <b>7 isolated instances</b> (own compute + VRAM + bandwidth) to pack many <b>small</b> models on one GPU. K8s sees each slice as <code>nvidia.com/mig-1g.10gb</code> etc.; GPU Operator's MIG manager sets profiles. <span class="pill g">TP/PP</span> spread one big model across GPUs; <span class="pill p">MIG</span> splits one GPU among many small pods — a TP model can't fit in one slice.</p></div>
     <div class="card"><h4><span class="ic">⚖️</span>Load balancing for LLMs</h4><p>Round-robin is naive (request costs vary wildly with prompt/output lengths) — prefer <b>least-outstanding-requests</b> or KV-cache/prefix-aware routing (NVIDIA Dynamo KV-aware router, gateway-API inference extensions). Sticky/affinity routing improves prefix-cache hits for agents reusing long system prompts. Multi-node TP/PP groups = <b>one logical replica</b> (LeaderWorkerSet pattern).</p></div>
   </div>
 
@@ -1237,7 +1240,7 @@ animate();
     <div class="trap"><h4>⚠ 10 · Speculative decoding never changes output quality</h4><p>The target model verifies and accepts/rejects draft tokens, preserving the target distribution. "Trades accuracy for speed" is <b>false</b>. It helps latency-bound/small-batch regimes most, not max-throughput ones.</p></div>
     <div class="trap"><h4>⚠ 11 · Blue-green vs canary cost/rollback</h4><p>Blue-green = instant rollback but ~2× resources (expensive with GPUs!). Canary = gradual + cheap but slower. "Instant rollback required" → blue-green. "Limit blast radius, validate on live traffic" → canary. "No user exposure at all" → shadow.</p></div>
     <div class="trap"><h4>⚠ 12 · Triton ensemble vs BLS</h4><p>Ensembles are <b>static DAGs</b>; conditional/looping logic (agent-ish control flow) needs <b>BLS</b> (Python backend), not an ensemble.</p></div>
-    <div class="trap"><h4>⚠ 13 · NIM profile auto-selection order</h4><p>Memory fit → lower precision (FP8&gt;FP16) → <b>latency</b>-optimized default → higher TP → trtllm &gt; vllm &gt; sglang. Trap: NIM does <b>NOT</b> default to throughput-optimized.</p></div>
+    <div class="trap"><h4>⚠ 13 · NIM profile auto-selection order</h4><p>Filter to GPU-runnable profiles first, then rank: backend (<b>trtllm &gt; vllm &gt; sglang</b>) → precision (MXFP4&gt;FP8&gt;…&gt;INT4_AWQ) → <b>latency</b>-optimized default → highest TP. Trap: NIM does <b>NOT</b> default to throughput-optimized. (Current docs put <b>backend before precision</b>; NIM 1.x's older memory→precision→latency→TP→backend chain is superseded — but latency-default and trtllm-preferred hold either way.)</p></div>
     <div class="trap"><h4>⚠ 14 · Edge sizing</h4><p>Jetson Orin Nano (8 GB) cannot run a 70B model. The answer is a <b>quantized small model (Nemotron Nano INT4/Q4)</b>, or hybrid edge-cloud where the edge handles fast/local skills.</p></div>
   </div>
 </section>

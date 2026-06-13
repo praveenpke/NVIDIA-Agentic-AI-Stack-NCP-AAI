@@ -11,6 +11,8 @@
     --card: #161e2e;
     --green: #76b900;
     --green-dim: #4d7a00;
+    --green-glow: rgba(118,185,0,.25);
+    --on-accent: #20150a;
     --text: #e5e9f0;
     --muted: #8b95a7;
     --border: #243049;
@@ -51,7 +53,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #20150a;
+    color: #20150a; /* fixed dark: bar backgrounds below are fixed warm-amber (non-themeable), so text must stay dark in both modes */
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -123,14 +125,18 @@
   <div class="hero">
     <div class="eyebrow">NVIDIA Certified Professional · Agentic AI</div>
     <h1>NCP-AAI Visual Study Hub</h1>
-    <p>Interactive 3D + infographic deep-dives into the six exam domains. Together these cover <strong style="color:var(--green)">48%</strong> of the exam. Each page pairs with a full notes file in <code>../notes/</code> and now includes a runnable <strong style="color:var(--green)">Code Companion</strong> plus current practitioner takes (2025-26).</p>
-    <div class="weight-bar" title="Relative exam weight of these six domains">
-      <a href="domain-03-evaluation-tuning.html"        style="flex:13; background:#d98c2e;">D3 · 13%</a>
-      <a href="domain-04-deployment-scaling.html"       style="flex:13; background:#e69b3e;">D4 · 13%</a>
-      <a href="domain-07-nvidia-platform.html"          style="flex:7;  background:#c77d24;">D7 · 7%</a>
-      <a href="domain-08-run-monitor-maintain.html"     style="flex:5;  background:#eeb060;">D8 · 5%</a>
-      <a href="domain-09-safety-ethics-compliance.html" style="flex:5;  background:#f3c281;">D9 · 5%</a>
-      <a href="domain-10-human-ai-interaction.html"     style="flex:5;  background:#f8d6a4;">D10 · 5%</a>
+    <p>Interactive 3D + infographic deep-dives into all <strong style="color:var(--green)">ten exam domains</strong> — the full <strong style="color:var(--green)">100%</strong> blueprint. Each page pairs with a full notes file in <code>../notes/</code> and now includes a runnable <strong style="color:var(--green)">Code Companion</strong> plus current practitioner takes (2025-26).</p>
+    <div class="weight-bar" title="Relative exam weight of the ten domains">
+      <a href="domain-01-agent-architecture.html"       style="flex:15; background:#c77d24;">D1 · 15%</a>
+      <a href="domain-02-agent-development.html"         style="flex:15; background:#d98c2e;">D2 · 15%</a>
+      <a href="domain-03-evaluation-tuning.html"         style="flex:13; background:#e69b3e;">D3 · 13%</a>
+      <a href="domain-04-deployment-scaling.html"        style="flex:13; background:#eaa44e;">D4 · 13%</a>
+      <a href="domain-05-cognition-planning-memory.html" style="flex:10; background:#eeb060;">D5 · 10%</a>
+      <a href="domain-06-knowledge-integration.html"     style="flex:10; background:#f1bc6f;">D6 · 10%</a>
+      <a href="domain-07-nvidia-platform.html"           style="flex:7;  background:#f3c281;">D7 · 7%</a>
+      <a href="domain-08-run-monitor-maintain.html"      style="flex:5;  background:#f6cd92;">D8 · 5%</a>
+      <a href="domain-09-safety-ethics-compliance.html"  style="flex:5;  background:#f8d6a4;">D9 · 5%</a>
+      <a href="domain-10-human-ai-interaction.html"      style="flex:5;  background:#fadfb5;">D10 · 5%</a>
     </div>
   </div>
 
@@ -140,6 +146,18 @@
       <h2>Builder's Pulse (2025-26)</h2>
       <p>The 10 conversations the agent-building world is having right now — context engineering, the evals debate, 12-factor agents, MCP/A2A, multi-agent skepticism — mapped to the exam domains, with a full reading list.</p>
       <div class="go">Open field briefing →</div>
+    </a>
+    <a class="card" href="domain-01-agent-architecture.html">
+      <span class="badge">Domain 1 · 15%</span>
+      <h2>Agent Architecture and Design</h2>
+      <p>Agent patterns (ReAct, Reflexion, plan-and-execute), single vs multi-agent topologies (supervisor, peer, blackboard, pipeline), orchestration frameworks, and the MCP / A2A protocols — the heaviest domain.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-02-agent-development.html">
+      <span class="badge">Domain 2 · 15%</span>
+      <h2>Agent Development</h2>
+      <p>Prompt engineering, tool/function calling, structured outputs, LangGraph state machines and HITL interrupts, reliability engineering (retries, fallbacks, validation), and rapid prototyping on the NVIDIA stack.</p>
+      <div class="go">Open 3D deep-dive →</div>
     </a>
     <a class="card" href="domain-03-evaluation-tuning.html">
       <span class="badge">Domain 3 · 13%</span>
@@ -151,6 +169,18 @@
       <span class="badge">Domain 4 · 13%</span>
       <h2>Deployment and Scaling</h2>
       <p>NIM microservices, Triton dynamic batching, TensorRT-LLM quantization and in-flight batching, autoscaling on Kubernetes. Fly through a 3D GPU datacenter under live load.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-05-cognition-planning-memory.html">
+      <span class="badge">Domain 5 · 10%</span>
+      <h2>Cognition, Planning, and Memory</h2>
+      <p>Reasoning frameworks (CoT, tree-of-thoughts, self-consistency), task decomposition and re-planning, the memory hierarchy (short/long-term, episodic vs semantic vs procedural), and context-window budgeting.</p>
+      <div class="go">Open 3D deep-dive →</div>
+    </a>
+    <a class="card" href="domain-06-knowledge-integration.html">
+      <span class="badge">Domain 6 · 10%</span>
+      <h2>Knowledge Integration and Data Handling</h2>
+      <p>End-to-end RAG: chunking, embeddings, vector DBs (NeMo Retriever, Milvus, FAISS), hybrid search with RRF, cross-encoder reranking, NV-Ingest document parsing, and GraphRAG for multi-hop questions.</p>
       <div class="go">Open 3D deep-dive →</div>
     </a>
     <a class="card" href="domain-07-nvidia-platform.html">
@@ -180,7 +210,7 @@
   </div>
 
   <div class="footer">
-    Built for praveenkumar199324 · Study guide: <a href="../NCP-AAI-Study-Guide.md">NCP-AAI-Study-Guide.md</a> · Notes: <code>../notes/</code>
+    Built for praveenkumar199324 · <a href="study-guide.html">Exam &amp; Study Guide</a> · <a href="resources.html">Resources</a> · <a href="../NCP-AAI-Study-Guide.md">Study guide (markdown)</a> · Notes: <code>../notes/</code>
   </div>
 </body>
 </html>

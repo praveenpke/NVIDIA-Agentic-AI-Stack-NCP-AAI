@@ -68,7 +68,7 @@ docker run --rm --gpus all --shm-size=16GB \
 | | Hosted endpoints (build.nvidia.com) | Self-hosted NIM containers |
 |---|---|---|
 | Where | NVIDIA-managed (API catalog, `https://integrate.api.nvidia.com/v1`) | Your infra: on-prem, any cloud, K8s (NIM Operator/Helm) |
-| Auth | `nvapi-...` API key from build.nvidia.com | `NGC_API_KEY` to pull from `nvcr.io` (NGC registry) |
+| Auth | `nvapi-...` API key from build.nvidia.com | `NGC_API_KEY` to pull from `nvcr.io` (**NGC = NVIDIA GPU Cloud** registry) |
 | Cost model | Free dev credits, then paid | Your GPUs + NVIDIA AI Enterprise license for production (Developer Program allows free R&D self-hosting, up to 16 GPUs) |
 | Data residency | Data leaves your network | Full control — air-gapped possible |
 | Use when | Prototyping, demos, bursty experimentation | Production, compliance/privacy, latency control, fine-tuned/LoRA models |

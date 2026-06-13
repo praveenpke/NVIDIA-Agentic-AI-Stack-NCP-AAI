@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 6 — Knowledge Integration &amp; Data Handling</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --on-accent:#0b0f17;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:hidden}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV — padding-right leaves room for the injected top-right control cluster */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 104px 0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* 3D SCENE — stays hardcoded dark in both themes */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12;overflow:hidden}
+  #scene-canvas{width:100%;height:100%;display:block}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8;max-width:calc(100% - 28px)}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5);color:#dfe7f3}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#8fa0b8}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(min(215px,100%),1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative;min-width:0}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green);word-break:break-word}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;color:var(--green);max-width:100%}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit;word-break:normal}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-word}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto;max-width:100%}
+
+  /* SVG diagrams */
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* TWO-STAGE / MANTRA banner */
+  .mantra{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:14px;margin:16px 0}
+  .mantra .stage{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--panel);min-width:0}
+  .mantra .stage.wide{border-top:3px solid var(--cyan)}
+  .mantra .stage.narrow{border-top:3px solid var(--green)}
+  .mantra .stage h5{font-size:.95rem;margin-bottom:6px}
+  .mantra .stage p{font-size:.84rem;color:var(--muted)}
+  .mantra .stage .big{font-family:var(--mono);font-size:.74rem;color:var(--text);display:block;margin-top:8px}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+  .trap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:10px}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  /* CODE COMPANION grid — minmax(0,1fr) prevents overflow on mobile */
+  .cc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-word}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+
+  @media(max-width:760px){
+    nav{padding-right:104px}
+    .tbl{display:block;overflow-x:auto;white-space:nowrap}
+    footer ul{columns:1}
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · D6</a>
+  <a href="#scene-wrap">3D Refinery</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#pipeline">RAG Pipeline</a>
+  <a href="#chunking">Chunking</a>
+  <a href="#embed-index">Embeddings &amp; ANN</a>
+  <a href="#hybrid">Hybrid + RRF</a>
+  <a href="#rerank">Reranking</a>
+  <a href="#data">Data Handling</a>
+  <a href="#graphrag">GraphRAG</a>
+  <a href="#nvidia">NVIDIA Layer</a>
+  <a href="#frameworks">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#drills">Drills &amp; Quiz</a>
+  <a href="#code-companion">Code Companion</a>
+  <a href="#voices">Engineer Takes</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Domain 6 <span class="pct">10% · ~6–7 questions</span></div>
+  <h1>Knowledge Integration <span class="accent">&amp;</span> Data Handling</h1>
+  <p class="hook">The <b>knowledge plumbing</b> behind every grounded agent: build a RAG pipeline end-to-end — <b>ingest → chunk → embed → index → retrieve → rerank → generate</b> — pick the right index and search mode for the workload, handle messy real-world data (PDFs, tables, PII, staleness), and know when plain vector RAG isn't enough and you reach for <b>GraphRAG</b>.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover objects for info</div>
+  <div class="scene-legend">
+    <h4>Legend — the knowledge refinery</h4>
+    <ul>
+      <li><span class="sw" style="background:#6aa3cf"></span><span>Raw doc slabs (PDF, table, image) drop onto the ingestion conveyor</span></li>
+      <li><span class="sw" style="background:#e8a33d"></span><span>Chunker saw slices docs into chunk tiles; embedding portal converts them</span></li>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Glowing vector points fly into the 3D vector cloud, clustered by topic color</span></li>
+      <li><span class="sw" style="background:#b07cff"></span><span>Query orb → retrieval beam lights candidates → reranker gate keeps the best few</span></li>
+      <li><span class="sw" style="background:#76b900"></span><span>Survivors dock into the generation core; side lattice = GraphRAG multi-hop walk</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why &amp; how to think about it</div>
+  <h2>Mental model — a research library</h2>
+  <p class="lede">Agents are only as good as the knowledge they can reach. This domain is the layer where most RAG quality problems actually live — and where the exam asks you to <b>pick the right component/strategy for a scenario</b>: which chunking strategy, which ANN index, dense vs hybrid, when to add a reranker, which NVIDIA NIM does X. The library analogy maps every stage to a role.</p>
+
+  <div class="grid c3">
+    <div class="card blue"><h4><span class="icon">📚</span>Acquisitions = Ingestion</h4><p>Books arrive in every format; a cataloger (<b>NV-Ingest</b>) extracts the usable content — including the <b>tables and figures</b> a lazy cataloger would skip.</p></div>
+    <div class="card amber"><h4><span class="icon">🗃️</span>Catalog cards = Chunking</h4><p>One card per book is too coarse; one per sentence is noise. Cards that follow <b>chapter boundaries</b> work best.</p></div>
+    <div class="card cyan"><h4><span class="icon">🔖</span>Card catalog = Embed + Index</h4><p>Organized so the librarian jumps to the right shelf without scanning every card — that's <b>ANN</b>.</p></div>
+    <div class="card green"><h4><span class="icon">🧑‍🏫</span>Two librarians = Dense + Sparse</h4><p>Dense understands what you <b>mean</b>; sparse/BM25 matches the exact <b>words</b> (codes, IDs, names). Hybrid asks both and merges (<b>RRF</b>).</p></div>
+    <div class="card purple"><h4><span class="icon">🔬</span>Subject expert = Reranker</h4><p>Takes 40 candidate books, actually skims each against your question, hands you the best 5. Too slow for the whole library — perfect for a shortlist.</p></div>
+    <div class="card red"><h4><span class="icon">🕸️</span>Reference librarian = GraphRAG</h4><p>Knows how books <b>relate</b> — "the author of X was funded by Y, acquired by Z" — answering questions no single shelf contains.</p></div>
+  </div>
+
+  <div class="callout"><b>Collection maintenance = data handling:</b> redact the donor records (<b>PII</b>) <i>before</i> shelving, and re-catalog when new editions arrive (<b>freshness</b>) — a catalog of last year's library only answers last year's questions.</div>
+
+  <h3>The whole pipeline at a glance</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 1000 300" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker>
+      </defs>
+      <g font-size="11">
+        <rect x="8" y="20" width="150" height="56" rx="9" style="fill:var(--panel2);stroke:var(--blue)"/>
+        <text x="83" y="42" text-anchor="middle" style="fill:var(--text)" font-weight="700">Raw docs</text>
+        <text x="83" y="59" text-anchor="middle" style="fill:var(--muted)">PDF · tables · charts · scans</text>
+
+        <rect x="190" y="20" width="160" height="56" rx="9" style="fill:var(--panel);stroke:var(--amber)"/>
+        <text x="270" y="42" text-anchor="middle" style="fill:var(--amber)" font-weight="700">Extraction</text>
+        <text x="270" y="59" text-anchor="middle" style="fill:var(--muted)">NV-Ingest: text+tables+OCR</text>
+
+        <rect x="382" y="20" width="150" height="56" rx="9" fill="none" style="stroke:var(--red)"/>
+        <text x="457" y="42" text-anchor="middle" style="fill:var(--red)" font-weight="700">PII redaction</text>
+        <text x="457" y="59" text-anchor="middle" style="fill:var(--muted)">NeMo Curator / Presidio</text>
+
+        <rect x="564" y="20" width="150" height="56" rx="9" fill="none" style="stroke:var(--amber)"/>
+        <text x="639" y="42" text-anchor="middle" style="fill:var(--amber)" font-weight="700">Chunking</text>
+        <text x="639" y="59" text-anchor="middle" style="fill:var(--muted)">recursive / page · +overlap</text>
+
+        <rect x="746" y="20" width="150" height="56" rx="9" fill="none" style="stroke:var(--cyan)"/>
+        <text x="821" y="42" text-anchor="middle" style="fill:var(--cyan)" font-weight="700">Embedding NIM</text>
+        <text x="821" y="59" text-anchor="middle" style="fill:var(--muted)">input_type: passage</text>
+
+        <rect x="700" y="130" width="200" height="60" rx="9" style="fill:var(--panel2);stroke:var(--green)"/>
+        <text x="800" y="153" text-anchor="middle" style="fill:var(--green)" font-weight="700">Vector DB + ANN</text>
+        <text x="800" y="170" text-anchor="middle" style="fill:var(--muted)">Milvus / FAISS / pgvector</text>
+        <text x="800" y="184" text-anchor="middle" style="fill:var(--muted)">HNSW · IVF · + metadata</text>
+
+        <rect x="8" y="135" width="150" height="50" rx="9" fill="none" style="stroke:var(--purple)"/>
+        <text x="83" y="156" text-anchor="middle" style="fill:var(--purple)" font-weight="700">User query</text>
+        <text x="83" y="172" text-anchor="middle" style="fill:var(--muted)">embed query + BM25</text>
+
+        <rect x="200" y="130" width="180" height="60" rx="9" fill="none" style="stroke:var(--cyan)"/>
+        <text x="290" y="153" text-anchor="middle" style="fill:var(--cyan)" font-weight="700">Hybrid fusion (RRF)</text>
+        <text x="290" y="170" text-anchor="middle" style="fill:var(--muted)">top-k wide, e.g. 40</text>
+        <text x="290" y="184" text-anchor="middle" style="fill:var(--muted)">dense + sparse merged</text>
+
+        <rect x="200" y="225" width="180" height="56" rx="9" fill="none" style="stroke:var(--purple)"/>
+        <text x="290" y="247" text-anchor="middle" style="fill:var(--purple)" font-weight="700">Reranking NIM</text>
+        <text x="290" y="264" text-anchor="middle" style="fill:var(--muted)">cross-encoder · keep top 3–5</text>
+
+        <rect x="430" y="225" width="180" height="56" rx="9" fill="none" style="stroke:var(--green)"/>
+        <text x="520" y="247" text-anchor="middle" style="fill:var(--green)" font-weight="700">LLM generation</text>
+        <text x="520" y="264" text-anchor="middle" style="fill:var(--muted)">grounded + cited</text>
+      </g>
+      <line x1="158" y1="48" x2="190" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="350" y1="48" x2="382" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="532" y1="48" x2="564" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="714" y1="48" x2="746" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="821" y1="76" x2="810" y2="130" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="158" y1="160" x2="200" y2="160" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrB)"/>
+      <line x1="700" y1="160" x2="382" y2="160" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrB)"/>
+      <line x1="290" y1="190" x2="290" y2="225" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="380" y1="253" x2="430" y2="253" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <path d="M 760 130 C 600 100 300 95 95 76" fill="none" style="stroke:var(--green)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+      <text x="430" y="108" style="fill:var(--green)" font-size="10" text-anchor="middle">re-index on change</text>
+    </svg>
+    <div class="caption">The stages are <b>independently tunable and independently measurable</b> — evaluate retrieval (recall@k, NDCG) separately from generation (faithfulness), per Domain 3.</div>
+  </div>
+
+  <h3>The two-stage retrieval mantra</h3>
+  <div class="mantra">
+    <div class="stage wide"><h5>① Retrieve wide &amp; cheap</h5><p>Bi-encoder ANN over the whole corpus. Encode query and passages <b>separately</b>, compare vectors — scalable, precomputable.<span class="big">top-40…100 candidates</span></p></div>
+    <div class="stage narrow"><h5>② Rank narrow &amp; expensive</h5><p>Cross-encoder scores each query+passage <b>pair jointly</b> — accurate but per-pair, so only over the shortlist.<span class="big">→ keep top 3–5</span></p></div>
+  </div>
+  <div class="callout"><b>Almost every</b> "improve precision" question resolves to <b>adding the second stage</b>; almost every "the answer is missing entirely" question resolves to <b>fixing the first</b>.</div>
+</section>
+
+<!-- ============ RAG PIPELINE ============ -->
+<section id="pipeline">
+  <div class="kicker">Section 2 · Core concepts</div>
+  <h2>The RAG pipeline, stage by stage</h2>
+  <p class="lede">Each stage has a job and a signature failure mode if done badly. Mapping a symptom to the responsible stage is the single most-tested skill in this domain.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Stage</th><th>What happens</th><th>Failure mode if done badly</th></tr>
+    <tr><td><b>Ingestion / extraction</b></td><td>Parse source formats into clean text + structured artifacts (tables→markdown, charts→descriptions, OCR for scans)</td><td class="bad">Garbage in: tables flattened to word soup, figures dropped — the answer never enters the corpus</td></tr>
+    <tr><td><b>Chunking</b></td><td>Split documents into retrieval units, usually with overlap</td><td class="bad">Too big → diluted embeddings, noise in context; too small → fragments without enough meaning</td></tr>
+    <tr><td><b>Embedding</b></td><td>Bi-encoder maps each chunk to a dense vector (one-time, offline)</td><td class="bad">Weak/wrong-domain embedder → low recall@k no matter what else you tune</td></tr>
+    <tr><td><b>Indexing</b></td><td>Store vectors in an ANN index (+ scalar/metadata) for sub-linear search</td><td class="bad">Wrong index/params → slow queries or low recall at scale</td></tr>
+    <tr><td><b>Retrieval</b></td><td>Embed the query, find top-k nearest chunks (dense), optionally + BM25 (sparse)</td><td class="bad">k too small or dense-only on keyword-heavy queries → relevant chunks missed</td></tr>
+    <tr><td><b>Reranking</b></td><td>Cross-encoder re-scores query+chunk <i>pairs</i>; keep the best few</td><td class="bad">Skipped → noisy context, hallucination risk, wasted tokens (low precision@k)</td></tr>
+    <tr><td><b>Generation</b></td><td>LLM answers grounded in the final context, ideally with citations</td><td class="bad">Even perfect retrieval can't fix an ungrounded prompt — but that's a generation-side fix</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ CHUNKING ============ -->
+<section id="chunking">
+  <h2>Chunking strategies</h2>
+  <p class="lede">Chunk size is a <b>retrieval parameter</b>, not a context-window maximization game. No universal winner exists — the meta-lesson the NVIDIA study and 2025–26 benchmarks all agree on is: <b>sweep chunking on your own corpus with retrieval metrics</b>.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Strategy</th><th>How it splits</th><th>Pros</th><th>Cons</th><th>When</th></tr>
+    <tr><td><b>Fixed-size</b></td><td>Every N tokens/chars (e.g. 512 tokens, 10–15% overlap)</td><td class="good">Trivial, predictable, fast</td><td class="bad">Cuts mid-thought; ignores structure</td><td>Baseline; homogeneous prose</td></tr>
+    <tr><td><b>Recursive</b></td><td>Try separators in order (<code>\n\n</code> → <code>\n</code> → <code>. </code> → <code> </code>) until pieces fit</td><td class="good">Respects boundaries while honoring a size budget — the production default</td><td class="mid">Still structure-blind for tables/headers</td><td>Default starting point (~512 tokens)</td></tr>
+    <tr><td><b>Semantic</b></td><td>Embed sentences; split where adjacent-sentence similarity drops below a threshold</td><td class="good">Topically coherent chunks</td><td class="bad">Expensive (embeds at ingest); tiny fragments; inconsistent gains</td><td>Topic-drifting docs; only if measured to help</td></tr>
+    <tr><td><b>Structure-aware</b></td><td>Split on real structure: markdown headers, sections, <b>pages</b></td><td class="good">Preserves semantic units; NVIDIA found <b>page-level</b> best on average (0.648, lowest variance)</td><td class="mid">Needs structured input; unit sizes vary</td><td>Manuals, filings, wikis</td></tr>
+  </table></div>
+  <div class="callout warn"><b>Overlap (10–20%)</b> prevents answers from being severed at chunk boundaries — at the cost of index size and duplicate-ish results. It does <b>not</b> fix bad chunk sizing. <b>Hierarchical / parent-child chunking</b> (retrieve small, hand the LLM the bigger parent) is the common production resolution of the precision-vs-context tension.</div>
+</section>
+
+<!-- ============ EMBEDDINGS + ANN ============ -->
+<section id="embed-index">
+  <h2>Embeddings, vector DBs &amp; ANN indexes</h2>
+  <p class="lede">A bi-encoder encodes query and passage <b>independently</b>; cosine/dot similarity ≈ relevance. Key properties: dimension (Matryoshka lets you truncate for cheaper search), max input tokens, domain coverage, and <b>asymmetry</b> — retrieval embedders use distinct <code>input_type="query"</code> vs <code>"passage"</code> modes. Using the same mode for both silently degrades retrieval.</p>
+  <div class="callout"><b>Distance metric — a property of the model, not a free knob.</b> <b>Cosine</b> (magnitude-invariant) is the safe text default; <b>dot/inner-product</b> equals cosine <i>when vectors are L2-normalized</i> and is what many embedders optimize; <b>L2/Euclidean</b> is rarely right for normalized text embeddings. Mismatching it (e.g. an IP-trained model queried with L2) quietly tanks recall. Milvus <code>metric_type="COSINE"/"IP"/"L2"</code>; pgvector <code>vector_cosine_ops</code> / <code>vector_ip_ops</code> / <code>vector_l2_ops</code>.</div>
+
+  <h3>NeMo Retriever embedding NIMs</h3>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">⭐</span>llama-3.2-nv-embedqa-1b-v2</h4><p>Current flagship: <b>multilingual (26 languages)</b>, <b>8192-token max input</b>, Matryoshka-configurable to <b>384/512/768/1024/2048</b> dims, asymmetric <code>input_type</code>.</p></div>
+    <div class="card blue"><h4><span class="icon">🇬🇧</span>nv-embedqa-e5-v5</h4><p>English QA embedder.</p></div>
+    <div class="card blue"><h4><span class="icon">🌐</span>nv-embedqa-mistral-7b-v2</h4><p>Multilingual. All served as NIM containers with an OpenAI-compatible <code>/v1/embeddings</code> API.</p></div>
+  </div>
+
+  <h3>Vector stores <span class="tag">database vs library</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Store</th><th>What it is</th><th>When</th></tr>
+    <tr><td><b>Milvus</b></td><td>Purpose-built distributed vector DB; dense + sparse + hybrid search, metadata filtering, partitions; <b>GPU-accelerated indexes (CAGRA)</b> — NVIDIA's blueprint default</td><td class="good">Production scale, hybrid search, GPU acceleration</td></tr>
+    <tr><td><b>FAISS</b></td><td>A <i>library</i> (in-process index), <b>not a database</b> — no server; persistence/CRUD/filtering are DIY</td><td class="mid">Prototypes, embedded/offline search, research</td></tr>
+    <tr><td><b>pgvector</b></td><td>Postgres extension: <code>vector</code> column + HNSW/IVFFlat indexes, queried in SQL</td><td class="mid">You already run Postgres; transactional joins of vectors + relational data</td></tr>
+  </table></div>
+
+  <h3>ANN indexes <span class="tag">why vector search is sub-linear</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Index</th><th>Mechanism</th><th>Trade-offs</th><th>Key params</th></tr>
+    <tr><td><b>Flat (brute force)</b></td><td>Compare query to every vector — exact, 100% recall</td><td class="mid">O(N) per query; fine to ~100k vectors</td><td>—</td></tr>
+    <tr><td><b>HNSW</b></td><td>Multi-layer navigable graph; greedy search top layer down</td><td class="good">High recall + low latency; <b>memory-heavy</b>; handles incremental inserts; slower builds</td><td><code>m</code> (~16), <code>ef_construction</code> (~200), <code>ef_search</code> (query-time recall/speed knob)</td></tr>
+    <tr><td><b>IVF (IVFFlat)</b></td><td>k-means partitions vectors into <code>lists</code> (Voronoi cells); search only <code>nprobe</code> nearest cells</td><td class="mid">Faster build, lower memory; recall drops if right cell unprobed; <b>needs training data</b>, degrades on distribution shift</td><td><code>lists</code> (≈ √rows), <code>nprobe</code></td></tr>
+  </table></div>
+  <div class="callout"><b>Rule of thumb:</b> HNSW = quality-first default (recall, incremental data); IVF = scale/memory-constrained, bulk-loaded data; <b>quantization (PQ/SQ, e.g. IVF_PQ)</b> trades recall for big memory cuts.</div>
+</section>
+
+<!-- ============ HYBRID + RRF ============ -->
+<section id="hybrid">
+  <h2>Hybrid search: dense + sparse with RRF</h2>
+  <p class="lede">Dense vectors capture <b>meaning</b> but fumble exact tokens (part numbers, error codes, names, acronyms). Sparse/lexical scoring (<b>BM25</b>: term-frequency × inverse-document-frequency, length-normalized) nails exact matches but has zero notion of synonyms. <b>Hybrid runs both and fuses the ranked lists.</b></p>
+
+  <div class="grid c2">
+    <div class="card cyan"><h4><span class="icon">➕</span>Reciprocal Rank Fusion (RRF)</h4>
+      <p><code>RRF score(d) = Σ 1/(k + rank_i(d))</code>, smoothing constant <b>k = 60</b> by default.</p>
+      <p style="margin-top:8px">RRF only uses <b>ranks, never raw scores</b> — so it needs no normalization across incomparable scales (cosine vs BM25). That's exactly why it's the default fuser (Milvus <code>RRFRanker</code>).</p></div>
+    <div class="card blue"><h4><span class="icon">⚖️</span>Weighted scoring</h4>
+      <p>The alternative — <code>WeightedRanker</code> — normalizes and linearly combines scores when you want to <b>bias toward one channel</b> (e.g. 0.7 dense / 0.3 sparse).</p></div>
+  </div>
+
+  <div class="callout"><b>Metadata filtering — the third leg.</b> Scalar predicates (<code>source == "2025_10K" and year &gt;= 2024</code>) applied to the vector search. Modern engines <b>pre-filter</b> (constrain the ANN search to matching vectors) rather than post-filter (which can return fewer than k). Filters are also your <b>tenancy/ACL enforcement point</b> — security by filter, not by hoping the LLM ignores other tenants' chunks.</div>
+</section>
+
+<!-- ============ RERANKING ============ -->
+<section id="rerank">
+  <h2>Reranking: cross-encoders for precision</h2>
+  <p class="lede">A <b>cross-encoder</b> feeds query and candidate passage through the model <i>together</i>, letting attention compare them token-by-token — far more accurate than bi-encoder cosine, but it must run per query-passage pair at query time, so it can never scan the whole corpus. Hence the two-stage pattern.</p>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🎯</span>What it buys you</h4><ul>
+      <li>Higher answer accuracy <b>and</b> lower generation cost (fewer, better chunks → fewer prompt tokens)</li>
+      <li>The natural <b>merge point</b> when retrieving from multiple sources</li>
+      <li>Pattern: retrieve wide (top 40–100) → rerank → keep top 3–5</li>
+    </ul></div>
+    <div class="card purple"><h4><span class="icon">🧩</span>NVIDIA reranking NIM</h4>
+      <p><b><code>llama-3.2-nv-rerankqa-1b-v2</code></b> — multilingual companion to the embedding NIM. Predecessor: <code>nv-rerankqa-mistral-4b-v3</code> (a truncated, LoRA-tuned Mistral with a binary relevance head).</p>
+      <p style="margin-top:8px"><b>Latency is the price</b> — budget reranking only over the shortlist.</p></div>
+  </div>
+</section>
+
+<!-- ============ DATA HANDLING ============ -->
+<section id="data">
+  <h2>Data handling: parsing, PII, freshness</h2>
+  <p class="lede">The unglamorous but highest-leverage stage. You cannot retrieve what was destroyed at parse time, you cannot un-leak PII once it's embedded, and a vector index is just a snapshot that answers last year's questions unless you update it.</p>
+
+  <div class="grid c3">
+    <div class="card amber"><h4><span class="icon">📄</span>Multimodal extraction</h4>
+      <p><b>NV-Ingest (NeMo Retriever extraction)</b>: splits docs into pages, classifies elements, uses specialized NIMs (page-element detection, table-structure, OCR) to extract <b>text, tables (as markdown), charts, infographics</b> into a uniform JSON/DataFrame schema — then optionally chunks, embeds, uploads to Milvus in one fluent pipeline.</p>
+      <p style="margin-top:8px">Tables as <b>structured markdown</b> embed and retrieve dramatically better than tables flattened to whitespace soup.</p></div>
+    <div class="card red"><h4><span class="icon">🔒</span>PII redaction</h4>
+      <p>Redact <b>at ingestion time, before indexing</b> — once PII is embedded and stored, every retrieval can leak it, and embeddings themselves can be inverted.</p>
+      <p style="margin-top:8px">Tooling: <b>NeMo Curator's <code>PiiModifier</code></b> (built on Microsoft <b>Presidio</b>) for pattern/NER detection; <code>LLMPiiModifier</code> / <code>AsyncLLMPiiModifier</code> for LLM-based detection via a NIM. Runtime <b>NeMo Guardrails</b> checks are defense in depth, not the load-bearing control.</p></div>
+    <div class="card blue"><h4><span class="icon">🔄</span>Freshness &amp; re-indexing</h4>
+      <p>RAG's whole advantage over fine-tuning is <b>cheap knowledge updates</b> — but only if you actually update.</p>
+      <ul>
+        <li><b>Incremental upsert:</b> content hash + <code>last_modified</code> per doc; on change, delete its chunks by stable ID (<code>doc_id#chunk_n</code>) and re-embed only it</li>
+        <li><b>Scheduled sync:</b> cron diff, or event-driven webhook on doc save</li>
+        <li><b>Full re-embed</b> only for: changing embedding model, chunking strategy, or dimension — version the model in index metadata</li>
+      </ul></div>
+  </div>
+  <div class="callout warn"><b>Stale-data symptom:</b> confidently outdated answers citing superseded docs — filterable by <code>effective_date</code> metadata until re-ingestion lands. The most common production RAG complaint isn't hallucination — it's confidently citing the superseded policy.</div>
+</section>
+
+<!-- ============ GRAPHRAG ============ -->
+<section id="graphrag">
+  <h2>GraphRAG &amp; structured knowledge</h2>
+  <p class="lede">Vector RAG retrieves <b>isolated chunks by similarity</b> — it fails on <b>multi-hop questions</b> ("Which suppliers of our acquired subsidiaries are affected by the new regulation?") where the connecting facts live in <i>relationships across documents</i>, and on <b>global/aggregate questions</b> ("What are the main themes across this corpus?") where the answer is a synthesis, not a passage.</p>
+
+  <div class="grid c2">
+    <div class="card purple"><h4><span class="icon">🕸️</span>GraphRAG (Microsoft)</h4>
+      <p>At <b>indexing time</b>, an LLM extracts <b>entities and relationships</b> from chunks into a knowledge graph; community detection (<b>Leiden</b>) clusters it hierarchically; an LLM writes <b>community summaries</b> per level.</p>
+      <ul>
+        <li><b>Global search</b> maps over community summaries (corpus-wide themes)</li>
+        <li><b>Local search</b> expands from matched entities to neighbors + source chunks (entity-centric multi-hop)</li>
+      </ul>
+      <p style="margin-top:8px">Knowledge graphs also serve agents as <b>structured tools</b> (Cypher/SPARQL over Neo4j) — text2query alongside similarity search.</p></div>
+    <div class="card amber"><h4><span class="icon">💸</span>The cost catch &amp; LazyGraphRAG</h4>
+      <p>LLM-extracting a graph over a large corpus is <b>expensive</b> (oft-cited early-2024 figure: ~$33k to index one dataset), and the graph must be maintained as docs change.</p>
+      <p style="margin-top:8px"><b>LazyGraphRAG</b> (Microsoft, late 2024) defers the expensive work to query time — indexing cost comparable to plain vector RAG (~0.1% of full GraphRAG's) with comparable global-search quality — the pragmatic default when graph queries are occasional.</p></div>
+  </div>
+  <div class="callout"><b>Decision:</b> vector RAG for <b>"find the passage"</b>; GraphRAG/KG for <b>"connect the facts"</b>; hybrid (graph + vector) in production systems that need both.</div>
+</section>
+
+<!-- ============ NVIDIA LAYER ============ -->
+<section id="nvidia">
+  <div class="kicker">Section 3 · NVIDIA-specific layer</div>
+  <h2>The NVIDIA RAG stack</h2>
+  <p class="lede">The NIM/Retriever stack buys you GPU-optimized, containerized, OpenAI-API-compatible pieces that slot into LangChain/LlamaIndex unchanged. The <i>concepts</i> (bi-encoder, cross-encoder, ANN, RRF) are identical to open source — exam questions mostly test that you can <b>map concept → NVIDIA product name</b>.</p>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>NVIDIA tool</th><th>Role</th><th>Key facts</th></tr>
+    <tr><td><b>NeMo Retriever embedding NIMs</b></td><td>Embedding stage as a container</td><td><code>llama-3.2-nv-embedqa-1b-v2</code> (26 langs, 8192-token input, Matryoshka 384–2048, asymmetric <code>input_type</code>); also <code>nv-embedqa-e5-v5</code>, <code>nv-embedqa-mistral-7b-v2</code>. LangChain: <code>NVIDIAEmbeddings</code></td></tr>
+    <tr><td><b>NeMo Retriever reranking NIM</b></td><td>Precision stage (cross-encoder)</td><td><code>llama-3.2-nv-rerankqa-1b-v2</code> (current), <code>nv-rerankqa-mistral-4b-v3</code> (prior). LangChain: <code>NVIDIARerank</code> → <code>ContextualCompressionRetriever</code></td></tr>
+    <tr><td><b>NV-Ingest / extraction</b></td><td>Multimodal document extraction</td><td>Fluent <code>Ingestor</code>: <code>.files().extract(...).embed().vdb_upload().ingest()</code>; detection/table/OCR NIMs; newest releases ship as <code>nemo-retriever</code> (<code>create_ingestor</code>)</td></tr>
+    <tr><td><b>Milvus (+ GPU CAGRA)</b></td><td>NVIDIA's default vector DB</td><td>Dense + sparse(BM25) + <code>hybrid_search</code> with <code>RRFRanker</code>/<code>WeightedRanker</code>; metadata filters; <b>CAGRA</b> = GPU-native graph ANN index</td></tr>
+    <tr><td><b>NeMo Curator (PII)</b></td><td>Ingestion-time PII redaction</td><td><code>PiiModifier</code> (Presidio) and <code>LLMPiiModifier</code> (NIM-backed) chained in a <code>Sequential</code> curation pipeline</td></tr>
+    <tr><td><b>NeMo Guardrails</b></td><td>Runtime complement</td><td>Input/output PII checks, grounding rails — defense in depth atop ingestion-time redaction</td></tr>
+    <tr><td><b>NVIDIA RAG Blueprint</b></td><td>The reference architecture</td><td>NIM LLM + NeMo Retriever embed/rerank + Milvus + NV-Ingest — the exam's mental picture of "NVIDIA's RAG stack"</td></tr>
+    <tr><td><b>NeMo Evaluator</b></td><td>Measures this domain's output</td><td>Retriever evals (Recall@K, NDCG@K on BEIR-format) and RAG evals (RAGAS-style) — Domain 3 crossover</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ DECISION FRAMEWORKS ============ -->
+<section id="frameworks">
+  <div class="kicker">Section 4 · Decision frameworks</div>
+  <h2>Pick the right component for the scenario</h2>
+  <p class="lede">The exam's bread and butter. The fix order is almost always: <b>extraction → chunking → hybrid → reranker → exotic</b>.</p>
+
+  <h3>Chunking selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Situation</th><th>Choose</th></tr>
+    <tr><td>No info about the corpus, need a baseline</td><td class="good">Recursive splitting, ~512 tokens, 10–15% overlap</td></tr>
+    <tr><td>Structured docs (manuals, wikis, filings) with meaningful sections/pages</td><td class="good">Structure-aware (header/section/page-level)</td></tr>
+    <tr><td>Long docs that drift across topics; ingestion compute is cheap</td><td class="mid">Semantic chunking — <i>if</i> eval shows it wins</td></tr>
+    <tr><td>Answers keep getting cut at boundaries</td><td class="good">Increase overlap, or parent-child (retrieve small, return parent)</td></tr>
+    <tr><td>Dense tables/figures in PDFs</td><td class="bad">Don't chunk harder — fix <b>extraction</b> first (NV-Ingest)</td></tr>
+  </table></div>
+
+  <h3>Index selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>&lt;~100k vectors, exact results, simplicity</td><td class="good">Flat (brute force)</td></tr>
+    <tr><td>High recall + low latency, data arrives incrementally, RAM available</td><td class="good">HNSW</td></tr>
+    <tr><td>Memory-constrained / huge bulk-loaded corpus, fastest builds</td><td class="mid">IVF (+ PQ quantization if needed)</td></tr>
+    <tr><td>GPU-accelerated high-throughput search on NVIDIA infra</td><td class="good">Milvus GPU index (CAGRA)</td></tr>
+    <tr><td>Vectors must live beside relational data with SQL joins/transactions</td><td class="mid">pgvector</td></tr>
+    <tr><td>Embedded in-process, no server, prototyping</td><td class="mid">FAISS</td></tr>
+  </table></div>
+
+  <h3>Retrieval architecture</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Symptom / need</th><th>Choose</th></tr>
+    <tr><td>Queries full of IDs, part numbers, exact names missed by dense search</td><td class="good">Hybrid (dense + BM25) with RRF</td></tr>
+    <tr><td>Top-k contains the answer but buried in noise (precision low, recall fine)</td><td class="good">Add cross-encoder reranking NIM over a wider candidate set</td></tr>
+    <tr><td>Answer not in top-k at all (recall low)</td><td class="bad">Fix upstream: chunking, embedder, hybrid, raise k — reranking can't recover what wasn't retrieved</td></tr>
+    <tr><td>Per-tenant / per-source / time-scoped retrieval</td><td class="good">Metadata filtering (pre-filter)</td></tr>
+    <tr><td>Multi-hop relationship questions, corpus-wide themes</td><td class="good">GraphRAG / KG (LazyGraphRAG if indexing budget is tight)</td></tr>
+    <tr><td>Sources change daily</td><td class="good">Incremental upsert + stable chunk IDs + scheduled sync</td></tr>
+    <tr><td>Swapped embedding model</td><td class="bad">Full re-embed of the corpus — no exceptions</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 5 · Gotchas</div>
+  <h2>Exam traps &amp; gotchas</h2>
+  <p class="lede">The fifteen traps this domain plants. Most are symptom→stage mapping or "X is obsolete / X everywhere" overreach.</p>
+  <div class="trap-grid">
+    <div class="trap"><h4><span class="n">01</span>"Bigger chunks = better"</h4><p>Oversized chunks <b>dilute the embedding</b> (many topics → mushy vector) and stuff noise into the prompt. <span class="fix">Chunk size is a retrieval parameter tuned by recall/precision.</span></p></div>
+    <div class="trap"><h4><span class="n">02</span>Overlap fixes quality</h4><p>Overlap prevents an answer span from being split across chunks; it does <b>not</b> fix bad sizing and inflates index size/cost. <span class="fix">Different tool for a different job.</span></p></div>
+    <div class="trap"><h4><span class="n">03</span>Reranker can fix recall</h4><p>A cross-encoder only <b>reorders</b> what retrieval returned. <span class="fix">Missing from top-50 → fix embeddings/chunking/hybrid/k. Present but buried → reranker.</span></p></div>
+    <div class="trap"><h4><span class="n">04</span>Bi- vs cross-encoder inversion</h4><p>Bi-encoder: encode query &amp; doc <b>separately</b>, compare vectors, scalable (first stage). Cross-encoder: encode the <b>pair jointly</b>, accurate but per-pair (rerank). <span class="fix">Can't cross-encode the whole corpus — it runs per pair at query time.</span></p></div>
+    <div class="trap"><h4><span class="n">05</span><code>input_type</code> asymmetry</h4><p>NeMo embedders are asymmetric: passages <code>input_type="passage"</code>, queries <code>"query"</code>. Same mode for both silently hurts retrieval. <span class="fix">LangChain's <code>embed_documents</code>/<code>embed_query</code> handles it.</span></p></div>
+    <div class="trap"><h4><span class="n">06</span>RRF uses scores</h4><p>RRF uses <b>ranks, not scores</b> — BM25 and cosine live on incomparable scales. <span class="fix">"Fusion without normalization" → RRF (k=60); "weighted bias toward one channel" → weighted scoring.</span></p></div>
+    <div class="trap"><h4><span class="n">07</span>BM25/sparse is obsolete</h4><p>Dense embeddings whiff on exact identifiers, acronyms, rare terms. <span class="fix">"Users search by error code/SKU and dense misses" → add hybrid, not a bigger embedder.</span></p></div>
+    <div class="trap"><h4><span class="n">08</span>HNSW vs IVF mix-up</h4><p>HNSW: graph, best recall/latency, memory-hungry, incremental-friendly. IVF: clustered lists, cheaper build/memory, needs training data. <span class="fix">"Streaming inserts + high recall" → HNSW; "huge static corpus, tight memory" → IVF(+PQ).</span></p></div>
+    <div class="trap"><h4><span class="n">09</span>FAISS is a database</h4><p>FAISS is a <b>library</b> — no server, replication, or DB-grade CRUD/metadata filtering. <span class="fix">"Production multi-tenant vector store" → Milvus/pgvector-class, not raw FAISS.</span></p></div>
+    <div class="trap"><h4><span class="n">10</span>Swap embedder, embed only new docs</h4><p>Vectors from different models (or dims) aren't comparable; a mixed index returns garbage quietly. <span class="fix">Model swap = full corpus re-embed + re-index, versioned.</span></p></div>
+    <div class="trap"><h4><span class="n">11</span>Fine-tune for fresh facts</h4><p>Knowledge updates are a <b>re-indexing</b> operation in RAG — that's the whole economic argument for RAG over fine-tuning. <span class="fix">(Domain 3 crossover, still tested here.)</span></p></div>
+    <div class="trap"><h4><span class="n">12</span>PII redaction at generation time</h4><p>Too late: the PII is already in the index and every retrieved context. <span class="fix">Redact during ingestion (Curator/Presidio), enforce access via metadata filters, runtime rails as defense in depth.</span></p></div>
+    <div class="trap"><h4><span class="n">13</span>Vector RAG for multi-hop</h4><p>Similarity retrieves chunks that <i>look like</i> the question; multi-hop answers live in chains of facts that individually don't. <span class="fix">"Joining facts across documents" → GraphRAG/KG (local search for entity-hops, global for themes).</span></p></div>
+    <div class="trap"><h4><span class="n">14</span>GraphRAG everywhere</h4><p>Also a trap: full GraphRAG indexing is LLM-expensive and high-maintenance. <span class="fix">Single-hop factual QA → plain vector RAG; occasional graph queries → LazyGraphRAG-style deferred approaches.</span></p></div>
+    <div class="trap"><h4><span class="n">15</span>Pre- vs post-filtering</h4><p>Post-filtering (search, then discard) can leave fewer than k results and wastes compute; production engines <b>pre-filter</b>. <span class="fix">Metadata filters are your ACL boundary, not the LLM's discretion.</span></p></div>
+  </div>
+</section>
+
+<!-- ============ DRILLS + QUIZ ============ -->
+<section id="drills">
+  <div class="kicker">Section 6 · Practice</div>
+  <h2>Scenario drills &amp; quick quiz</h2>
+  <p class="lede">Read each scenario, decide the fix <b>before</b> you open the answer. These are the exact shape of Domain 6 questions: a symptom, and you map it to the responsible stage.</p>
+
+  <details class="drill"><summary><span class="qn">D1</span><span>Support-bot users query by product SKU and error code; dense retrieval returns related-but-wrong articles. Recall on keyword-heavy queries is poor; recall on natural-language queries is fine. Fix?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Hybrid search: add a sparse/BM25 channel and fuse with RRF.</b><span class="why">Exact identifiers are lexical signals dense embeddings can't represent; a bigger embedder won't fix it.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D2</span><span>Recall@50 is 0.92 but answers are mediocre; the right chunk is usually around rank 20–40, and the LLM receives 50 chunks. Cheapest fix?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Add the reranking NIM</b> (cross-encoder, e.g. <code>llama-3.2-nv-rerankqa-1b-v2</code>) over the 50 candidates, keep top-5.<span class="why">The precision-stage textbook case — improves accuracy <i>and</i> cuts prompt tokens.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D3</span><span>A financial-analyst agent must answer "How did supplier risks discussed in the 2023 10-K evolve through the 2025 filings?" spanning entities and relationships across many documents. Vector RAG keeps returning isolated, similar-sounding paragraphs. Architecture change?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>GraphRAG / knowledge-graph retrieval</b>: extract entities/relations at indexing, use local (entity-expansion) search for the multi-hop chain.<span class="why">LazyGraphRAG-style deferred indexing if cost is a concern.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D4</span><span>Your corpus is scanned PDFs with dense tables and charts. Text extraction "works" but retrieval over table content is near-zero. First fix?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Fix extraction, not chunking: run ingestion through NV-Ingest / NeMo Retriever extraction</b> so tables become structured markdown and charts become described elements before chunking/embedding.<span class="why">You cannot retrieve what was destroyed at parse time.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D5</span><span>Compliance flags that customer SSNs appear in retrieved contexts shown to agents. The team proposes a prompt instructing the LLM to omit PII. Correct response?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer">Reject prompt-level mitigation as primary control; <b>redact PII at ingestion</b> (NeMo Curator <code>PiiModifier</code>/Presidio) and re-index the affected collection, enforce scope via <b>metadata filters</b>, keep Guardrails-style output checks as a secondary layer.<span class="why">Once PII is embedded and stored, every retrieval can leak it.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D6</span><span>You upgrade from <code>nv-embedqa-e5-v5</code> to <code>llama-3.2-nv-embedqa-1b-v2</code> and only embed <i>new</i> documents with the new model into the same collection. Retrieval quality craters. Why?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Mixed embedding spaces</b>: vectors from different models aren't comparable, so nearest-neighbor results are meaningless across the boundary.<span class="why">Re-embed the entire corpus with the new model into a fresh (versioned) index, then cut over.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">D7</span><span>Docs change daily; nightly full re-embedding of 10M chunks is blowing the GPU budget. Better pattern?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Incremental upsert</b>: hash each source doc, on change delete its chunks by stable ID prefix and re-embed only that doc; schedule a periodic diff sync.<span class="why">Reserve full re-embeds for model/chunking changes.</span></div></details>
+
+  <h3>Quick quiz <span class="tag">one-liners</span></h3>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>Which fuser needs no score normalization across cosine and BM25, and why?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>RRF (Reciprocal Rank Fusion, k=60).</b><span class="why">It combines <i>ranks</i> (1/(k+rank)), never raw scores — sidestepping the incomparable cosine vs BM25 scales entirely.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">Q2</span><span>Streaming inserts plus a high-recall requirement — which ANN index?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>HNSW.</b><span class="why">Best recall/latency and handles incremental inserts well; IVF needs representative training data and degrades on distribution shift.</span></div></details>
+
+  <details class="drill"><summary><span class="qn">Q3</span><span>Which chunking strategy did NVIDIA's study find best on average, with the lowest variance?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Page-level (document-structure-aware) chunking</b> — 0.648 accuracy, lowest variance.<span class="why">But benchmarks disagree; the exam-safe answer is "sweep on your own corpus with retrieval metrics."</span></div></details>
+
+  <details class="drill"><summary><span class="qn">Q4</span><span>Production multi-tenant vector store with metadata filtering and replication — FAISS or Milvus?</span><span class="flip"><span class="show">show ▾</span><span class="hide">hide ▴</span></span></summary>
+    <div class="answer"><b>Milvus</b> (or pgvector-class).<span class="why">FAISS is a library, not a database — no server, no replication, no DB-grade CRUD/metadata filtering.</span></div></details>
+</section>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code-companion">
+  <div class="kicker">Section 7 · Hands-on</div>
+  <h2>Code Companion — the domain in runnable snippets</h2>
+  <p class="lede">Every core idea reduced to the smallest piece of code that exercises it: the two-stage pipeline, chunking comparison, Milvus hybrid + RRF, NV-Ingest multimodal extraction, metadata-filtered retrieval, incremental upsert, GraphRAG multi-hop, and pgvector HNSW in plain SQL.</p>
+
+  <div class="cc-grid">
+    <div class="card green">
+      <h4><span class="icon">🔗</span>1 · Minimal end-to-end RAG <span class="pill g">embedding NIM + FAISS + reranking NIM + generation</span></h4>
+      <pre class="code-block"><code>from langchain_nvidia_ai_endpoints import ChatNVIDIA, NVIDIAEmbeddings, NVIDIARerank  # reads NVIDIA_API_KEY
+from langchain_community.vectorstores import FAISS
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+chunks = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64).split_documents(docs)
+emb = NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2", truncate="END")
+vstore = FAISS.from_documents(chunks, emb)                      # passages embedded as input_type=passage
+
+retriever = ContextualCompressionRetriever(                     # stage 2: cross-encoder precision
+    base_retriever=vstore.as_retriever(search_kwargs={"k": 40}),  # stage 1: wide &amp; cheap
+    base_compressor=NVIDIARerank(model="nvidia/llama-3.2-nv-rerankqa-1b-v2", top_n=5),
+)
+llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct")
+ctx = retriever.invoke("What is the warranty period for model X?")  # query embedded as input_type=query
+answer = llm.invoke(f"Answer ONLY from context:\n{ctx}\n\nQ: What is the warranty period for model X?")</code></pre>
+      <p><b>What to notice:</b> the whole §2 pipeline in ~12 lines — retrieve wide (k=40) then rerank down to 5 is the two-stage mantra, and <code>NVIDIAEmbeddings</code>/<code>NVIDIARerank</code> are just OpenAI-compatible NIM endpoints behind LangChain classes. The embed/rerank model pair (<code>...nv-embedqa-1b-v2</code> + <code>...nv-rerankqa-1b-v2</code>) is NVIDIA's matched multilingual duo.</p>
+    </div>
+
+    <div class="card cyan">
+      <h4><span class="icon">✂️</span>2 · Chunking comparison <span class="pill c">recursive vs semantic in a few lines</span></h4>
+      <pre class="code-block"><code>from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+
+recursive = RecursiveCharacterTextSplitter(            # tries \n\n, \n, ". ", " " in order
+    chunk_size=512, chunk_overlap=64).split_text(long_text)
+semantic = SemanticChunker(                            # splits where adjacent-sentence similarity drops
+    NVIDIAEmbeddings(model="nvidia/llama-3.2-nv-embedqa-1b-v2"),
+    breakpoint_threshold_type="percentile").split_text(long_text)
+print(len(recursive), len(semantic))                   # semantic: variable sizes, topical coherence — and embedding cost at ingest</code></pre>
+      <p><b>What to notice:</b> recursive enforces a size budget while respecting separator hierarchy (the production default); semantic spends embedding calls <i>during ingestion</i> to find topic boundaries and emits variable-size chunks. Benchmarks disagree on which wins — the exam-safe answer is "measure on your corpus" (§3.2).</p>
+    </div>
+
+    <div class="card blue">
+      <h4><span class="icon">🔀</span>3 · Milvus hybrid search <span class="pill b">dense + BM25 sparse fused with RRF</span></h4>
+      <pre class="code-block"><code>from pymilvus import MilvusClient, AnnSearchRequest, RRFRanker
+
+client = MilvusClient(uri="http://localhost:19530")
+q_text = "RTX 5090 driver error 0x887A0006"
+dense_req = AnnSearchRequest(data=[embed(q_text)], anns_field="dense_vector",
+                             param={"metric_type": "COSINE"}, limit=20)
+sparse_req = AnnSearchRequest(data=[q_text], anns_field="sparse_vector",   # raw text: Milvus 2.5+ computes BM25 internally
+                              param={"metric_type": "BM25"}, limit=20)
+hits = client.hybrid_search(collection_name="docs",
+                            reqs=[dense_req, sparse_req],
+                            ranker=RRFRanker(k=60),                        # rank-based fusion, k=60 default
+                            limit=5, output_fields=["text", "source"])</code></pre>
+      <p><b>What to notice:</b> the error code <code>0x887A0006</code> is exactly what dense-only retrieval misses and BM25 nails. <code>RRFRanker</code> fuses by <i>rank</i> (1/(k+rank)), so the incomparable COSINE and BM25 score scales never need normalizing; swap in <code>WeightedRanker(0.7, 0.3)</code> to bias channels instead.</p>
+    </div>
+
+    <div class="card amber">
+      <h4><span class="icon">📄</span>4 · NV-Ingest multimodal extraction <span class="pill a">PDF → embed → vector DB in one chain</span></h4>
+      <pre class="code-block"><code>from nemo_retriever import create_ingestor   # pip install nemo-retriever (earlier releases: nv-ingest-client's Ingestor)
+
+ingestor = (
+    create_ingestor(run_mode="batch")
+    .files(["data/q3_earnings_deck.pdf"])
+    .extract(extract_text=True, extract_tables=True,     # tables come back as markdown
+             extract_charts=True, extract_infographics=True)
+    .embed()                                              # NeMo Retriever embedding NIM
+    .vdb_upload()                                         # straight into Milvus
+)
+chunks = ingestor.ingest()                                # pandas DataFrame of extracted elements
+print(chunks.iloc[0]["text"])</code></pre>
+      <p><b>What to notice:</b> one fluent chain covers ingestion → extraction → embedding → indexing, with specialized NIMs (page-element detection, table structure, OCR) doing the heavy lifting per modality. The exam point: tables/charts are extracted as <i>structured</i> artifacts, not flattened text — fixing retrieval failures that no chunking tweak can.</p>
+    </div>
+
+    <div class="card purple">
+      <h4><span class="icon">🎛️</span>5 · Metadata-filtered retrieval <span class="pill p">scope, tenancy, and freshness in one expression</span></h4>
+      <pre class="code-block"><code>hits = client.search(
+    collection_name="docs",
+    data=[embed("What changed in the leave policy?")],
+    filter='tenant_id == "acme" and doc_type == "policy" and effective_year &gt;= 2025',
+    limit=5, output_fields=["text", "source", "last_modified"],
+)</code></pre>
+      <p><b>What to notice:</b> the filter is applied as a <i>pre-filter</i> constraining the ANN search (post-filtering can return fewer than k and wastes compute). The <code>tenant_id</code> clause is the access-control boundary — enforced by the database, never left to the LLM's discretion (trap #12/#15).</p>
+    </div>
+
+    <div class="card green">
+      <h4><span class="icon">🔄</span>6 · Freshness: incremental upsert <span class="pill g">content hash + stable chunk IDs</span></h4>
+      <pre class="code-block"><code>import hashlib
+
+def sync_doc(doc_id: str, text: str, client, emb):
+    h = hashlib.sha256(text.encode()).hexdigest()
+    prev = client.query("docs", filter=f'doc_id == "{doc_id}"', output_fields=["content_hash"], limit=1)
+    if prev and prev[0]["content_hash"] == h:
+        return "unchanged"                                        # skip: no re-embedding cost
+    client.delete("docs", filter=f'doc_id == "{doc_id}"')          # targeted delete of stale chunks
+    rows = [{"id": f"{doc_id}#{i}", "doc_id": doc_id, "content_hash": h,
+             "text": c, "dense_vector": v, "embedding_model": "llama-3.2-nv-embedqa-1b-v2"}
+            for i, (c, v) in enumerate(zip(chunk(text), emb.embed_documents(chunk(text))))]
+    client.insert("docs", rows)
+    return "reindexed"
+# run from a nightly scheduler / on-save webhook; alert if "reindexed" rate spikes</code></pre>
+      <p><b>What to notice:</b> the hash check makes re-indexing <i>incremental</i> — only changed docs pay the embedding cost — and stable IDs (<code>doc_id#n</code>) make deletes surgical. Storing <code>embedding_model</code> per row is what makes a future model migration detectable instead of silently mixing vector spaces (trap #10).</p>
+    </div>
+
+    <div class="card red">
+      <h4><span class="icon">🕸️</span>7 · GraphRAG-style multi-hop sketch <span class="pill r">extract triples, hop the graph, then answer</span></h4>
+      <pre class="code-block"><code>import networkx as nx
+
+G = nx.DiGraph()
+for chunk in chunks:                                      # indexing time: LLM extracts (head, relation, tail)
+    for h, r, t in llm_extract_triples(chunk.text):       # e.g. ("AcmeSub", "supplied_by", "VoltCorp")
+        G.add_edge(h, t, relation=r, source=chunk.id)
+
+def multi_hop(question: str, hops: int = 2):
+    seeds = llm_extract_entities(question)                # query time: link question → graph entities
+    sub = nx.ego_graph(G.to_undirected(), seeds[0], radius=hops)   # expand neighborhood (local search)
+    facts, chunk_ids = [], set()
+    for u, v, d in sub.edges(data=True):                           # only the retrieved subgraph's edges
+        facts.append(f"{u} -{d.get('relation','?')}- {v}")         # the relation, not the whole attr dict
+        if d.get("source"): chunk_ids.add(d["source"])             # ground back to local source chunks
+    return llm.invoke(f"Facts:\n{facts}\n\nSources:\n{fetch(chunk_ids)}\n\nQ: {question}")</code></pre>
+      <p><b>What to notice:</b> the answer is assembled from a <i>path of relationships</i> (ego-graph expansion = GraphRAG "local search"), not from chunks that merely resemble the question — that's why this works for multi-hop where vector similarity fails (§3.7). The expensive part is the indexing-time LLM triple extraction, which is exactly what LazyGraphRAG defers to query time.</p>
+    </div>
+
+    <div class="card blue">
+      <h4><span class="icon">🐘</span>8 · pgvector: HNSW index + filtered search <span class="pill b">plain SQL</span></h4>
+      <pre class="code-block"><code>CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE chunks (id text PRIMARY KEY, doc_id text, tenant text,
+                     body text, embedding vector(2048));
+CREATE INDEX ON chunks USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 200);            -- HNSW defaults; IVFFlat alt: WITH (lists = 1000)
+
+SET hnsw.ef_search = 100;                          -- query-time recall/speed knob
+SELECT id, body, 1 - (embedding &lt;=&gt; $1) AS score   -- &lt;=&gt; is cosine distance
+FROM chunks WHERE tenant = 'acme'
+ORDER BY embedding &lt;=&gt; $1 LIMIT 5;</code></pre>
+      <p><b>What to notice:</b> vectors as a column type means filtering, joins, and transactions are just SQL — the pgvector pitch. The §3.3 knobs appear literally: <code>m</code>/<code>ef_construction</code> at build, <code>ef_search</code> at query; switching to IVFFlat is one index swap (<code>lists ≈ √rows</code>, bulk-load before building).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ENGINEER TAKES ============ -->
+<section id="voices">
+  <div class="kicker">Section 8 · Field notes</div>
+  <h2>What top engineers are saying (2025–26)</h2>
+  <p class="lede">The discourse that reframed RAG for the agent era: retrieval wasn't killed by long context, it was promoted into a decision agents make — and the chunking/GraphRAG cost debates settled into "measure your own corpus."</p>
+
+  <div class="grid c2">
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>LightOn <span class="pill g">RAG is Dead, Long Live RAG</span></h4>
+      <p>The sharpest rebuttal to the long-context-killed-RAG narrative: retrieval hasn't been replaced, it's been <b>promoted</b> into a conditional decision agents make (whether/what/where/how to retrieve), and the economics are decisive — "RAG is <b>8–82× cheaper</b> than long context for typical workloads, with better latency." The meeting analogy (dumping a corpus into context = scheduling a ten-person meeting instead of consulting one expert) is the cleanest framing of why context-stuffing doesn't scale.</p>
+      <p><a href="https://lighton.ai/lighton-blogs/rag-is-dead-long-live-rag-retrieval-in-the-age-of-agents" target="_blank" rel="noopener">lighton.ai/…/rag-is-dead-long-live-rag</a></p>
+    </div>
+    <div class="card blue">
+      <h4><span class="icon">🗣️</span>Chroma Research <span class="pill b">"Context Rot" (Jul 2025)</span></h4>
+      <p>The empirical backbone of the RAG side: across 18 models (GPT-4.1, Claude 4, Gemini 2.5), performance degrades as input context grows <b>even on simple tasks</b> — million-token windows don't deliver million-token comprehension. Why "just put everything in context" fails, and why curated retrieval into a <i>small</i> context remains the move — it also strengthens the case for reranking (fewer, better tokens).</p>
+      <p><a href="https://research.trychroma.com/context-rot" target="_blank" rel="noopener">research.trychroma.com/context-rot</a></p>
+    </div>
+    <div class="card cyan">
+      <h4><span class="icon">🗣️</span>RAGFlow <span class="pill c">From RAG to Context: 2025 Year-End Review</span></h4>
+      <p>The synthesis position: RAG is metamorphosing from a fixed retrieve-then-generate pattern into a "context engine" whose core capability is <b>intelligent retrieval</b> feeding context engineering. Naive RAG (embed → top-k → pray) is what actually died in 2025; the retrieval discipline itself got bigger, not smaller — useful framing for why hybrid, reranking, and agentic retrieval loops are the current default rather than exotic add-ons.</p>
+      <p><a href="https://ragflow.io/blog/rag-review-2025-from-rag-to-context" target="_blank" rel="noopener">ragflow.io/blog/rag-review-2025-from-rag-to-context</a></p>
+    </div>
+    <div class="card amber">
+      <h4><span class="icon">🗣️</span>VentureBeat <span class="pill a">Six data shifts for enterprise AI in 2026</span></h4>
+      <p>The pro-disruption side, steelmanned: RAG won't disappear in 2026, but for <i>agentic</i> workloads it's increasingly surpassed by contextual/agentic memory — agents that accumulate task state and consult tools (grep-style, SQL-style search) rather than running a vector pipeline per question. The takeaway echoed across the discourse: <b>vector search becomes one tool among several</b> an agent chooses, not the mandatory front door.</p>
+      <p><a href="https://venturebeat.com/data/six-data-shifts-that-will-shape-enterprise-ai-in-2026" target="_blank" rel="noopener">venturebeat.com/…/six-data-shifts-2026</a></p>
+    </div>
+    <div class="card purple">
+      <h4><span class="icon">🗣️</span>Microsoft Research <span class="pill p">LazyGraphRAG</span></h4>
+      <p>The course correction on GraphRAG's cost problem from GraphRAG's own authors: by deferring LLM work to query time, LazyGraphRAG matches full GraphRAG's global-search quality at <b>~0.1% of indexing cost</b> (and &gt;700× lower query cost than some global-search configs), while beating vector RAG on local <i>and</i> global queries. Knowledge-graph-quality answers no longer require paying the $33k-style upfront build — removing the main practical objection to graph-augmented retrieval.</p>
+      <p><a href="https://www.microsoft.com/en-us/research/blog/lazygraphrag-setting-a-new-standard-for-quality-and-cost/" target="_blank" rel="noopener">microsoft.com/…/lazygraphrag</a></p>
+    </div>
+    <div class="card red">
+      <h4><span class="icon">🗣️</span>Agentic-RAG survey + Red Hat "Tool RAG" <span class="pill r">arXiv 2501.09136 · Nov 2025</span></h4>
+      <p>The survey formalizes what practitioners converged on: embed retrieval decisions <b>into the reasoning loop</b> — the agent decides when to retrieve, grades what came back, rewrites the query, and re-retrieves on failure (self-correcting retrieval). Red Hat extends the same pattern to <b>tool selection</b>: RAG over the tool registry itself, with experiments where retrieval-based tool selection jumped accuracy from <b>13% to 43%</b> on large toolsets.</p>
+      <p><a href="https://arxiv.org/abs/2501.09136" target="_blank" rel="noopener">arxiv.org/abs/2501.09136</a> · <a href="https://next.redhat.com/2025/11/26/tool-rag-the-next-breakthrough-in-scalable-ai-agents/" target="_blank" rel="noopener">next.redhat.com — Tool RAG</a></p>
+    </div>
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>The chunking-wars corpus <span class="pill g">NVIDIA study vs 2025–26 benchmarks</span></h4>
+      <p>NVIDIA's evaluation crowned <b>page-level</b> chunking best on average (0.648, lowest variance); Vecta's Feb-2026 benchmark instead put <b>recursive 512-token</b> first (69%) with semantic <i>underperforming</i> (54%, ~43-token fragments); a peer-reviewed clinical study found adaptive topic-boundary chunking beating fixed-size 87% vs 13%. Read together: chunking matters a lot <b>and no strategy generalizes</b> — per-corpus evaluation is the only defensible answer, which is exactly how the exam frames it.</p>
+      <p><a href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/" target="_blank" rel="noopener">developer.nvidia.com — chunking study</a> · <a href="https://www.runvecta.com/blog/we-benchmarked-7-chunking-strategies-most-advice-was-wrong" target="_blank" rel="noopener">Vecta — 7 chunking strategies benchmark</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>NeMo Retriever overview &amp; models — <a href="https://docs.nvidia.com/nim/#nemo-retriever" target="_blank" rel="noopener">docs.nvidia.com/nim — NeMo Retriever</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-embedqa-1b-v2/modelcard" target="_blank" rel="noopener">embedqa-1b-v2 card</a> · <a href="https://build.nvidia.com/nvidia/llama-3_2-nv-rerankqa-1b-v2/modelcard" target="_blank" rel="noopener">rerankqa-1b-v2 card</a></li>
+    <li>NV-Ingest / NeMo Retriever extraction — <a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener">github.com/NVIDIA/nv-ingest</a> · <a href="https://docs.nvidia.com/nemo/retriever/latest/extraction/overview/" target="_blank" rel="noopener">extraction overview</a></li>
+    <li>NVIDIA reranking blogs — <a href="https://developer.nvidia.com/blog/enhancing-rag-pipelines-with-re-ranking/" target="_blank" rel="noopener">enhancing RAG with re-ranking</a> · <a href="https://developer.nvidia.com/blog/how-using-a-reranking-microservice-can-improve-accuracy-and-costs-of-information-retrieval/" target="_blank" rel="noopener">reranking microservice accuracy &amp; costs</a></li>
+    <li>NVIDIA chunking study — <a href="https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/" target="_blank" rel="noopener">finding-the-best-chunking-strategy</a></li>
+    <li>Milvus hybrid search &amp; RRF — <a href="https://milvus.io/docs/multi-vector-search.md" target="_blank" rel="noopener">multi-vector-search</a> · <a href="https://milvus.io/docs/rrf-ranker.md" target="_blank" rel="noopener">rrf-ranker</a> · <a href="https://milvus.io/blog/get-started-with-hybrid-semantic-full-text-search-with-milvus-2-5.md" target="_blank" rel="noopener">hybrid search Milvus 2.5</a></li>
+    <li>pgvector (HNSW/IVFFlat) — <a href="https://github.com/pgvector/pgvector" target="_blank" rel="noopener">github.com/pgvector/pgvector</a> · <a href="https://aws.amazon.com/blogs/database/optimize-generative-ai-applications-with-pgvector-indexing-a-deep-dive-into-ivfflat-and-hnsw-techniques/" target="_blank" rel="noopener">AWS IVFFlat vs HNSW deep-dive</a></li>
+    <li>LangChain NVIDIA integration — <a href="https://github.com/langchain-ai/langchain-nvidia/blob/main/libs/ai-endpoints/README.md" target="_blank" rel="noopener">langchain-nvidia README</a> · <a href="https://docs.nvidia.com/nim/nemo-retriever/text-reranking/latest/playbook.html" target="_blank" rel="noopener">text-reranking playbook</a></li>
+    <li>Microsoft GraphRAG &amp; LazyGraphRAG — <a href="https://github.com/microsoft/graphrag" target="_blank" rel="noopener">github.com/microsoft/graphrag</a> · <a href="https://www.microsoft.com/en-us/research/blog/lazygraphrag-setting-a-new-standard-for-quality-and-cost/" target="_blank" rel="noopener">LazyGraphRAG blog</a></li>
+    <li>NeMo Curator PII — <a href="https://docs.nvidia.com/nemo-framework/user-guide/latest/datacuration/personalidentifiableinformationidentificationandremoval.html" target="_blank" rel="noopener">PII identification &amp; removal</a> · <a href="https://github.com/NVIDIA-NeMo/Curator" target="_blank" rel="noopener">github.com/NVIDIA-NeMo/Curator</a></li>
+    <li>RAG-vs-long-context discourse — <a href="https://lighton.ai/lighton-blogs/rag-is-dead-long-live-rag-retrieval-in-the-age-of-agents" target="_blank" rel="noopener">LightOn</a> · <a href="https://venturebeat.com/data/six-data-shifts-that-will-shape-enterprise-ai-in-2026" target="_blank" rel="noopener">VentureBeat 2026 shifts</a> · <a href="https://ragflow.io/blog/rag-review-2025-from-rag-to-context" target="_blank" rel="noopener">RAGFlow review</a> · <a href="https://research.trychroma.com/context-rot" target="_blank" rel="noopener">Chroma context-rot</a></li>
+    <li>Agentic RAG &amp; Tool RAG — <a href="https://arxiv.org/abs/2501.09136" target="_blank" rel="noopener">arXiv 2501.09136</a> · <a href="https://next.redhat.com/2025/11/26/tool-rag-the-next-breakthrough-in-scalable-ai-agents/" target="_blank" rel="noopener">Red Hat — Tool RAG</a></li>
+    <li>NCP-AAI exam framing — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/" target="_blank" rel="noopener">nvidia.com certification</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 6: Knowledge Integration &amp; Data Handling (10%) · Built from personal study notes. All facts sourced from the notes above.</p>
+</footer>
+
+<!-- ============ THREE.JS SCENE — the knowledge refinery ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 80, 170);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
+camera.position.set(4, 18, 46);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(2, 5, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 14;
+controls.maxDistance = 120;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.35);
+key.position.set(14, 30, 16);
+scene.add(key);
+const greenFill = new THREE.PointLight(0x76b900, 70, 70);
+greenFill.position.set(26, 12, 6);
+scene.add(greenFill);
+const cyanFill = new THREE.PointLight(0x3fd2c7, 60, 80);
+cyanFill.position.set(0, 16, 10);
+scene.add(cyanFill);
+const purpleFill = new THREE.PointLight(0xb07cff, 50, 70);
+purpleFill.position.set(-22, 14, -8);
+scene.add(purpleFill);
+
+// ---------- ground + grid ----------
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(260, 260),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2.0;
+scene.add(ground);
+const grid = new THREE.GridHelper(260, 130, 0x1b2840, 0x121a2a);
+grid.position.y = -1.98;
+scene.add(grid);
+
+// ---------- text sprite helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.strokeStyle = border;
+  g.lineWidth = 4;
+  const r = 18;
+  g.beginPath();
+  g.roundRect(3, 3, w - 6, h - 6, r);
+  g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  const k = 0.012 * scale;
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+const hoverables = [];
+
+// topic palette for vector-space clustering
+const TOPIC = [0x3fd2c7, 0x4da3ff, 0xb07cff, 0xe8a33d, 0x76b900];
+
+// ============================================================
+//  STAGE LAYOUT (left → right along X)
+//  conveyor/ingestion (-46..-28) → chunker saw (-24) →
+//  embedding portal (-16) → vector cloud (-8..6) →
+//  reranker gate (16) → generation core (26)
+// ============================================================
+
+// ---------- ① ingestion conveyor ----------
+const CONV_Y = 0.4, CONV_X0 = -46, CONV_X1 = -26;
+const belt = new THREE.Mesh(
+  new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.5, 5),
+  new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.7, metalness: 0.4 })
+);
+belt.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.4, 0);
+scene.add(belt);
+for (const dz of [-2.55, 2.55]) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.12, 0.12),
+    new THREE.MeshBasicMaterial({ color: 0x6aa3cf })
+  );
+  strip.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.12, dz);
+  scene.add(strip);
+}
+const chevrons = [];
+const chevMat = new THREE.MeshBasicMaterial({ color: 0x24364f });
+for (let i = 0; i < 9; i++) {
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 4.2), chevMat);
+  ch.position.set(CONV_X0 + i * 2.4, CONV_Y - 0.1, 0);
+  scene.add(ch);
+  chevrons.push(ch);
+}
+const ingLabel = makeLabel('① INGESTION CONVEYOR — raw docs', { border: '#6aa3cf', color: '#6aa3cf', scale: 1.15 });
+ingLabel.position.set(-36, 9, 0);
+scene.add(ingLabel);
+const ingHit = new THREE.Mesh(new THREE.BoxGeometry(22, 6, 6), new THREE.MeshBasicMaterial({ visible: false }));
+ingHit.position.set(-36, 1.5, 0);
+ingHit.userData = { title: 'Ingestion / extraction', desc: 'Raw PDFs, tables, charts and scans drop onto the conveyor. NV-Ingest extracts text, tables (as markdown), charts and OCR — you cannot retrieve what was destroyed at parse time.' };
+scene.add(ingHit); hoverables.push(ingHit);
+
+// raw doc slab spawner (3 kinds: PDF slab, table, image)
+const slabs = [];
+const slabKinds = [
+  { name: 'PDF slab', col: 0x6aa3cf, geo: new THREE.BoxGeometry(2.2, 0.4, 2.8) },
+  { name: 'Table doc', col: 0x58bfae, geo: new THREE.BoxGeometry(2.4, 0.4, 2.4) },
+  { name: 'Image / scan', col: 0xe0b14b, geo: new THREE.BoxGeometry(2.0, 0.4, 2.6) },
+];
+function spawnSlab() {
+  const kind = slabKinds[Math.floor(Math.random() * slabKinds.length)];
+  const m = new THREE.Mesh(kind.geo, new THREE.MeshStandardMaterial({ color: kind.col, emissive: kind.col, emissiveIntensity: 0.25, roughness: 0.5, metalness: 0.2 }));
+  m.position.set(CONV_X0 + 1, CONV_Y + 0.4, 0);
+  m.userData = { title: 'Raw document (' + kind.name + ')', desc: 'Enterprise knowledge lives in PDFs full of tables, charts and scanned pages — naive text extraction destroys it. Tables extracted as structured markdown embed and retrieve dramatically better.' };
+  scene.add(m);
+  hoverables.push(m);
+  slabs.push({ mesh: m, phase: 'belt', topic: Math.floor(Math.random() * TOPIC.length), tiles: [], t: Math.random() });
+}
+
+// ---------- ② chunker saw ----------
+const SAW_X = -24.5;
+const sawHousing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 7, 6.2), new THREE.MeshStandardMaterial({ color: 0x2a231b, roughness: 0.6, metalness: 0.5 }));
+sawHousing.position.set(SAW_X, 1.5, 0);
+scene.add(sawHousing);
+const sawBlade = new THREE.Mesh(
+  new THREE.CylinderGeometry(2.4, 2.4, 0.18, 28),
+  new THREE.MeshStandardMaterial({ color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.55, metalness: 0.8, roughness: 0.3 })
+);
+sawBlade.rotation.x = Math.PI / 2;
+sawBlade.position.set(SAW_X, 2.6, 0);
+scene.add(sawBlade);
+const sawLabel = makeLabel('② CHUNKER SAW', { border: '#e8a33d', color: '#e8a33d', scale: 1.0 });
+sawLabel.position.set(SAW_X, 7.4, 0);
+scene.add(sawLabel);
+sawHousing.userData = { title: 'Chunker', desc: 'Slices documents into retrieval-unit tiles. Recursive ~512-token splitting is the production default; page-level structure-aware chunking won NVIDIA\'s study on average. Overlap (10–20%) stops answers being severed at boundaries.' };
+hoverables.push(sawHousing);
+
+// ---------- ③ embedding portal ----------
+const PORTAL_X = -16;
+const portalRing = new THREE.Mesh(
+  new THREE.TorusGeometry(3.0, 0.34, 20, 48),
+  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.7, metalness: 0.6, roughness: 0.3 })
+);
+portalRing.position.set(PORTAL_X, 3.0, 0);
+scene.add(portalRing);
+const portalDisc = new THREE.Mesh(
+  new THREE.CircleGeometry(2.7, 40),
+  new THREE.MeshBasicMaterial({ color: 0x0e3b16, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+);
+portalDisc.position.copy(portalRing.position);
+scene.add(portalDisc);
+const portalLabel = makeLabel('③ EMBEDDING PORTAL — input_type: passage', { border: '#76b900', color: '#a4e040', scale: 0.95 });
+portalLabel.position.set(PORTAL_X, 7.6, 0);
+scene.add(portalLabel);
+const portalHit = new THREE.Mesh(new THREE.BoxGeometry(6.4, 6.4, 1.5), new THREE.MeshBasicMaterial({ visible: false }));
+portalHit.position.copy(portalRing.position);
+portalHit.userData = { title: 'Embedding NIM (bi-encoder)', desc: 'Each chunk tile becomes a dense vector — llama-3.2-nv-embedqa-1b-v2, passages embedded with input_type="passage". Using the same mode for queries silently degrades retrieval (trap #5).' };
+scene.add(portalHit); hoverables.push(portalHit);
+
+// ---------- ④ vector-space cloud ----------
+const CLOUD_CX = -1, CLOUD_CY = 6, CLOUD_CZ = 0, CLOUD_R = 7.5;
+const cloudCenter = new THREE.Vector3(CLOUD_CX, CLOUD_CY, CLOUD_CZ);
+// cluster anchors per topic
+const clusterAnchor = TOPIC.map((_, i) => {
+  const a = (i / TOPIC.length) * Math.PI * 2;
+  return new THREE.Vector3(CLOUD_CX + Math.cos(a) * 4.2, CLOUD_CY + (i - 2) * 1.4, CLOUD_CZ + Math.sin(a) * 4.2);
+});
+const cloudBox = new THREE.Mesh(
+  new THREE.BoxGeometry(CLOUD_R * 2.1, CLOUD_R * 2.0, CLOUD_R * 2.1),
+  new THREE.MeshBasicMaterial({ color: 0x3fd2c7, wireframe: true, transparent: true, opacity: 0.06 })
+);
+cloudBox.position.copy(cloudCenter);
+scene.add(cloudBox);
+const cloudLabel = makeLabel('④ VECTOR SPACE — clustered by topic', { border: '#3fd2c7', color: '#3fd2c7', scale: 1.1 });
+cloudLabel.position.set(CLOUD_CX, 15, 0);
+scene.add(cloudLabel);
+const cloudHit = new THREE.Mesh(new THREE.SphereGeometry(CLOUD_R, 16, 16), new THREE.MeshBasicMaterial({ visible: false }));
+cloudHit.position.copy(cloudCenter);
+cloudHit.userData = { title: 'ANN index / vector cloud', desc: 'Vectors stored in an ANN index (HNSW graph or IVF lists) so search is sub-linear. Points cluster by topic; metadata filters pre-constrain the search and enforce tenancy/ACL.' };
+scene.add(cloudHit); hoverables.push(cloudHit);
+
+// seed a resident point cloud in the vector space (so it looks populated)
+const resident = [];
+const ptGeo = new THREE.SphereGeometry(0.16, 8, 8);
+for (let i = 0; i < 220; i++) {
+  const topic = i % TOPIC.length;
+  const anchor = clusterAnchor[topic];
+  const p = anchor.clone().add(new THREE.Vector3(
+    (Math.random() - 0.5) * 3.6, (Math.random() - 0.5) * 3.0, (Math.random() - 0.5) * 3.6));
+  const mat = new THREE.MeshBasicMaterial({ color: TOPIC[topic], transparent: true, opacity: 0.55 });
+  const m = new THREE.Mesh(ptGeo, mat);
+  m.position.copy(p);
+  scene.add(m);
+  resident.push({ mesh: m, base: p.clone(), topic, baseOpacity: 0.55 });
+}
+
+// ---------- query orb ----------
+const queryOrb = new THREE.Mesh(
+  new THREE.SphereGeometry(0.85, 24, 24),
+  new THREE.MeshStandardMaterial({ color: 0xb07cff, emissive: 0xb07cff, emissiveIntensity: 0.9 })
+);
+scene.add(queryOrb);
+queryOrb.userData = { title: 'Query orb', desc: 'Embedded with input_type="query". A retrieval beam sweeps the cloud; candidate points light up, then pass through the reranker gate.' };
+hoverables.push(queryOrb);
+const queryLabel = makeLabel('input_type: query', { border: '#b07cff', color: '#c9aef5', scale: 0.7 });
+scene.add(queryLabel);
+
+// retrieval beam (query → cloud), shown when active
+const beamMat = new THREE.LineBasicMaterial({ color: 0xb07cff, transparent: true, opacity: 0.0 });
+const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), beamMat);
+scene.add(beam);
+
+// ---------- ⑤ reranker gate ----------
+const GATE_X = 16;
+const gatePosts = [];
+for (const dz of [-3.2, 3.2]) {
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.7, 8, 0.7), new THREE.MeshStandardMaterial({ color: 0x2a231b, roughness: 0.5, metalness: 0.6 }));
+  post.position.set(GATE_X, 3.5, dz);
+  scene.add(post);
+  gatePosts.push(post);
+}
+const gateBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 7.3), new THREE.MeshStandardMaterial({ color: 0xb07cff, emissive: 0xb07cff, emissiveIntensity: 0.45 }));
+gateBar.position.set(GATE_X, 7.3, 0);
+scene.add(gateBar);
+const gateLabel = makeLabel('⑤ RERANKER GATE — cross-encoder, keep top 3–5', { border: '#b07cff', color: '#c9aef5', scale: 0.95 });
+gateLabel.position.set(GATE_X, 9.4, 0);
+scene.add(gateLabel);
+const gateHit = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 7.5), new THREE.MeshBasicMaterial({ visible: false }));
+gateHit.position.set(GATE_X, 3.5, 0);
+gateHit.userData = { title: 'Reranker (cross-encoder)', desc: 'Scores query+passage pairs jointly — far more accurate than bi-encoder cosine, but per-pair so only over the shortlist. Most candidates dim out; the best few brighten and dock into generation. llama-3.2-nv-rerankqa-1b-v2.' };
+scene.add(gateHit); hoverables.push(gateHit);
+
+// ---------- ⑥ generation core ----------
+const CORE_X = 26;
+const core = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(2.6, 1),
+  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.6, metalness: 0.5, roughness: 0.35, flatShading: true })
+);
+core.position.set(CORE_X, 4.5, 0);
+scene.add(core);
+const coreLabel = makeLabel('⑥ GENERATION CORE — grounded + cited', { border: '#76b900', color: '#a4e040', scale: 1.0 });
+coreLabel.position.set(CORE_X, 9, 0);
+scene.add(coreLabel);
+core.userData = { title: 'LLM generation core', desc: 'The surviving top-3–5 chunks dock here; the LLM answers grounded in them, with citations. Even perfect retrieval can\'t fix an ungrounded prompt — but that\'s a generation-side fix.' };
+hoverables.push(core);
+
+// ---------- side path: GraphRAG lattice ----------
+const GRAPH_CZ = -16, GRAPH_CX = 6, GRAPH_CY = 4;
+const graphGroup = new THREE.Group();
+scene.add(graphGroup);
+const nodeDefs = [
+  { id: 'Acme', p: new THREE.Vector3(-6, 0, 0) },
+  { id: 'Sub', p: new THREE.Vector3(-1, 2.5, 1) },
+  { id: 'Volt', p: new THREE.Vector3(4, 0.5, -1) },
+  { id: 'Reg', p: new THREE.Vector3(8, 3, 1) },
+  { id: 'Fund', p: new THREE.Vector3(1, -2, 2) },
+  { id: 'Mkt', p: new THREE.Vector3(-3, -2.4, -2) },
+];
+const graphEdges = [[0,1],[1,2],[2,3],[0,4],[4,2],[1,5],[5,0]];
+const graphNodes = [];
+const nodeGeo = new THREE.SphereGeometry(0.6, 16, 16);
+nodeDefs.forEach((d, i) => {
+  const m = new THREE.Mesh(nodeGeo, new THREE.MeshStandardMaterial({ color: 0xb08ee6, emissive: 0xb08ee6, emissiveIntensity: 0.4 }));
+  m.position.copy(d.p);
+  graphGroup.add(m);
+  graphNodes.push(m);
+});
+const edgeLines = [];
+graphEdges.forEach(([a, b]) => {
+  const g = new THREE.BufferGeometry().setFromPoints([nodeDefs[a].p, nodeDefs[b].p]);
+  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x5a4a78, transparent: true, opacity: 0.7 }));
+  graphGroup.add(line);
+  edgeLines.push({ line, a, b });
+});
+graphGroup.position.set(GRAPH_CX, GRAPH_CY, GRAPH_CZ);
+const graphLabel = makeLabel('SIDE PATH · GRAPHRAG — multi-hop walk', { border: '#b08ee6', color: '#c9aef5', scale: 1.0 });
+graphLabel.position.set(GRAPH_CX, GRAPH_CY + 6.5, GRAPH_CZ);
+scene.add(graphLabel);
+const graphHit = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 8), new THREE.MeshBasicMaterial({ visible: false }));
+graphHit.position.set(GRAPH_CX, GRAPH_CY, GRAPH_CZ);
+graphHit.userData = { title: 'GraphRAG / knowledge graph', desc: 'For multi-hop questions where no single chunk holds the answer: an LLM extracts entities+relations into a graph; local search walks edges from matched entities (Acme → Sub → Volt → Reg). LazyGraphRAG defers the costly extraction to query time.' };
+scene.add(graphHit); hoverables.push(graphHit);
+
+// ---------- ambient star dust ----------
+{
+  const n = 500, g = new THREE.BufferGeometry(), a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = (Math.random() - 0.5) * 200;
+    a[i * 3 + 1] = Math.random() * 55;
+    a[i * 3 + 2] = (Math.random() - 0.5) * 200;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// flying vector points (chunk → embedded vector → cloud)
+const flyers = [];
+const flyGeo = new THREE.SphereGeometry(0.22, 8, 8);
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+let hovered = null;
+
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+let spawnTimer = 0;
+const BELT_SPEED = 3.4;
+
+// retrieval query cycle state
+let queryT = 0;            // 0..1 within a query cycle
+const QUERY_PERIOD = 7;    // seconds per query sweep
+let litCandidates = [];    // resident points lit this cycle
+
+function startQueryCycle() {
+  // pick a focus topic; light ~candidates near its cluster
+  const focus = Math.floor(Math.random() * TOPIC.length);
+  litCandidates = resident.filter(r => r.topic === focus).slice(0, 14);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // belt chevrons
+  for (const ch of chevrons) {
+    ch.position.x += BELT_SPEED * dt;
+    if (ch.position.x > CONV_X1) ch.position.x -= (CONV_X1 - CONV_X0);
+  }
+
+  // saw spin
+  sawBlade.rotation.y += dt * 9;
+  // portal pulse + spin
+  portalRing.rotation.z += dt * 0.6;
+  portalRing.material.emissiveIntensity = 0.6 + 0.25 * Math.sin(t * 3);
+  // core spin
+  core.rotation.y += dt * 0.5; core.rotation.x += dt * 0.2;
+
+  // spawn slabs
+  spawnTimer -= dt;
+  if (spawnTimer <= 0 && slabs.length < 5) { spawnSlab(); spawnTimer = 2.4; }
+
+  // advance slabs through belt → saw → portal → emit flyers
+  for (let i = slabs.length - 1; i >= 0; i--) {
+    const s = slabs[i];
+    const m = s.mesh;
+    if (s.phase === 'belt') {
+      m.position.x += BELT_SPEED * dt;
+      m.rotation.y += dt * 0.4;
+      if (m.position.x >= SAW_X) { s.phase = 'sliced'; }
+    } else if (s.phase === 'sliced') {
+      // squash slightly at saw then continue toward portal
+      m.position.x += (BELT_SPEED + 0.5) * dt;
+      m.scale.z = 0.6 + 0.4 * Math.abs(Math.sin(t * 12));
+      if (m.position.x >= PORTAL_X) {
+        // through the portal: convert to flying vector points, remove slab
+        for (let k = 0; k < 4; k++) {
+          const anchor = clusterAnchor[s.topic];
+          const target = anchor.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, (Math.random() - 0.5) * 2.6, (Math.random() - 0.5) * 3));
+          const fm = new THREE.Mesh(flyGeo, new THREE.MeshBasicMaterial({ color: TOPIC[s.topic] }));
+          fm.position.set(PORTAL_X, 3.0, 0);
+          scene.add(fm);
+          flyers.push({ mesh: fm, from: new THREE.Vector3(PORTAL_X, 3.0, 0), to: target, t: 0, topic: s.topic });
+        }
+        const idx = hoverables.indexOf(m); if (idx >= 0) hoverables.splice(idx, 1);
+        scene.remove(m); m.geometry.dispose ? null : 0; m.material.dispose();
+        slabs.splice(i, 1);
+      }
+    }
+  }
+
+  // animate flyers into the cloud, then settle as residents
+  for (let i = flyers.length - 1; i >= 0; i--) {
+    const f = flyers[i];
+    f.t += dt * 0.6;
+    const e = Math.min(f.t, 1);
+    const ease = 1 - Math.pow(1 - e, 3);
+    f.mesh.position.lerpVectors(f.from, f.to, ease);
+    if (e >= 1) {
+      // become a resident point
+      f.mesh.material.transparent = true; f.mesh.material.opacity = 0.55;
+      resident.push({ mesh: f.mesh, base: f.to.clone(), topic: f.topic, baseOpacity: 0.55 });
+      // cap resident count so it doesn't grow unbounded
+      if (resident.length > 320) {
+        const old = resident.shift();
+        scene.remove(old.mesh); old.mesh.material.dispose();
+      }
+      flyers.splice(i, 1);
+    }
+  }
+
+  // gentle drift of resident points
+  for (const r of resident) {
+    r.mesh.position.y = r.base.y + Math.sin(t * 0.6 + r.base.x) * 0.12;
+  }
+
+  // ----- query / retrieval / rerank cycle -----
+  queryT += dt / QUERY_PERIOD;
+  if (queryT >= 1) { queryT -= 1; startQueryCycle(); }
+  // query orb enters from -Z, sweeps toward the cloud
+  const qx = CLOUD_CX - 11 + 9 * Math.min(queryT * 2, 1);
+  const qz = 12 - 12 * Math.min(queryT * 2, 1);
+  queryOrb.position.set(qx, CLOUD_CY + 1.5, qz);
+  queryLabel.position.set(qx, CLOUD_CY + 3.4, qz);
+  queryOrb.material.emissiveIntensity = 0.7 + 0.3 * Math.sin(t * 5);
+
+  // phase 1 (0..0.45): retrieval beam + candidates light
+  // phase 2 (0.45..0.75): pass through reranker gate, most dim, best brighten
+  // phase 3 (0.75..1): best dock into core
+  const lit = litCandidates;
+  if (queryT < 0.45) {
+    beamMat.opacity = 0.5;
+    const bp = beam.geometry.attributes.position;
+    bp.setXYZ(0, queryOrb.position.x, queryOrb.position.y, queryOrb.position.z);
+    bp.setXYZ(1, CLOUD_CX, CLOUD_CY, CLOUD_CZ);
+    bp.needsUpdate = true;
+    lit.forEach((r, j) => {
+      const on = (queryT / 0.45) > (j / lit.length);
+      const tgt = on ? 1.0 : r.baseOpacity;
+      r.mesh.material.opacity += (tgt - r.mesh.material.opacity) * 0.2;
+      r.mesh.scale.setScalar(on ? 1.8 : 1);
+    });
+  } else if (queryT < 0.75) {
+    beamMat.opacity *= 0.9;
+    // reranker: dim all but top 4
+    lit.forEach((r, j) => {
+      const keep = j < 4;
+      const tgt = keep ? 1.0 : 0.08;
+      r.mesh.material.opacity += (tgt - r.mesh.material.opacity) * 0.12;
+      r.mesh.scale.setScalar(keep ? 2.1 : 1.0);
+    });
+  } else {
+    beamMat.opacity *= 0.85;
+    // survivors fly toward the generation core
+    const k = (queryT - 0.75) / 0.25;
+    lit.forEach((r, j) => {
+      if (j < 4) {
+        const tgt = new THREE.Vector3(CORE_X, 4.5, 0);
+        r.mesh.position.lerp(tgt, 0.04 + k * 0.05);
+        r.mesh.material.opacity = 1.0;
+      } else {
+        r.mesh.material.opacity += (r.baseOpacity - r.mesh.material.opacity) * 0.1;
+        r.mesh.scale.setScalar(1);
+      }
+    });
+    if (k > 0.96) {
+      // reset survivors back to their cluster for next cycle
+      lit.forEach((r, j) => { if (j < 4) { r.mesh.position.copy(r.base); r.mesh.scale.setScalar(1); r.mesh.material.opacity = r.baseOpacity; } });
+      core.material.emissiveIntensity = 1.1;
+    }
+  }
+  core.material.emissiveIntensity += (0.6 - core.material.emissiveIntensity) * 0.05;
+
+  // gate bar pulse
+  gateBar.material.emissiveIntensity = 0.4 + 0.2 * Math.sin(t * 3);
+
+  // ----- GraphRAG: animate a multi-hop walk along a path of edges -----
+  const path = [0, 1, 2, 3]; // Acme → Sub → Volt → Reg
+  const walkT = (t % 6) / 6;        // 0..1
+  const seg = Math.min(Math.floor(walkT * (path.length - 1)), path.length - 2);
+  edgeLines.forEach(el => {
+    const onPath = (el.a === path[seg] && el.b === path[seg + 1]) || (el.b === path[seg] && el.a === path[seg + 1]);
+    el.line.material.color.setHex(onPath ? 0xb08ee6 : 0x5a4a78);
+    el.line.material.opacity = onPath ? 1.0 : 0.5;
+  });
+  graphNodes.forEach((n, i) => {
+    const active = i === path[seg] || i === path[seg + 1];
+    n.material.emissiveIntensity = active ? 0.9 : 0.3;
+    n.scale.setScalar(active ? 1.35 : 1);
+  });
+  graphGroup.rotation.y = Math.sin(t * 0.15) * 0.25;
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+startQueryCycle();
+animate();
+
+// resize
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

@@ -121,7 +121,7 @@ These are *classifier LLMs*: they don't answer the user; they label a prompt and
 
 | Model | Base / training | Taxonomy | Output |
 |---|---|---|---|
-| **Llama Guard 3** (Meta) | Llama 3.1 8B fine-tune | **14 categories S1–S14** = MLCommons 13-hazard taxonomy + S14 Code Interpreter Abuse; 8 languages. (S1 Violent Crimes … S10 Hate, S11 Suicide & Self-Harm, S13 Elections, S14 Code Interpreter Abuse) | `safe` or `unsafe` + category codes |
+| **Llama Guard 3** (Meta) | Llama 3.1 8B fine-tune | **14 categories S1–S14** = MLCommons 13-hazard taxonomy + S14 Code Interpreter Abuse; 8 languages. (S1 Violent Crimes, S2 Non-Violent Crimes, S3 Sex-Related Crimes, S4 Child Sexual Exploitation, S5 Defamation, S6 Specialized Advice, S7 Privacy, S8 Intellectual Property, S9 Indiscriminate Weapons, S10 Hate, S11 Suicide & Self-Harm, S12 Sexual Content, S13 Elections, S14 Code Interpreter Abuse) | `safe` or `unsafe` + category codes |
 | **Llama 3.1 NemoGuard 8B ContentSafety** (NVIDIA) | Llama 3.1 8B Instruct + **LoRA (rank 16, alpha 32)**; trained on **Aegis 2.0** (Nemotron Content Safety Dataset V2, ~30–35k human-annotated samples) | **23 risk categories (S1–S23)** + *safe* + **"Needs Caution"** (covers violence, hate, PII/privacy, self-harm, weapons, fraud, malware, misinformation, copyright, unauthorized advice…) | JSON: `{"User Safety": ..., "Response Safety": ..., "Safety Categories": "..."}` |
 
 **Aegis** is NVIDIA's content-safety program: the *Aegis Content Safety Dataset* (human-annotated, built on top of an extended Llama Guard-style taxonomy) and the resulting *AegisGuard / NemoGuard ContentSafety* models. Key differentiators to remember: NemoGuard adds the **"Needs Caution"** ambiguity label, a broader taxonomy than Llama Guard (23 vs 14), and ships as a **NIM microservice** that plugs into NeMo Guardrails as both an input and an output rail:
@@ -131,7 +131,7 @@ models:
   - type: content_safety
     engine: nim
     parameters:
-      base_url: "http://localhost:8123/v1"
+      base_url: "http://localhost:8000/v1"
       model_name: "llama-3.1-nemoguard-8b-content-safety"
 rails:
   input:
@@ -212,8 +212,8 @@ garak --list_probes
 - **Fairness**: formal criteria — *demographic parity* (equal positive rates across groups), *equalized odds* (equal error rates across groups). They can conflict; choose per use case and document the choice. High-risk EU AI Act systems must address discriminatory outcomes in data governance.
 - **Transparency**: users should know they're talking to AI (EU AI Act Art. 50), what data the system uses, and why decisions were made — delivered via disclosures, model cards, explainable traces of agent reasoning/tool calls.
 - **Content provenance / watermarking** — two complementary layers:
-  1. **C2PA Content Credentials** — signed, tamper-evident *metadata manifest* attached to media recording origin (which model/device) and edit history; now ISO/IEC 22144; backed by Adobe, Microsoft, Google, OpenAI, NVIDIA.
-  2. **Invisible watermarking** — imperceptible signal embedded *in the content itself* (Google **SynthID** for images/audio/text — 10B+ items watermarked; survives compression/screenshots where metadata gets stripped).
+  1. **C2PA Content Credentials** — signed, tamper-evident *metadata manifest* attached to media recording origin (which model/device) and edit history; being standardized as **ISO/DIS 22144** ("Authenticity of information — Content Credentials"; an ISO Draft International Standard, *not* a joint ISO/IEC standard — don't write "ISO/IEC 22144"); backed by Adobe, Microsoft, Google, OpenAI, NVIDIA.
+  2. **Invisible watermarking** — imperceptible signal embedded *in the content itself* (Google **SynthID** for images/audio/text/video — **10B+ items watermarked** as of late 2025 (Google DeepMind), across Imagen/Veo/Lyria/Gemini; survives compression/screenshots where metadata gets stripped).
   Provenance ≠ detection: provenance proves origin claims; detectors guess. EU AI Act Art. 50 requires machine-readable marking of synthetic content (enforced from Aug 2026); California SB 942 similar.
 
 ## 4. NVIDIA-specific layer
@@ -335,7 +335,7 @@ models:
   - type: content_safety                 # NemoGuard ContentSafety NIM as a rail model
     engine: nim
     parameters:
-      base_url: "http://localhost:8123/v1"
+      base_url: "http://localhost:8000/v1"
       model_name: "llama-3.1-nemoguard-8b-content-safety"
 rails:
   input:
@@ -425,7 +425,8 @@ Provide your safety assessment in the below JSON format:
 {{"User Safety": ..., "Response Safety": ..., "Safety Categories": ...}}"""
 
 r = requests.post("http://localhost:8000/v1/completions", json={
-    "model": "llama-nemotron-safety-guard-v2",   # current NIM name; older form: llama-3.1-nemoguard-8b-content-safety
+    "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",   # API model string (NIM default port 8000)
+    # NB: NVIDIA now markets this NIM as "Llama Nemotron Safety Guard V2", but the model id you pass is still the llama-3.1-nemoguard-8b-content-safety string above.
     "prompt": prompt, "max_tokens": 100, "temperature": 0.0})
 verdict = json.loads(r.json()["choices"][0]["text"])
 if verdict["User Safety"] == "unsafe":

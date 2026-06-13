@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI — Exam &amp; Study Guide</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25); --on-accent:#0b0f17;
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{position:relative;overflow:hidden;padding:72px 24px 56px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  header.hero::before{content:"";position:absolute;inset:-40% -20%;background:
+    radial-gradient(ellipse 30% 35% at 30% 40%,color-mix(in srgb, var(--green) 10%, transparent),transparent 70%),
+    radial-gradient(ellipse 25% 30% at 70% 60%,color-mix(in srgb, var(--cyan) 7%, transparent),transparent 70%);
+    animation:heroGlow 14s ease-in-out infinite alternate;pointer-events:none}
+  @keyframes heroGlow{
+    0%{transform:translate3d(-3%,2%,0) scale(1);opacity:.7}
+    50%{transform:translate3d(3%,-2%,0) scale(1.06);opacity:1}
+    100%{transform:translate3d(-2%,-3%,0) scale(1.02);opacity:.8}
+  }
+  .hero .dots{position:absolute;inset:0;pointer-events:none}
+  .hero .dot{position:absolute;border-radius:50%;background:var(--green);opacity:.35;animation:floatDot 9s ease-in-out infinite}
+  .hero .dot.b{background:var(--blue)}
+  .hero .dot.c{background:var(--cyan)}
+  @keyframes floatDot{
+    0%,100%{transform:translateY(0) scale(1);opacity:.18}
+    50%{transform:translateY(-26px) scale(1.25);opacity:.5}
+  }
+  .hero-inner{position:relative;z-index:1}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+  .fact-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:22px}
+  .fact-chips .fc{display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-size:.84rem;font-weight:700;color:var(--text)}
+  .fact-chips .fc .ic{color:var(--green)}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+  a.inline{color:var(--blue);text-decoration:none}
+  a.inline:hover{text-decoration:underline}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:var(--green-dim)}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card ol{margin:8px 0 0 20px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  .card a{color:var(--blue);text-decoration:none}
+  .card a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em;margin-bottom:8px}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td a{color:var(--blue);text-decoration:none}
+  .tbl td a:hover{text-decoration:underline}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout a{color:var(--blue);text-decoration:none}
+  .callout a:hover{text-decoration:underline}
+  .callout .exam-chip{display:inline-block;background:var(--green);color:var(--on-accent);border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 11px;margin-right:10px;vertical-align:1px}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  /* WEIGHT BAR */
+  .weight-stack{margin:18px 0 6px}
+  .wrow{display:grid;grid-template-columns:minmax(150px,250px) 1fr 52px;align-items:center;gap:12px;padding:7px 0;text-decoration:none;border-radius:8px}
+  .wrow:hover .wlabel{color:var(--green)}
+  .wrow:hover .wfill{filter:brightness(1.18)}
+  .wlabel{font-size:.84rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wlabel .dn{color:var(--muted);font-weight:800;font-family:var(--mono);font-size:.74rem;margin-right:7px}
+  .wtrack{display:flex;height:14px;background:var(--bg3);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .wfill{display:block;height:100%;min-height:12px;border-radius:999px;background:linear-gradient(90deg,var(--green-dim),var(--green));transition:filter .15s}
+  .wfill.tier2{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 55%, var(--bg3)),color-mix(in srgb, var(--green) 80%, var(--bg3)))}
+  .wfill.tier3{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 30%, var(--bg3)),color-mix(in srgb, var(--green) 55%, var(--bg3)))}
+  .wpct{font-size:.82rem;font-weight:800;color:var(--green);font-family:var(--mono);text-align:right}
+  @media(max-width:560px){
+    .wrow{grid-template-columns:1fr 44px;grid-template-rows:auto auto;gap:4px 10px;padding:9px 0}
+    .wlabel{grid-column:1/-1}
+    .wpct{font-size:.78rem}
+  }
+
+  /* DOMAIN CARDS */
+  .dcard .open-link{display:inline-block;margin-top:12px;font-weight:700;font-size:.84rem;color:var(--green) !important}
+  .dcard .open-link:hover{text-decoration:underline}
+  .dcard h4 .wt{margin-left:auto;font-size:.7rem;font-weight:800;color:var(--green);background:var(--green-glow);border-radius:999px;padding:2px 9px;white-space:nowrap}
+
+  /* ACCORDION */
+  details.qa{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+  details.qa summary{cursor:pointer;list-style:none;padding:14px 18px;font-size:.92rem;font-weight:700;color:var(--text);display:flex;align-items:flex-start;gap:12px;user-select:none}
+  details.qa summary::-webkit-details-marker{display:none}
+  details.qa summary .qn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:999px;background:var(--green-glow);color:var(--green);font-size:.78rem;font-weight:800;font-family:var(--mono)}
+  details.qa summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s;flex:none}
+  details.qa[open] summary .chev{transform:rotate(90deg)}
+  details.qa[open]{border-color:var(--green-dim)}
+  details.qa .ans{padding:0 18px 16px 56px;font-size:.86rem;color:var(--muted)}
+  details.qa .ans b{color:var(--text)}
+  details.qa .ans a{color:var(--blue);text-decoration:none}
+  details.qa .ans a:hover{text-decoration:underline}
+  @media(max-width:560px){details.qa .ans{padding-left:18px}}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="index.html">← Hub</a>
+  <a href="#overview">Overview</a>
+  <a href="#blueprint">Blueprint</a>
+  <a href="#domains">Domain Deep-Dive</a>
+  <a href="#tech">NVIDIA Tech</a>
+  <a href="#training">DLI Training</a>
+  <a href="#plan">8-Week Plan</a>
+  <a href="#tips">Exam-Day Tips</a>
+  <a href="#resources">Resources</a>
+  <a href="#selfcheck">Self-Check</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="dots" aria-hidden="true">
+    <span class="dot"   style="width:6px;height:6px;left:8%;top:30%;animation-delay:0s"></span>
+    <span class="dot b" style="width:4px;height:4px;left:18%;top:62%;animation-delay:1.4s"></span>
+    <span class="dot c" style="width:5px;height:5px;left:30%;top:22%;animation-delay:2.6s"></span>
+    <span class="dot"   style="width:4px;height:4px;left:44%;top:74%;animation-delay:.8s"></span>
+    <span class="dot b" style="width:6px;height:6px;left:58%;top:28%;animation-delay:3.4s"></span>
+    <span class="dot"   style="width:5px;height:5px;left:70%;top:60%;animation-delay:1.9s"></span>
+    <span class="dot c" style="width:4px;height:4px;left:82%;top:34%;animation-delay:4.2s"></span>
+    <span class="dot"   style="width:6px;height:6px;left:92%;top:66%;animation-delay:2.2s"></span>
+  </div>
+  <div class="hero-inner">
+    <div class="domain-chip">Study Guide <span class="pct">All 10 Domains</span></div>
+    <h1>NCP-AAI — <span class="accent">Exam &amp; Study Guide</span></h1>
+    <p class="hook">The <b>NVIDIA-Certified Professional: Agentic AI</b> exam validates that you can <b>architect, develop, deploy, and govern</b> advanced agentic AI solutions — multi-agent interaction, distributed reasoning, scalability, and ethical safeguards. Everything you need to plan your prep is on this page.</p>
+    <div class="fact-chips">
+      <span class="fc"><span class="ic">❓</span>60–70 questions</span>
+      <span class="fc"><span class="ic">⏱️</span>120 minutes</span>
+      <span class="fc"><span class="ic">💵</span>$200 USD</span>
+      <span class="fc"><span class="ic">📅</span>2-year validity</span>
+      <span class="fc"><span class="ic">🎥</span>Remote proctored</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 1 · EXAM OVERVIEW ============ -->
+<section id="overview">
+  <div class="kicker">Section 1 · The basics</div>
+  <h2>Exam overview</h2>
+  <p class="lede">Compiled June 2026 from the <a class="inline" href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/" target="_blank">official NVIDIA certification page</a> and community exam guides. A <b>professional-level (intermediate)</b> exam aimed at practitioners with hands-on, production-level agentic AI experience.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Item</th><th>Detail</th></tr>
+    <tr><td><b>Certification</b></td><td>NVIDIA-Certified Professional: Agentic AI (NCP-AAI)</td></tr>
+    <tr><td><b>Level</b></td><td>Professional (intermediate)</td></tr>
+    <tr><td><b>Format</b></td><td>Online, remotely proctored</td></tr>
+    <tr><td><b>Questions</b></td><td>60–70 (multiple choice + scenario-based)</td></tr>
+    <tr><td><b>Duration</b></td><td>120 minutes (~2 min/question)</td></tr>
+    <tr><td><b>Price</b></td><td>$200 USD</td></tr>
+    <tr><td><b>Language</b></td><td>English</td></tr>
+    <tr><td><b>Validity</b></td><td>2 years</td></tr>
+    <tr><td><b>Recommended experience</b></td><td>1–2 years in AI/ML roles with hands-on, production-level agentic AI projects</td></tr>
+  </table></div>
+
+  <div class="callout"><span class="exam-chip">What it validates</span>The ability to <b>architect, develop, deploy, and govern</b> advanced agentic AI solutions — multi-agent interaction, distributed reasoning, scalability, and ethical safeguards.</div>
+</section>
+
+<!-- ============ 2 · BLUEPRINT ============ -->
+<section id="blueprint">
+  <div class="kicker">Section 2 · Official blueprint</div>
+  <h2>Exam domains &amp; weights</h2>
+  <p class="lede">Ten domains, three weight tiers. <b>56% of the exam is the top four domains</b> — prioritize architecture, development, evaluation, and deployment. Click any bar or row to open that domain's deep-dive page.</p>
+
+  <div class="weight-stack" role="list" aria-label="Domain weights">
+    <a class="wrow" role="listitem" href="domain-01-agent-architecture.html"><span class="wlabel"><span class="dn">D1</span>Agent Architecture and Design</span><span class="wtrack"><span class="wfill" style="width:100%"></span></span><span class="wpct">15%</span></a>
+    <a class="wrow" role="listitem" href="domain-02-agent-development.html"><span class="wlabel"><span class="dn">D2</span>Agent Development</span><span class="wtrack"><span class="wfill" style="width:100%"></span></span><span class="wpct">15%</span></a>
+    <a class="wrow" role="listitem" href="domain-03-evaluation-tuning.html"><span class="wlabel"><span class="dn">D3</span>Evaluation and Tuning</span><span class="wtrack"><span class="wfill" style="width:86.7%"></span></span><span class="wpct">13%</span></a>
+    <a class="wrow" role="listitem" href="domain-04-deployment-scaling.html"><span class="wlabel"><span class="dn">D4</span>Deployment and Scaling</span><span class="wtrack"><span class="wfill" style="width:86.7%"></span></span><span class="wpct">13%</span></a>
+    <a class="wrow" role="listitem" href="domain-05-cognition-planning-memory.html"><span class="wlabel"><span class="dn">D5</span>Cognition, Planning, and Memory</span><span class="wtrack"><span class="wfill tier2" style="width:66.7%"></span></span><span class="wpct">10%</span></a>
+    <a class="wrow" role="listitem" href="domain-06-knowledge-integration.html"><span class="wlabel"><span class="dn">D6</span>Knowledge Integration and Data Handling</span><span class="wtrack"><span class="wfill tier2" style="width:66.7%"></span></span><span class="wpct">10%</span></a>
+    <a class="wrow" role="listitem" href="domain-07-nvidia-platform.html"><span class="wlabel"><span class="dn">D7</span>NVIDIA Platform Implementation</span><span class="wtrack"><span class="wfill tier3" style="width:46.7%"></span></span><span class="wpct">7%</span></a>
+    <a class="wrow" role="listitem" href="domain-08-run-monitor-maintain.html"><span class="wlabel"><span class="dn">D8</span>Run, Monitor, and Maintain</span><span class="wtrack"><span class="wfill tier3" style="width:33.3%"></span></span><span class="wpct">5%</span></a>
+    <a class="wrow" role="listitem" href="domain-09-safety-ethics-compliance.html"><span class="wlabel"><span class="dn">D9</span>Safety, Ethics, and Compliance</span><span class="wtrack"><span class="wfill tier3" style="width:33.3%"></span></span><span class="wpct">5%</span></a>
+    <a class="wrow" role="listitem" href="domain-10-human-ai-interaction.html"><span class="wlabel"><span class="dn">D10</span>Human-AI Interaction and Oversight</span><span class="wtrack"><span class="wfill tier3" style="width:33.3%"></span></span><span class="wpct">5%</span></a>
+  </div>
+
+  <h3>Blueprint table</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>#</th><th>Domain</th><th>Weight</th><th>Deep-dive</th></tr>
+    <tr><td><b>1</b></td><td><a href="domain-01-agent-architecture.html">Agent Architecture and Design</a></td><td class="good"><b>15%</b></td><td><a href="domain-01-agent-architecture.html">Open →</a></td></tr>
+    <tr><td><b>2</b></td><td><a href="domain-02-agent-development.html">Agent Development</a></td><td class="good"><b>15%</b></td><td><a href="domain-02-agent-development.html">Open →</a></td></tr>
+    <tr><td><b>3</b></td><td><a href="domain-03-evaluation-tuning.html">Evaluation and Tuning</a></td><td class="good"><b>13%</b></td><td><a href="domain-03-evaluation-tuning.html">Open →</a></td></tr>
+    <tr><td><b>4</b></td><td><a href="domain-04-deployment-scaling.html">Deployment and Scaling</a></td><td class="good"><b>13%</b></td><td><a href="domain-04-deployment-scaling.html">Open →</a></td></tr>
+    <tr><td><b>5</b></td><td><a href="domain-05-cognition-planning-memory.html">Cognition, Planning, and Memory</a></td><td><b>10%</b></td><td><a href="domain-05-cognition-planning-memory.html">Open →</a></td></tr>
+    <tr><td><b>6</b></td><td><a href="domain-06-knowledge-integration.html">Knowledge Integration and Data Handling</a></td><td><b>10%</b></td><td><a href="domain-06-knowledge-integration.html">Open →</a></td></tr>
+    <tr><td><b>7</b></td><td><a href="domain-07-nvidia-platform.html">NVIDIA Platform Implementation</a></td><td><b>7%</b></td><td><a href="domain-07-nvidia-platform.html">Open →</a></td></tr>
+    <tr><td><b>8</b></td><td><a href="domain-08-run-monitor-maintain.html">Run, Monitor, and Maintain</a></td><td><b>5%</b></td><td><a href="domain-08-run-monitor-maintain.html">Open →</a></td></tr>
+    <tr><td><b>9</b></td><td><a href="domain-09-safety-ethics-compliance.html">Safety, Ethics, and Compliance</a></td><td><b>5%</b></td><td><a href="domain-09-safety-ethics-compliance.html">Open →</a></td></tr>
+    <tr><td><b>10</b></td><td><a href="domain-10-human-ai-interaction.html">Human-AI Interaction and Oversight</a></td><td><b>5%</b></td><td><a href="domain-10-human-ai-interaction.html">Open →</a></td></tr>
+  </table></div>
+
+  <div class="callout"><span class="exam-chip">Strategy</span><b>56% of the exam is the top four domains</b> (D1 + D2 + D3 + D4). Prioritize architecture, development, evaluation, and deployment before polishing the 5% domains.</div>
+</section>
+
+<!-- ============ 3 · DOMAIN DEEP-DIVE ============ -->
+<section id="domains">
+  <div class="kicker">Section 3 · What's actually in each domain</div>
+  <h2>Domain deep-dive</h2>
+  <p class="lede">The blueprint topics per domain, condensed. Each card links to its full deep-dive page with mental models, decision tables, exam traps, and scenario drills.</p>
+
+  <div class="grid c2">
+    <div class="card green dcard">
+      <h4><span class="icon">🏗️</span>D1 — Agent Architecture and Design <span class="wt">15%</span></h4>
+      <ul>
+        <li><b>Agent patterns:</b> ReAct (reason + act), Reflexion (self-critique loops), Plan-and-Execute, AutoGPT-style autonomous loops, router/supervisor patterns.</li>
+        <li><b>Single-agent vs multi-agent design:</b> when to decompose into specialist agents vs one generalist agent.</li>
+        <li><b>Multi-agent topologies:</b> supervisor/worker (hierarchical), peer-to-peer, blackboard/shared-state, pipeline (sequential hand-off).</li>
+        <li><b>Orchestration frameworks:</b> LangGraph (stateful graphs, checkpointing), LangChain, AutoGen / AG2 (conversational multi-agent), CrewAI (role-based crews), NVIDIA NeMo Agent Toolkit.</li>
+        <li><b>Inter-agent communication standards:</b> Agent2Agent (A2A) protocol, Model Context Protocol (MCP) for tool/context integration.</li>
+        <li><b>Design trade-offs:</b> latency vs accuracy, cost vs capability, autonomy vs controllability, statefulness vs statelessness.</li>
+        <li><b>Tool design:</b> tool schemas, function calling, idempotency, error contracts.</li>
+      </ul>
+      <a class="open-link" href="domain-01-agent-architecture.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card green dcard">
+      <h4><span class="icon">🛠️</span>D2 — Agent Development <span class="wt">15%</span></h4>
+      <ul>
+        <li><b>Prompt engineering:</b> system prompts, few-shot examples, chain-of-thought, structured output (JSON schema), prompt templates and versioning.</li>
+        <li><b>Tool/function calling:</b> defining tools, parallel tool calls, handling tool errors and retries, MCP servers as first-class tool layer.</li>
+        <li><b>Structured workflows:</b> state machines and graphs (LangGraph nodes/edges/conditional edges), human-in-the-loop interrupts, checkpoints.</li>
+        <li><b>Multimodal agents:</b> vision-language models, document understanding, audio I/O.</li>
+        <li><b>Reliability engineering:</b> retries with backoff, timeouts, fallback models, output validation (Pydantic/JSON schema), guarded generation.</li>
+        <li><b>Streaming</b> responses and partial results; async/concurrent agent execution.</li>
+        <li><b>Rapid prototyping:</b> NVIDIA AI Workbench, build.nvidia.com hosted endpoints, NIM API catalog.</li>
+      </ul>
+      <a class="open-link" href="domain-02-agent-development.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card blue dcard">
+      <h4><span class="icon">📊</span>D3 — Evaluation and Tuning <span class="wt">13%</span></h4>
+      <ul>
+        <li><b>Evaluation types:</b> offline eval (golden datasets), online eval (A/B tests), LLM-as-a-judge, human evaluation, pairwise comparison.</li>
+        <li><b>Agent-specific metrics:</b> task completion rate, tool-call accuracy, trajectory/step efficiency, hallucination rate, latency, cost per task.</li>
+        <li><b>RAG evaluation:</b> retrieval metrics (recall@k, precision@k, MRR, NDCG), generation metrics (faithfulness/groundedness, answer relevance, context relevance) — RAGAS-style triad.</li>
+        <li><b>Tuning approaches:</b> prompt optimization, RAG tuning (chunking/embedding/reranker choices), fine-tuning (SFT, LoRA/PEFT), preference alignment (DPO/RLHF) — and when each is appropriate.</li>
+        <li><b>NVIDIA NeMo Evaluator</b> microservice; benchmark suites (MMLU, HELM-style, domain benchmarks).</li>
+        <li><b>Regression testing</b> for prompts and agents; eval-driven development.</li>
+      </ul>
+      <a class="open-link" href="domain-03-evaluation-tuning.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card blue dcard">
+      <h4><span class="icon">🚀</span>D4 — Deployment and Scaling <span class="wt">13%</span></h4>
+      <ul>
+        <li><b>NVIDIA NIM microservices:</b> containerized, optimized inference endpoints (OpenAI-compatible APIs); deploying on Kubernetes/cloud/on-prem.</li>
+        <li><b>Triton Inference Server:</b> multi-framework serving, dynamic batching, concurrent model execution, model ensembles.</li>
+        <li><b>TensorRT / TensorRT-LLM:</b> engine optimization, quantization (FP8/INT8/INT4, AWQ), KV-cache management, in-flight (continuous) batching.</li>
+        <li><b>Scaling patterns:</b> horizontal autoscaling, GPU utilization optimization, multi-GPU/multi-node inference (tensor/pipeline parallelism), load balancing.</li>
+        <li><b>Serving trade-offs:</b> throughput vs latency, batch size tuning, speculative decoding.</li>
+        <li><b>Infrastructure:</b> Kubernetes + GPU operator, Helm charts for NIM, cloud GPU instances (DGX Cloud), edge deployment (Jetson / Nemotron Nano models).</li>
+        <li><b>CI/CD for agents:</b> containerization, model versioning, blue-green/canary rollout.</li>
+      </ul>
+      <a class="open-link" href="domain-04-deployment-scaling.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card purple dcard">
+      <h4><span class="icon">🧠</span>D5 — Cognition, Planning, and Memory <span class="wt">10%</span></h4>
+      <ul>
+        <li><b>Reasoning frameworks:</b> chain-of-thought, tree-of-thoughts, self-consistency, reasoning models (test-time compute).</li>
+        <li><b>Planning:</b> task decomposition, hierarchical planning, re-planning on failure, plan validation.</li>
+        <li><b>Memory types:</b> short-term (conversation buffer/window), long-term (vector store memory), episodic vs semantic vs procedural memory, entity memory.</li>
+        <li><b>Context management:</b> context window budgeting, summarization/compaction of history, scratchpads, retrieval-augmented memory.</li>
+        <li><b>State management</b> across sessions; checkpointing and resumability.</li>
+      </ul>
+      <a class="open-link" href="domain-05-cognition-planning-memory.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card purple dcard">
+      <h4><span class="icon">📚</span>D6 — Knowledge Integration and Data Handling <span class="wt">10%</span></h4>
+      <ul>
+        <li><b>RAG pipelines end-to-end:</b> ingestion → chunking → embedding → indexing → retrieval → reranking → generation.</li>
+        <li><b>Chunking strategies:</b> fixed-size, recursive, semantic, document-structure-aware; chunk overlap trade-offs.</li>
+        <li><b>Embeddings &amp; vector databases:</b> NVIDIA NeMo Retriever (NIM embedding/reranking models), Milvus, FAISS, pgvector; ANN indexes (HNSW, IVF).</li>
+        <li><b>Hybrid search:</b> dense + sparse (BM25) with fusion (RRF); metadata filtering.</li>
+        <li><b>Reranking:</b> cross-encoder rerankers to boost precision.</li>
+        <li><b>Data handling:</b> PII redaction, document parsing (PDF/tables/images — NV-Ingest / NeMo Retriever extraction), data freshness and re-indexing.</li>
+        <li><b>GraphRAG and structured knowledge</b> (knowledge graphs) for multi-hop questions.</li>
+      </ul>
+      <a class="open-link" href="domain-06-knowledge-integration.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card cyan dcard">
+      <h4><span class="icon">🟩</span>D7 — NVIDIA Platform Implementation <span class="wt">7%</span></h4>
+      <ul>
+        <li><b>NIM (NVIDIA Inference Microservices):</b> model catalog at build.nvidia.com, self-hosted vs hosted endpoints, OpenAI-compatible API.</li>
+        <li><b>NeMo framework family:</b> NeMo Customizer (fine-tuning), NeMo Evaluator, NeMo Guardrails, NeMo Retriever, NeMo Agent Toolkit (formerly AgentIQ).</li>
+        <li><b>Nemotron model family:</b> open NVIDIA models for agentic use (e.g., Nemotron Super/Ultra; Nano variants for edge).</li>
+        <li><b>NVIDIA AI Enterprise:</b> production support, security, and lifecycle for the stack.</li>
+        <li><b>NVIDIA Blueprints:</b> reference agentic workflows (e.g., AI virtual assistant, multimodal PDF RAG).</li>
+        <li><b>AI Workbench / DGX Cloud</b> for development and training environments.</li>
+      </ul>
+      <a class="open-link" href="domain-07-nvidia-platform.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card cyan dcard">
+      <h4><span class="icon">📡</span>D8 — Run, Monitor, and Maintain <span class="wt">5%</span></h4>
+      <ul>
+        <li><b>Observability:</b> tracing agent trajectories (OpenTelemetry, LangSmith/LangFuse-style tooling), logging tool calls and intermediate steps.</li>
+        <li><b>Monitoring:</b> latency, token usage/cost, error rates, GPU utilization (DCGM metrics), throughput.</li>
+        <li><b>Drift detection:</b> data drift, model behavior drift, eval-in-production.</li>
+        <li><b>Alerting and incident response;</b> dashboards; SLOs for agent services.</li>
+        <li><b>Maintenance:</b> model updates, prompt version rollouts, index refreshes, dependency upgrades.</li>
+      </ul>
+      <a class="open-link" href="domain-08-run-monitor-maintain.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card red dcard">
+      <h4><span class="icon">🛡️</span>D9 — Safety, Ethics, and Compliance <span class="wt">5%</span></h4>
+      <ul>
+        <li><b>NeMo Guardrails:</b> input/output rails, topic control, jailbreak detection, content safety models (e.g., Llama Guard-class, Aegis), Colang policies.</li>
+        <li><b>Threats:</b> prompt injection (direct/indirect), data exfiltration via tools, excessive agency, insecure output handling (OWASP LLM Top 10).</li>
+        <li><b>Red-teaming</b> agents; adversarial testing (e.g., Garak-style scanners).</li>
+        <li><b>Governance &amp; compliance:</b> auditability, data residency, EU AI Act / NIST AI RMF awareness, model cards, usage policies.</li>
+        <li><b>Responsible AI:</b> bias evaluation, transparency, content provenance.</li>
+      </ul>
+      <a class="open-link" href="domain-09-safety-ethics-compliance.html">Open deep-dive →</a>
+    </div>
+
+    <div class="card amber dcard">
+      <h4><span class="icon">🤝</span>D10 — Human-AI Interaction and Oversight <span class="wt">5%</span></h4>
+      <ul>
+        <li><b>Human-in-the-loop (HITL):</b> approval gates for high-risk actions, interrupt/resume workflows, escalation paths.</li>
+        <li><b>Confidence thresholds</b> and selective deferral to humans.</li>
+        <li><b>Transparency:</b> explaining agent decisions, citing sources, showing tool-use traces to users.</li>
+        <li><b>UX for agents:</b> streaming feedback, progress indication, undo/confirmation for irreversible actions.</li>
+        <li><b>Oversight design:</b> least-privilege tool access, action allowlists, audit logs.</li>
+      </ul>
+      <a class="open-link" href="domain-10-human-ai-interaction.html">Open deep-dive →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 · NVIDIA TECH QUICK REFERENCE ============ -->
+<section id="tech">
+  <div class="kicker">Section 4 · The stack, at a glance</div>
+  <h2>Key NVIDIA technologies — quick reference</h2>
+  <p class="lede">When a question mentions the NVIDIA stack, the answer usually wants the <b>NVIDIA-native component</b>. Know what each one is and where it shows up.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Technology</th><th>What it is</th><th>Exam relevance</th></tr>
+    <tr><td><b>NIM</b></td><td>Containerized, optimized inference microservices with OpenAI-compatible APIs</td><td>Deployment questions; self-hosted vs API</td></tr>
+    <tr><td><b>NeMo Agent Toolkit</b></td><td>Framework-agnostic library to build/profile/optimize agent workflows</td><td>Agent orchestration, profiling</td></tr>
+    <tr><td><b>NeMo Guardrails</b></td><td>Programmable rails for safety, topic control, jailbreak detection</td><td>Safety domain</td></tr>
+    <tr><td><b>NeMo Retriever</b></td><td>Embedding, reranking, and extraction NIMs for RAG</td><td>Knowledge integration</td></tr>
+    <tr><td><b>NeMo Customizer / Evaluator</b></td><td>Fine-tuning (LoRA/SFT) and evaluation microservices</td><td>Tuning &amp; evaluation</td></tr>
+    <tr><td><b>Triton Inference Server</b></td><td>High-performance multi-framework model serving</td><td>Scaling, batching</td></tr>
+    <tr><td><b>TensorRT-LLM</b></td><td>LLM inference optimization: quantization, KV cache, in-flight batching</td><td>Performance questions</td></tr>
+    <tr><td><b>Nemotron models</b></td><td>NVIDIA's open model family (incl. Nano for edge)</td><td>Model selection scenarios</td></tr>
+    <tr><td><b>NVIDIA Blueprints</b></td><td>Reference architectures for agentic workflows</td><td>Architecture scenarios</td></tr>
+    <tr><td><b>AI Workbench</b></td><td>Local/remote dev environment manager</td><td>Prototyping</td></tr>
+    <tr><td><b>MCP / A2A</b></td><td>Tool-integration and agent-to-agent protocols</td><td>Interoperability questions</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ 5 · DLI TRAINING ============ -->
+<section id="training">
+  <div class="kicker">Section 5 · Official prep</div>
+  <h2>Recommended official training (NVIDIA DLI)</h2>
+  <p class="lede">The NVIDIA Deep Learning Institute courses that map directly onto the blueprint.</p>
+
+  <div class="grid c3">
+    <div class="card green"><span class="pill g">~8 h · Free self-paced</span><h4><span class="icon">🎓</span>Building RAG Agents With LLMs</h4><p>Free self-paced (S-FX-15); a paid instructor-led version also exists. Core prep for D6 knowledge integration and D1/D2 agent skills.</p></div>
+    <div class="card blue"><span class="pill b">~3 h · Self-paced</span><h4><span class="icon">🎓</span>Evaluating RAG and Semantic Search Systems</h4><p>Self-paced (S-FX-32). Directly covers the D3 RAG-evaluation metrics (faithfulness, relevance, recall@k).</p></div>
+    <div class="card green"><span class="pill g">~8 h · Free self-paced</span><h4><span class="icon">🎓</span>Building Agentic AI Applications With LLMs</h4><p>Free self-paced (C-FX-25). The flagship course for D1/D2 — tool calling, workflows, agents.</p></div>
+    <div class="card amber"><span class="pill a">Instructor-led</span><h4><span class="icon">🎓</span>Adding New Knowledge to LLMs</h4><p>Instructor-led workshop (price varies). Fine-tuning and knowledge-injection techniques for the D3 tuning decisions.</p></div>
+    <div class="card cyan"><span class="pill b">~8 h · Self-paced</span><h4><span class="icon">🎓</span>Deploying RAG Pipelines for Production at Scale</h4><p>Self-paced (C-FX-18). Production deployment of RAG — maps to D4 deployment/scaling and D7 platform.</p></div>
+  </div>
+</section>
+
+<!-- ============ 6 · 8-WEEK PLAN ============ -->
+<section id="plan">
+  <div class="kicker">Section 6 · The schedule</div>
+  <h2>8-week study plan</h2>
+  <p class="lede">One domain cluster per week, hands-on first, with a full practice week at the end. <b>Lab time matters more than memorization.</b></p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Week</th><th>Focus</th><th>Activities</th></tr>
+    <tr><td><b>1</b></td><td><b>Foundations + Architecture (D1)</b></td><td>Agent patterns (ReAct, Reflexion, plan-execute), multi-agent topologies; read LangGraph &amp; NeMo Agent Toolkit docs</td></tr>
+    <tr><td><b>2</b></td><td><b>Agent Development (D2)</b></td><td>Build a tool-using agent with function calling + MCP; structured outputs; error handling; DLI "Building Agentic AI Applications"</td></tr>
+    <tr><td><b>3</b></td><td><b>Cognition &amp; Memory (D5)</b></td><td>Implement short/long-term memory, summarization, planning loops in a project</td></tr>
+    <tr><td><b>4</b></td><td><b>RAG &amp; Knowledge (D6)</b></td><td>Build a RAG pipeline with NeMo Retriever or open embeddings + Milvus; hybrid search + reranking; DLI "Building RAG Agents"</td></tr>
+    <tr><td><b>5</b></td><td><b>Evaluation &amp; Tuning (D3)</b></td><td>RAGAS-style evals, LLM-as-judge, golden datasets; when to prompt-tune vs LoRA vs RAG; DLI "Evaluating RAG"</td></tr>
+    <tr><td><b>6</b></td><td><b>Deployment &amp; Scaling (D4 + D7)</b></td><td>Deploy a NIM locally (Docker) or use build.nvidia.com; learn Triton concepts, TensorRT-LLM optimizations, K8s autoscaling</td></tr>
+    <tr><td><b>7</b></td><td><b>Ops, Safety, HITL (D8–D10)</b></td><td>Add tracing/observability; implement NeMo Guardrails; add HITL approval gate; study OWASP LLM Top 10</td></tr>
+    <tr><td><b>8</b></td><td><b>Practice &amp; review</b></td><td>Full-length timed practice exams; review weak domains; redo missed topics hands-on</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ 7 · EXAM-DAY TIPS ============ -->
+<section id="tips">
+  <div class="kicker">Section 7 · On the day</div>
+  <h2>Exam-day tips</h2>
+  <p class="lede">Scenario questions usually ask for the <b>best trade-off</b>, not the only correct tool. Read like a system designer.</p>
+
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">⏱️</span>Pace yourself</h4><p>~2 minutes per question. <b>Flag and return</b> to long scenario questions rather than burning time early.</p></div>
+    <div class="card amber"><h4><span class="icon">🔍</span>Read carefully</h4><p>Watch for <b>NOT</b> / <b>EXCEPT</b> / "BEST" / "FIRST" qualifiers — they flip the answer.</p></div>
+    <div class="card blue"><h4><span class="icon">📐</span>Think like a system designer</h4><p>Scenario questions usually ask for the <b>best trade-off</b> (cost, latency, safety, scalability), not the only correct tool.</p></div>
+    <div class="card cyan"><h4><span class="icon">🟩</span>NVIDIA-first answers</h4><p>When a question mentions the NVIDIA stack, prefer the <b>NVIDIA-native component</b> (NIM, NeMo Guardrails, Triton) over generic alternatives.</p></div>
+    <div class="card purple"><h4><span class="icon">🧪</span>Hands-on beats theory</h4><p>The exam tests practical decision-making; <b>lab time matters more than memorization</b>.</p></div>
+    <div class="card red"><h4><span class="icon">🎥</span>Proctoring logistics</h4><p>Test your webcam/proctoring setup <b>24 h before</b>; have a clean desk and stable internet.</p></div>
+  </div>
+</section>
+
+<!-- ============ 8 · PRACTICE RESOURCES ============ -->
+<section id="resources">
+  <div class="kicker">Section 8 · Where to practice</div>
+  <h2>Practice resources</h2>
+  <p class="lede">Official references first, then hands-on endpoints, then community mock exams.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">📜</span>Official NVIDIA</h4><ul>
+      <li><a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/" target="_blank">Official cert page &amp; study guide</a></li>
+      <li><a href="https://build.nvidia.com" target="_blank">build.nvidia.com</a> — free hosted NIM endpoints for hands-on practice</li>
+      <li>NVIDIA Blueprints &amp; GitHub (<a href="https://github.com/NVIDIA/GenerativeAIExamples" target="_blank">GenerativeAIExamples repo</a>)</li>
+    </ul></div>
+    <div class="card blue"><h4><span class="icon">🧰</span>Community &amp; frameworks</h4><ul>
+      <li><b>Practice tests:</b> FlashGenius, Whizlabs, Preporato, Udemy mock exams</li>
+      <li><b>Frameworks to practice with:</b> LangGraph, AutoGen/AG2, CrewAI, NeMo Agent Toolkit</li>
+      <li><b>This site:</b> the <a href="index.html">visual hub</a> — interactive scenes + infographics per domain</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ============ 9 · SELF-CHECK ============ -->
+<section id="selfcheck">
+  <div class="kicker">Section 9 · Quick self-check</div>
+  <h2>Can you answer these?</h2>
+  <p class="lede">If any of these makes you hesitate, that's your weak domain. Expand each question for a pointer to where the answer lives.</p>
+
+  <details class="qa">
+    <summary><span class="qn">1</span>When would you choose a supervisor multi-agent pattern over a single ReAct agent?<span class="chev">›</span></summary>
+    <div class="ans">Think: task decomposability, independent sub-tasks, specialist tools, and whether coordination overhead is justified. Covered in <a href="domain-01-agent-architecture.html">D1 — Agent Architecture</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">2</span>What does in-flight batching do in TensorRT-LLM, and why does it improve throughput?<span class="chev">›</span></summary>
+    <div class="ans">Think: continuous batching at the iteration level — new requests join a running batch instead of waiting for it to drain. Covered in <a href="domain-04-deployment-scaling.html">D4 — Deployment &amp; Scaling</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">3</span>How do you measure RAG faithfulness vs answer relevance?<span class="chev">›</span></summary>
+    <div class="ans">Think: faithfulness = is the answer grounded in the retrieved context; answer relevance = does it address the question — the RAGAS-style triad. Covered in <a href="domain-03-evaluation-tuning.html">D3 — Evaluation &amp; Tuning</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">4</span>Where do input rails vs output rails sit in NeMo Guardrails, and what threats does each mitigate?<span class="chev">›</span></summary>
+    <div class="ans">Think: input rails screen user messages before the LLM (jailbreaks, off-topic, injection); output rails screen responses before the user (unsafe content, leakage). Covered in <a href="domain-09-safety-ethics-compliance.html">D9 — Safety, Ethics &amp; Compliance</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">5</span>RAG vs fine-tuning vs prompt engineering — which do you pick for fast-changing knowledge, and why?<span class="chev">›</span></summary>
+    <div class="ans">Think: RAG — re-index instead of re-train; fine-tuning bakes knowledge in and goes stale; prompts can't carry a whole corpus. Covered in <a href="domain-03-evaluation-tuning.html">D3</a> and <a href="domain-06-knowledge-integration.html">D6 — Knowledge Integration</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">6</span>What is the role of MCP vs A2A in an agentic system?<span class="chev">›</span></summary>
+    <div class="ans">Think: MCP = agent ↔ tools/data integration; A2A = agent ↔ agent communication. Complementary, not competing. Covered in <a href="domain-01-agent-architecture.html">D1 — Agent Architecture</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">7</span>How would you add a human approval step before an agent executes a destructive tool call?<span class="chev">›</span></summary>
+    <div class="ans">Think: HITL interrupt/resume in the workflow graph, approval gates on high-risk actions, action allowlists. Covered in <a href="domain-10-human-ai-interaction.html">D10 — Human-AI Interaction &amp; Oversight</a>.</div>
+  </details>
+  <details class="qa">
+    <summary><span class="qn">8</span>Which metrics indicate an agent regression after a prompt update in production?<span class="chev">›</span></summary>
+    <div class="ans">Think: task completion rate, tool-call accuracy, trajectory/step efficiency, latency, cost per task, error rates — tracked against a regression suite. Covered in <a href="domain-03-evaluation-tuning.html">D3</a> and <a href="domain-08-run-monitor-maintain.html">D8 — Run, Monitor &amp; Maintain</a>.</div>
+  </details>
+
+  <div class="callout" style="margin-top:26px"><span class="exam-chip">Next step</span>Drill your weak domains with the deep-dive pages above, then come back to the <a href="#plan">8-week plan</a> and check the boxes week by week.</div>
+</section>
+
+</main>
+
+<footer>
+  <h3>About this page</h3>
+  <ul>
+    <li>Back to the hub — <a href="index.html">NCP-AAI Visual Study Hub</a></li>
+    <li>GitHub repo — <a href="https://github.com/praveenpke/ncp-aai-study-hub" target="_blank">praveenpke/ncp-aai-study-hub</a></li>
+    <li>Official cert page — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/" target="_blank">nvidia.com/…/agentic-ai-professional</a></li>
+    <li>Domain deep-dives — <a href="domain-01-agent-architecture.html">D1</a> · <a href="domain-02-agent-development.html">D2</a> · <a href="domain-03-evaluation-tuning.html">D3</a> · <a href="domain-04-deployment-scaling.html">D4</a> · <a href="domain-05-cognition-planning-memory.html">D5</a> · <a href="domain-06-knowledge-integration.html">D6</a> · <a href="domain-07-nvidia-platform.html">D7</a> · <a href="domain-08-run-monitor-maintain.html">D8</a> · <a href="domain-09-safety-ethics-compliance.html">D9</a> · <a href="domain-10-human-ai-interaction.html">D10</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Exam &amp; Study Guide — compiled June 2026 from the official NVIDIA certification page and community exam guides · Built from personal study notes.</p>
+</footer>
+
+</body>
+</html>

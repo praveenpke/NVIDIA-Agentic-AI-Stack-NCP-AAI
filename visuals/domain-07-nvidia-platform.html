@@ -7,10 +7,12 @@
 <style>
   :root{
     --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#131b2b; --card2:#182337;
+    --panel:#141d2e; --panel2:#18233a;
+    --text:#e8edf5; --muted:#9aa7bd; --on-accent:#0b0f17;
     --ink:#e8edf5; --ink-dim:#9aa7bd; --ink-faint:#6b7890;
     --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.18);
-    --amber:#ffb347; --red:#ff6b6b; --blue:#4fc3f7; --purple:#b388ff; --teal:#2dd4bf;
-    --line:#223049; --radius:14px;
+    --amber:#ffb347; --red:#ff6b6b; --blue:#4fc3f7; --purple:#b388ff; --teal:#2dd4bf; --cyan:#2dd4bf;
+    --line:#223049; --border:#223049; --radius:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -60,7 +62,7 @@
   .hero .hook{color:var(--muted);max-width:760px;margin:0 auto;font-size:1.05rem}
   /* nav */
   nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  nav .wrap{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:0 16px}
+  nav .wrap{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:0 104px 0 16px}
   nav a{flex:none;color:var(--muted);font-size:.82rem;font-weight:600;padding:13px 13px;border-bottom:2px solid transparent;white-space:nowrap}
   nav a:hover{color:var(--green);text-decoration:none;border-bottom-color:var(--green-dim)}
   /* 3D */
@@ -86,7 +88,7 @@
   .rung:hover{transform:translateX(6px);border-color:var(--green-dim)}
   .rung .lvl{font-weight:900;color:var(--green);font-size:1.1rem;width:34px;flex:none;text-align:center}
   .rung .nm{font-weight:800;min-width:230px}
-  .rung .rl{color:var(--muted);font-size:.88rem}
+  .rung .rl{color:var(--muted);font-size:.88rem;min-width:0;overflow-wrap:anywhere}
   .rung.wrap-r{border-left-color:var(--amber)}
   .rung.wrap-r .lvl{color:var(--amber)}
   /* bars */
@@ -580,7 +582,7 @@ resp = client.chat.completions.create(
   <div class="tablewrap"><table>
     <tr><th></th><th>Hosted endpoints (build.nvidia.com)</th><th>Self-hosted NIM containers</th></tr>
     <tr><td><b>Where</b></td><td>NVIDIA-managed (API catalog, <code>https://integrate.api.nvidia.com/v1</code>)</td><td>Your infra: on-prem, any cloud, K8s (NIM Operator / Helm)</td></tr>
-    <tr><td><b>Auth</b></td><td><code>nvapi-...</code> API key from build.nvidia.com</td><td><code>NGC_API_KEY</code> to pull from <code>nvcr.io</code> (NGC registry)</td></tr>
+    <tr><td><b>Auth</b></td><td><code>nvapi-...</code> API key from build.nvidia.com</td><td><code>NGC_API_KEY</code> to pull from <code>nvcr.io</code> (<b>NGC = NVIDIA GPU Cloud</b> registry)</td></tr>
     <tr><td><b>Cost model</b></td><td>Free dev credits, then paid</td><td>Your GPUs + NVIDIA AI Enterprise license for production (Developer Program: free R&amp;D self-hosting, up to 16 GPUs)</td></tr>
     <tr><td><b>Data residency</b></td><td class="cell-bad">Data leaves your network</td><td class="cell-good">Full control — air-gapped possible</td></tr>
     <tr><td><b>Time to first token</b></td><td class="cell-good">Minutes (API key only)</td><td class="cell-mid">Hours (GPU, NGC pull)</td></tr>

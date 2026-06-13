@@ -6,10 +6,12 @@
 <title>NCP-AAI Domain 8 — Run, Monitor &amp; Maintain</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a29; --panel:#141d2e; --panel2:#18233a;
-    --line:#22304a; --txt:#dbe4f0; --dim:#8fa1b8; --faint:#5d6f88;
-    --nv:#76b900; --nv-dark:#4e7a00; --blue:#4da3ff; --yellow:#ffd24d; --red:#ff5c5c;
-    --orange:#ff9f43; --purple:#b07cff; --cyan:#3fd8d2;
+    /* Canonical theme variables (overridden by theme.css; defined here so the page works standalone) */
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a29; --card:#141d2e; --panel:#141d2e; --panel2:#18233a;
+    --line:#22304a; --border:#22304a; --text:#dbe4f0; --muted:#8fa1b8; --faint:#5d6f88;
+    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,0.12); --on-accent:#0b0f17;
+    --blue:#4da3ff; --amber:#ffd24d; --red:#ff5c5c; --purple:#b07cff; --cyan:#3fd8d2;
+    --mono:Consolas,Menlo,monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html{scroll-behavior:smooth;}
@@ -24,7 +26,7 @@
   nav{
     position:sticky; top:0; z-index:100; background:color-mix(in srgb, var(--bg) 92%, transparent);
     backdrop-filter:blur(10px); border-bottom:1px solid var(--line);
-    display:flex; gap:2px; overflow-x:auto; padding:0 14px; white-space:nowrap;
+    display:flex; gap:2px; overflow-x:auto; padding:0 96px 0 14px; white-space:nowrap;
   }
   nav a{
     color:var(--muted); text-decoration:none; font-size:.78rem; font-weight:600;
@@ -88,6 +90,7 @@
 
   /* cards */
   .grid{display:grid; gap:14px;}
+  .grid > *{min-width:0;} /* let cards shrink below content width so <pre> scrolls instead of forcing page overflow */
   .g2{grid-template-columns:repeat(auto-fit,minmax(310px,1fr));}
   .g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
   .card{
@@ -824,6 +827,15 @@ window.addEventListener('resize', ()=>{
   </div>
   <div class="key"><b>Scaling rule:</b> rising queue depth with flat GPU util = capacity exhausted → scale out. <b>HPA/KEDA autoscaling for LLM services keys on queue depth or KV-cache usage via Prometheus Adapter — NOT CPU/memory</b> (CPU is meaningless for a GPU-bound service).</div>
 
+  <h3 class="block">Health probes — liveness vs. readiness (not the same as <code>/metrics</code>)</h3>
+  <div class="grid g2">
+    <div class="card"><h4>Liveness <span class="pill p-red">fail → restart</span></h4>
+      <p>"Is the process alive?" Fail → Kubernetes <b>restarts the pod</b>. <b>NIM:</b> <code>/v1/health/live</code> &middot; <b>Triton:</b> <code>/v2/health/live</code> (default port <b>8000</b>, HTTP 200 when healthy). For slow weight loading add a <b>startupProbe</b> so a cold start isn't mistaken for a liveness failure and crash-looped.</p></div>
+    <div class="card"><h4>Readiness <span class="pill p-yellow">fail → drop from LB</span></h4>
+      <p>"Is the model loaded and ready to serve?" Fail → Kubernetes <b>removes the pod from the Service load-balancer</b> but does <b>not</b> restart it. <b>NIM:</b> <code>/v1/health/ready</code> &middot; <b>Triton:</b> <code>/v2/health/ready</code> (with <code>--strict-readiness</code>, ready only once all models are loaded).</p></div>
+  </div>
+  <div class="note"><b>Exam framing:</b> a pod flapping in and out of the load balancer <i>with no restarts</i> → <b>readiness</b> probe failing; a pod stuck in a restart crash-loop → <b>liveness</b> (or startup) probe failing. Probes are a kubelet <b>pull</b> check — distinct from Prometheus scraping <code>/metrics</code>.</div>
+
   <div class="diagram">
     <svg viewBox="0 0 960 250">
       <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)"/></marker></defs>
@@ -1084,7 +1096,7 @@ window.addEventListener('resize', ()=>{
     <div class="trap"><h4>⚠ 6 · Prompt rollback does not require redeploying code</h4><p>With prompt management (Langfuse-style versions + labels), rollback = <b>repoint the <code>production</code> label</b>. "Rebuild and redeploy the container to restore the old prompt" is the distractor. Sub-trap: SDK prompt <b>caching</b> means a brief tail of old-version traces after switching.</p></div>
     <div class="trap"><h4>⚠ 7 · Changing the embedding model silently breaks RAG</h4><p>New query embeddings vs. an index built with the old model = garbage similarity scores. Correct: <b>full re-embed + rebuild side-by-side, validate retrieval, atomic swap</b> — not "just refresh new documents."</p></div>
     <div class="trap"><h4>⚠ 8 · Shadow deployment ≠ canary</h4><p>Shadow serves <b>no</b> users (zero risk, double cost, no user feedback); canary serves a <b>small %</b> of users (small real risk, real feedback). The exam swaps these definitions.</p></div>
-    <div class="trap"><h4>⚠ 9 · Port/endpoint trivia mix-ups</h4><p>dcgm-exporter = <b>9400</b>; Triton metrics = <b>8002</b>; NIM metrics at <code>/v1/metrics</code> on the service port; Phoenix UI defaults to <b>6006</b>. Also: Prometheus <b>scrapes</b> (pull model) — Triton/NIM never push metrics.</p></div>
+    <div class="trap"><h4>⚠ 9 · Port/endpoint trivia mix-ups</h4><p>dcgm-exporter = <b>9400</b>; Triton metrics = <b>8002</b>; NIM metrics at <code>/v1/metrics</code> on the service port (default 8000); Phoenix UI defaults to <b>6006</b>. Don't confuse <i>metrics</i> with <i>health</i> endpoints: NIM <code>/v1/health/{live,ready}</code>, Triton <code>/v2/health/{live,ready}</code> feed K8s probes, not Prometheus. Also: Prometheus <b>scrapes</b> (pull model) — Triton/NIM never push metrics.</p></div>
     <div class="trap"><h4>⚠ 10 · SLO math</h4><p>99.5% SLO ⇒ <b>0.5% error budget</b> over the window. Burn rate &gt; 1 = budget exhausted <b>early</b>. Burn-rate alerting (fast + slow windows) beats single static thresholds — alerting on every p99 blip is the distractor.</p></div>
     <div class="trap"><h4>⚠ 11 · A retry / finish_reason: length / tool-error isn't always an HTTP error</h4><p>Error-rate SLIs based only on 5xx <b>undercount agent failures</b>; tool-call failure rate and refusal rate are separate SLIs.</p></div>
     <div class="trap"><h4>⚠ 12 · "Eval once before launch" is never the right answer</h4><p>Production agents need <b>continuous</b> evals (sampled judge scoring, canary evals on every change) because models, data, and user behavior all drift.</p></div>
@@ -1314,14 +1326,14 @@ langfuse.flush()</code></pre>
 
     <div class="card accent-top">
       <h4>Hamel Husain <span class="pill p-green">hamel.dev</span></h4>
-      <p style="margin-bottom:8px"><b>"LLM Evals: Everything You Need to Know"</b> (evals FAQ). Take: "You must remove all friction from the process of looking at data" — error analysis on real traces beats generic dashboards and off-the-shelf metric suites; keep reading logs/traces until you stop learning new failure modes.</p>
+      <p style="margin-bottom:8px"><b>"Frequently Asked Questions (And Answers) About AI Evals"</b> (the evals FAQ). Take: remove all friction from the process of looking at your data — error analysis on real traces beats generic dashboards and off-the-shelf metric suites; build custom annotation tools and keep reading logs/traces until you stop learning new failure modes.</p>
       <p style="margin-bottom:8px"><b>Why it matters:</b> for this domain it grounds why traces (not aggregate metrics) are the first stop in incident triage (scenario drill 1), and why every incident should mint new eval cases.</p>
       <p><a href="https://hamel.dev/blog/posts/evals-faq/" target="_blank" rel="noopener">hamel.dev/blog/posts/evals-faq</a></p>
     </div>
 
     <div class="card accent-top">
       <h4>Charity Majors &amp; Phillip Carter <span class="pill p-yellow">Honeycomb blog</span></h4>
-      <p style="margin-bottom:8px"><b>"The Role of AI Observability in 2025."</b> Take: you cannot understand or improve an LLM feature in isolation — RAG is a tracing problem, LLM-as-router is a high-cardinality problem, agents are high-dimensionality — so "you can't have great observability for AI unless you start with great observability for the rest of your software," and aggregates with random exemplars are not enough; you need outlier inspection over full event chains.</p>
+      <p style="margin-bottom:8px"><b>"Observability in the Age of AI."</b> Take: you cannot understand or improve an LLM feature in isolation — RAG is a tracing problem, LLM-as-router is a high-cardinality problem, agents are high-dimensionality — so "you can't have great observability for AI unless you start with great observability for the rest of your software," and aggregates with random exemplars are not enough; you need outlier inspection over full event chains.</p>
       <p style="margin-bottom:8px"><b>Why it matters:</b> maps directly to the layered dashboards + trace-first triage model in §3.4.</p>
       <p><a href="https://www.honeycomb.io/blog/observability-age-of-ai" target="_blank" rel="noopener">honeycomb.io/blog/observability-age-of-ai</a></p>
     </div>

@@ -30,7 +30,7 @@
 
   /* nav */
   nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-  nav .wrap{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 24px;white-space:nowrap}
+  nav .wrap{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 104px 10px 24px;white-space:nowrap}
   nav .brand{font-weight:800;color:var(--green);margin-right:14px;font-size:.9rem;flex:0 0 auto}
   nav a{color:var(--muted);font-size:.8rem;padding:6px 10px;border-radius:6px;flex:0 0 auto}
   nav a:hover{color:var(--text);background:var(--bg3);text-decoration:none}
@@ -59,10 +59,10 @@
   #scene-title{position:absolute;left:50%;transform:translateX(-50%);top:14px;text-align:center;color:#8fa0b8;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
 
   /* cards */
-  .grid{display:grid;gap:16px}
-  .g2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
-  .g3{grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
-  .g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr))}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
   .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
   .card h4{font-size:.98rem;margin-bottom:.45rem;color:var(--text)}
   .card p{font-size:.86rem;color:var(--muted)}
@@ -122,7 +122,14 @@
   footer{padding:48px 0 72px;color:var(--muted);font-size:.82rem}
   footer ul{list-style:none;columns:2;gap:32px}
   footer li{margin:5px 0;break-inside:avoid}
-  @media (max-width:760px){footer ul{columns:1}.bar-row{grid-template-columns:130px 1fr 56px}}
+  @media (max-width:760px){
+    footer ul{columns:1}
+    .bar-row{grid-template-columns:130px 1fr 56px}
+    table{display:block;overflow-x:auto}
+    #scene-title{display:none}
+    #scene-hint{display:none}
+    #scene-status{left:16px;right:16px;max-width:none}
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>

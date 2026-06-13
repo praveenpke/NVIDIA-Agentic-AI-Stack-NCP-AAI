@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 5 — Cognition, Planning & Memory</title>
+<style>
+  /* page-local vars mirror the shared warm theme (theme.css); the 3D scene stays hardcoded dark */
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55;overflow-x:hidden}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV — padding-right keeps the injected top-right control cluster clear of the last links */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 104px 0 12px;scrollbar-width:thin}
+  @media(max-width:760px){nav{padding-right:104px}}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 11px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--purple) 8%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-wrap:wrap;justify-content:center}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* 3D SCENE — stays dark in both themes; overlays dark with light text */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#06090f}
+  #scene-canvas{width:100%;height:100%;display:block;max-width:100%}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(8,11,18,.9);border:1px solid #38496a;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#9aacc4}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(8,11,18,.85);border:1px solid #38496a;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#9aacc4}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(6,9,15,.96);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.55)}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#9aacc4}
+  @media(max-width:760px){.scene-legend{max-width:none;right:14px;font-size:.72rem}.scene-hint{display:none}}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(255px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative;min-width:0}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green);overflow-wrap:anywhere}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;color:var(--green);max-width:100%}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit;white-space:pre}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-all}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto;max-width:100%}
+
+  /* SVG diagrams */
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+
+  /* MOBILE: code companion grid must collapse cleanly, no horizontal overflow */
+  .cc-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  @media(max-width:760px){
+    .tbl{display:block;overflow-x:auto;white-space:nowrap}
+    section{padding:44px 0 14px}
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · D5</a>
+  <a href="#scene-wrap">3D Mind</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#reasoning">Reasoning</a>
+  <a href="#planning">Planning</a>
+  <a href="#memory">Memory Types</a>
+  <a href="#context">Context Mgmt</a>
+  <a href="#state">State &amp; Checkpoints</a>
+  <a href="#nvidia">NVIDIA Layer</a>
+  <a href="#frameworks">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#drills">Drills</a>
+  <a href="#quiz">Quiz</a>
+  <a href="#code-companion">Code Companion</a>
+  <a href="#voices">Engineer Takes</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Domain 5 <span class="pct">10% · ~6–7 questions</span></div>
+  <h1>Cognition, Planning <span class="accent">&amp;</span> Memory</h1>
+  <p class="hook">An LLM is stateless and thinks in <b>one forward pass</b>; an <b>agent</b> has to reason over many steps, decompose goals into plans, recover when a step fails, and remember things — within a turn, across a conversation, and across sessions. This domain is the difference between a demo that handles one chat turn and an agent that survives a <b>200-step task without drowning its own context window</b>: pick the right reasoning strategy, make failures trigger <b>re-planning</b>, and architect memory so the right thing is recalled at the right time.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover objects for info</div>
+  <div class="scene-legend">
+    <h4>Legend — the agent's mind</h4>
+    <ul>
+      <li><span class="sw" style="background:#76b900"></span><span>Central ring = the <b>context window</b> as finite token slots that visibly fill (compaction frees them)</span></li>
+      <li><span class="sw" style="background:#4da3ff"></span><span>Close fast-pulsing buffer = <b>short-term</b> thread state; recall beams pull memories into the ring</span></li>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Crystal lattice = <b>long-term vector store</b>; spiral tape = <b>episodic log</b>; gear cluster = <b>procedural store</b></span></li>
+      <li><span class="sw" style="background:#b07cff"></span><span>Compaction beam compresses old tokens into a <b>summary crystal</b></span></li>
+      <li><span class="sw" style="background:#e0455a"></span><span>Planner satellite decomposes a task orb into sub-tasks; one <b>fails red</b> → visible re-planning</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · How to think about it</div>
+  <h2>Mental model — a consultant on a long engagement</h2>
+  <p class="lede">Their <b>reasoning</b> is how they think through any single problem: a quick gut call (direct answer), working it out on paper (chain-of-thought), polling three colleagues and taking the majority view (self-consistency), or whiteboarding several solution branches and pruning dead ends (tree-of-thoughts). Their <b>plan</b> is the project roadmap — decompose the engagement into workstreams, execute, and when one fails, revise the <i>remaining</i> roadmap rather than re-litigate finished steps. Their <b>memory</b> has layers.</p>
+
+  <div class="grid c4">
+    <div class="card blue"><h4><span class="icon">🗒️</span>Today's notepad</h4><p><b>Short-term / conversation buffer</b> — the messages and scratchpad in this meeting. Persisted by a checkpointer, keyed by <code>thread_id</code>.</p></div>
+    <div class="card cyan"><h4><span class="icon">📚</span>The firm's knowledge base</h4><p><b>Long-term semantic memory</b> — client facts that outlive any one meeting. A store, addressed by namespace + key, vector- or graph-backed.</p></div>
+    <div class="card purple"><h4><span class="icon">🗂️</span>Past case files &amp; playbooks</h4><p><b>Episodic</b> (what happened on past engagements, reused as examples) and <b>procedural</b> (the firm's how-to playbooks).</p></div>
+    <div class="card amber"><h4><span class="icon">🧮</span>The whiteboard</h4><p><b>Scratchpad</b> for intermediate results. When it fills, write minutes and wipe it — that's <b>summarization / compaction</b>. The engagement file is checkpointed so a new consultant can resume.</p></div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 980 430" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--red)"/></marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker>
+      </defs>
+      <!-- the loop -->
+      <rect x="40" y="20" width="150" height="44" rx="10" style="fill:var(--panel2);stroke:var(--green)"/>
+      <text x="115" y="47" text-anchor="middle" style="fill:var(--text)" font-size="14" font-weight="700">Goal</text>
+      <rect x="240" y="20" width="220" height="44" rx="10" style="fill:var(--panel);stroke:var(--green)"/>
+      <text x="350" y="40" text-anchor="middle" style="fill:var(--green)" font-size="12" font-weight="700">Plan</text>
+      <text x="350" y="56" text-anchor="middle" style="fill:var(--muted)" font-size="11">decompose into steps</text>
+      <rect x="510" y="20" width="230" height="44" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="625" y="40" text-anchor="middle" style="fill:var(--blue)" font-size="12" font-weight="700">Execute step</text>
+      <text x="625" y="56" text-anchor="middle" style="fill:var(--muted)" font-size="11">reason + act with tools</text>
+      <polygon points="850,18 945,64 850,110 755,64" style="fill:var(--panel2);stroke:var(--amber)"/>
+      <text x="850" y="60" text-anchor="middle" style="fill:var(--amber)" font-size="12" font-weight="700">Still valid?</text>
+      <line x1="190" y1="42" x2="240" y2="42" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="460" y1="42" x2="510" y2="42" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="740" y1="42" x2="775" y2="50" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- yes more steps loop back to execute -->
+      <path d="M 850 110 C 850 150 625 150 625 70" fill="none" style="stroke:var(--green)" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+      <text x="725" y="140" text-anchor="middle" style="fill:var(--green)" font-size="10.5">yes, more steps</text>
+      <!-- replan -->
+      <rect x="640" y="175" width="240" height="52" rx="10" style="fill:var(--panel);stroke:var(--red)"/>
+      <text x="760" y="197" text-anchor="middle" style="fill:var(--red)" font-size="12" font-weight="700">Re-plan remaining steps</text>
+      <text x="760" y="214" text-anchor="middle" style="fill:var(--muted)" font-size="11">using past_steps + the failure</text>
+      <line x1="850" y1="110" x2="800" y2="173" style="stroke:var(--red)" stroke-width="1.8" marker-end="url(#arrR)"/>
+      <text x="905" y="150" text-anchor="middle" style="fill:var(--red)" font-size="10.5">failure /</text>
+      <text x="905" y="164" text-anchor="middle" style="fill:var(--red)" font-size="10.5">new info</text>
+      <path d="M 640 200 C 560 200 625 96 625 70" fill="none" style="stroke:var(--red)" stroke-width="1.8" marker-end="url(#arrR)"/>
+      <!-- done -->
+      <rect x="755" y="240" width="190" height="42" rx="10" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)"/>
+      <text x="850" y="266" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="700">Answer</text>
+      <line x1="850" y1="110" x2="850" y2="240" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <text x="868" y="180" style="fill:var(--green)" font-size="10.5">done</text>
+      <!-- Memory subgraph -->
+      <rect x="40" y="180" width="560" height="220" rx="12" style="fill:none;stroke:var(--line)" stroke-dasharray="6 5"/>
+      <text x="60" y="202" style="fill:var(--muted)" font-size="12" font-weight="700" letter-spacing=".1em">MEMORY</text>
+      <rect x="60" y="218" width="250" height="74" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="185" y="240" text-anchor="middle" style="fill:var(--blue)" font-size="12" font-weight="700">Short-term: thread state</text>
+      <text x="185" y="258" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">messages, scratchpad, current plan</text>
+      <text x="185" y="276" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">checkpointer + thread_id</text>
+      <rect x="330" y="218" width="250" height="74" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/>
+      <text x="455" y="240" text-anchor="middle" style="fill:var(--cyan)" font-size="12" font-weight="700">Long-term: cross-thread store</text>
+      <text x="455" y="258" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">semantic / episodic / procedural</text>
+      <text x="455" y="276" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">vector- or graph-backed</text>
+      <rect x="190" y="312" width="260" height="60" rx="10" style="fill:var(--panel);stroke:var(--purple)"/>
+      <text x="320" y="334" text-anchor="middle" style="fill:var(--purple)" font-size="12" font-weight="700">Context manager</text>
+      <text x="320" y="352" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">trim · summarize/compact · retrieve JIT</text>
+      <line x1="625" y1="70" x2="430" y2="218" style="stroke:var(--blue)" stroke-width="1.5" marker-end="url(#arrB)" marker-start="url(#arrB)"/>
+      <line x1="185" y1="292" x2="280" y2="312" style="stroke:var(--purple)" stroke-width="1.4" marker-end="url(#arr)" marker-start="url(#arr)"/>
+      <line x1="455" y1="292" x2="370" y2="312" style="stroke:var(--purple)" stroke-width="1.4"/>
+    </svg>
+    <div class="caption">The loop is the point: <b>plan → execute → validate → re-plan on failure</b>, with memory feeding every step and context management keeping the working set inside the model's attention budget.</div>
+  </div>
+</section>
+
+<!-- ============ REASONING ============ -->
+<section id="reasoning">
+  <div class="kicker">Section 2 · Core concepts</div>
+  <h2>Reasoning frameworks — CoT, self-consistency, ToT, test-time compute</h2>
+  <p class="lede">How an agent thinks through a single problem. The exam loves the distinctions: <b>one chain vs many chains + vote vs a branching search</b>, and the third scaling axis — spending more inference tokens for better answers.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Technique</th><th>What it is</th><th>Cost</th><th>When</th></tr>
+    <tr><td><b>Chain-of-thought (CoT)</b></td><td>Prompt the model to produce intermediate reasoning steps before the answer (few-shot exemplars, or zero-shot "think step by step")</td><td class="good">1 call, more output tokens</td><td>Default for any multi-step problem; the foundation everything builds on</td></tr>
+    <tr><td><b>Self-consistency</b></td><td>Sample <b>N</b> independent CoT paths at temperature&nbsp;&gt;&nbsp;0, then <b>majority-vote</b> the final answers</td><td class="mid">N calls</td><td>Problems with a <b>verifiable, discrete</b> answer (math, classification); big accuracy lift over single CoT</td></tr>
+    <tr><td><b>Tree-of-thoughts (ToT)</b></td><td>Explore a <b>tree</b> of partial "thoughts": generate candidate next steps, <b>evaluate/score</b> each state, expand promising branches (BFS/DFS), <b>backtrack</b> from dead ends</td><td class="bad">Many calls (generate + evaluate per node)</td><td>Problems needing search, lookahead, backtracking (puzzles, planning, design) — where one linear chain fails</td></tr>
+    <tr><td><b>ReAct</b></td><td>Interleave <b>Reasoning and Acting</b>: thought → tool action → observation → thought → …</td><td class="mid">1 call per step</td><td>Tool-using agents; reasoning grounded in observations (deeper in the agent-architecture domain)</td></tr>
+    <tr><td><b>Reflexion (self-reflection)</b></td><td>After a failed attempt, <b>verbally reflect</b> on the feedback, store the reflection in an <b>episodic memory buffer</b>, then <b>retry the whole task</b> with reflections prepended — "verbal reinforcement," no weight updates (Shinn et&nbsp;al. 2023)</td><td class="bad">N attempts (each a full task run + reflection)</td><td>Tasks you can retry with a pass/fail signal (code-must-pass-tests, multi-hop QA); the bridge between <i>reasoning</i> and <i>episodic memory</i></td></tr>
+    <tr><td><b>Reasoning models (test-time compute)</b></td><td>Models post-trained (RL on verifiable rewards) to emit long internal thinking tokens before answering — o1/o3, DeepSeek-R1, <b>NVIDIA Llama Nemotron</b>. Quality scales with <i>inference-time</i> token budget, not just parameters</td><td class="bad">1 call, lots of hidden thinking tokens, high latency</td><td>Hard reasoning without prompt scaffolding; the model does CoT/search internally</td></tr>
+  </table></div>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🔑</span>The distinction the exam loves</h4><p><b>CoT is one chain; self-consistency is many chains + vote; ToT is a branching search with state evaluation and backtracking.</b> "Explores alternatives and backtracks" → <b>ToT</b>. "Samples diverse paths and takes majority answer" → <b>self-consistency</b>.</p></div>
+    <div class="card amber"><h4><span class="icon">🌡️</span>Self-consistency needs temp&nbsp;&gt;&nbsp;0</h4><p>Diversity <i>is</i> the mechanism, and it needs an answer you can aggregate. It does <b>not</b> work well for open-ended prose (nothing discrete to vote on).</p></div>
+    <div class="card blue"><h4><span class="icon">📈</span>Test-time compute = the third scaling axis</h4><p>After params and data: spend more inference tokens/attempts for better answers — <b>sequential</b> (longer thinking), <b>parallel</b> (best-of-N with a verifier), or <b>search</b> (MCTS/ToT-style). Strong returns on math/code, <b>diminishing on commonsense</b>; "overthinking" (huge token spend on easy questions) is a known failure mode — hence per-request <b>reasoning toggles</b>.</p></div>
+    <div class="card purple"><h4><span class="icon">🎛️</span>Nemotron reasoning toggle</h4><p>Llama Nemotron switches between reasoning and chat via the system prompt — <code>"detailed thinking on"</code> / <code>"detailed thinking off"</code> — one model, two behaviors, chosen per request (see NVIDIA layer).</p></div>
+    <div class="card cyan"><h4><span class="icon">🔄</span>Reflexion vs self-consistency vs ReAct</h4><p>All multi-pass, different axis. <b>Self-consistency</b> = <i>parallel</i> independent chains + vote (no memory between them). <b>ReAct</b> = reason/act interleaved <i>within one</i> attempt. <b>Reflexion</b> = <i>sequential across attempts</i>: fail → write a verbal reflection into <b>episodic memory</b> → retry the whole task carrying it forward. The "agent that learns from its own mistakes within a session."</p></div>
+  </div>
+</section>
+
+<!-- ============ PLANNING ============ -->
+<section id="planning">
+  <h2>Planning — decompose, validate, re-plan</h2>
+  <p class="lede">Break a goal into ordered sub-steps <i>before</i> acting, check the plan before burning tool calls, and route every failure through a <b>replanner</b> — not a blind retry.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🪓</span>Task decomposition</h4><p>Two basic styles: <b>plan-and-execute</b> (explicit upfront plan, then execute — often a smaller/cheaper model executes while a stronger model plans) vs <b>ReAct-style interleaved</b> (decide the next step one at a time). Explicit plans are cheaper (fewer big-model calls), more inspectable, and force "thinking through" the whole task; interleaving adapts faster to surprises.</p></div>
+    <div class="card blue"><h4><span class="icon">🏗️</span>Hierarchical planning</h4><p>A high-level planner produces abstract milestones; lower-level planners/agents expand each into concrete actions (<b>supervisor → workers</b>). Keeps each context small and lets sub-plans fail/retry independently.</p></div>
+    <div class="card amber"><h4><span class="icon">✅</span>Plan validation</h4><p>Check the plan <b>before</b> burning tool calls: schema-validate structured plans (Pydantic), check tool availability/preconditions, optionally LLM-judge the plan ("will these steps achieve the goal?"), or gate with a <b>human</b> (HITL approval on the plan node).</p></div>
+    <div class="card red"><h4><span class="icon">🔁</span>Re-planning on failure</h4><p>After each executed step, feed <code>past_steps</code> (what was tried, what came back) to a <b>replanner</b> that either (a) returns the final response if the goal is met, or (b) emits a <i>revised remaining plan</i> — <b>never re-including completed steps</b>. LangGraph's canonical plan-and-execute uses a structured <code>Act = Union[Response, Plan]</code> and a conditional edge looping agent ↔ replan until <code>Response</code>.</p></div>
+  </div>
+  <div class="callout"><b>ReWOO variant:</b> plan all steps upfront <i>with variable placeholders</i> (<code>#E1</code>, <code>#E2</code>) so evidence from step 1 substitutes into step 3 without re-calling the planner LLM each step — cuts token cost vs ReAct.</div>
+</section>
+
+<!-- ============ MEMORY ============ -->
+<section id="memory">
+  <div class="kicker">Section 3 · The taxonomy the exam tests</div>
+  <h2>Memory types — two axes</h2>
+  <p class="lede"><b>Axis 1 — scope</b> (the architectural one: short-term thread state vs long-term cross-thread store). <b>Axis 2 — content</b> (the cognitive-science one used by LangMem/CoALA: semantic vs episodic vs procedural vs entity). Most exam questions live at the intersection.</p>
+
+  <h3>Axis 1 — scope <span class="tag">short-term vs long-term</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th></th><th>Short-term memory</th><th>Long-term memory</th></tr>
+    <tr><td><b>Scope</b></td><td>One thread / session / conversation</td><td>Across threads, sessions, users</td></tr>
+    <tr><td><b>Contents</b></td><td>Message history, scratchpad fields, current plan, tool results</td><td>Extracted facts, preferences, past experiences, learned rules</td></tr>
+    <tr><td><b>Mechanism</b></td><td>Agent state persisted by a <b>checkpointer</b>, addressed by <code>thread_id</code></td><td>A <b>store</b> (key-value + vector/semantic search), addressed by namespace + key, e.g. <code>("memories", user_id)</code></td></tr>
+    <tr><td><b>Failure mode</b></td><td class="mid">Context overflow → trim / summarize</td><td class="mid">Stale/contradictory memories → consolidation, temporal invalidation</td></tr>
+    <tr><td><b>LangGraph names</b></td><td><code>InMemorySaver</code> / <code>SqliteSaver</code> / <code>PostgresSaver</code> (checkpointer)</td><td><code>InMemoryStore</code> / <code>PostgresStore</code> (Store API)</td></tr>
+  </table></div>
+
+  <h3>Axis 2 — content <span class="tag">semantic · episodic · procedural · entity</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Memory type</th><th>Stores</th><th>Human analogy</th><th>Agent example</th></tr>
+    <tr><td><b>Semantic</b></td><td>Facts and knowledge about the world/user</td><td>"Paris is the capital of France"</td><td>"User's deploy target is AWS us-east-1"; profile or fact-collection documents</td></tr>
+    <tr><td><b>Episodic</b></td><td>Specific past <i>experiences/events</i>, with context of what happened</td><td>Remembering your last vacation</td><td>Saved successful interaction traces, reused as few-shot examples; "last time the user asked X, doing Y worked"</td></tr>
+    <tr><td><b>Procedural</b></td><td><i>How</i> to do things — rules, skills, behaviors</td><td>Riding a bike</td><td>The agent's evolving system-prompt instructions ("always answer in bullet points"); learned tool-use policies</td></tr>
+    <tr><td><b>Entity memory</b></td><td>Facts organized <i>per entity</i> (person, org, product) extracted from conversation</td><td>A CRM in your head</td><td>"Acme Corp: enterprise tier, renewal in March, contact = Dana" — keyed/structured per entity</td></tr>
+  </table></div>
+
+  <div class="callout"><b>One-liners:</b> Episodic = "what happened" (specific event); semantic = "what is true" (decontextualized fact); procedural = "how to act" (internalized rule). A fact distilled <i>from</i> many episodes becomes <b>semantic</b>; a behavior distilled from feedback becomes <b>procedural</b> (often implemented as <b>prompt rewriting</b> — LangMem's "save learned procedures as updated instructions in the agent's prompt").</div>
+
+  <h3>Write paths &amp; backends</h3>
+  <div class="grid c2">
+    <div class="card cyan"><h4><span class="icon">🔥</span>Hot path vs background</h4><p><b>In the hot path:</b> the agent explicitly calls a <code>manage_memory</code>-style tool during the turn — transparent but adds latency and a decision. <b>Background consolidation:</b> a subconscious post-turn job extracts/updates memories (Mem0's extract-then-update pipeline, LangMem's background manager).</p></div>
+    <div class="card purple"><h4><span class="icon">🗃️</span>Vector- vs graph-backed</h4><p>Long-term stores are typically <b>vector-backed</b> (embed → similarity search at recall time) or <b>graph-backed</b> (Zep/Graphiti <b>temporal knowledge graphs</b> tracking when facts were true and when they were invalidated).</p></div>
+  </div>
+</section>
+
+<!-- ============ CONTEXT MANAGEMENT ============ -->
+<section id="context">
+  <h2>Context management — budgeting the attention window</h2>
+  <p class="lede">Context is a <b>finite attention budget</b>, not free storage. <b>Context rot</b> (Chroma, 2025): across 18 frontier models, output quality degrades <i>monotonically</i> as input length grows — long before the window limit — with lost-in-the-middle effects and distractor interference. So treat "what goes in the window this turn" as an engineered decision.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Technique</th><th>What it does</th><th>Tradeoff</th></tr>
+    <tr><td><b>Trimming / windowing</b></td><td>Keep only last N messages/tokens (sliding window); drop or filter the rest</td><td class="mid">Cheap, deterministic; silently loses early constraints</td></tr>
+    <tr><td><b>Summarization / compaction</b></td><td>When history nears a threshold, replace older messages with an LLM-written <b>running summary</b>, keep recent messages verbatim</td><td class="mid">Preserves gist at low token cost; lossy — bad summaries lose decisions/constraints</td></tr>
+    <tr><td><b>Scratchpad</b></td><td>A dedicated place for intermediate results: a <b>state field</b> (in-graph) or a <b>file</b> (<code>todo.md</code>, notes) the agent writes/reads with tools</td><td class="mid">Persistent working memory outside the message list; agent must be prompted to use it</td></tr>
+    <tr><td><b>Retrieval-augmented memory</b></td><td>Don't carry everything — store it (vector store/Store API) and <b>retrieve just-in-time</b> by semantic search when relevant</td><td class="mid">Keeps context lean; recall quality depends on embeddings/query</td></tr>
+    <tr><td><b>Context offloading (filesystem-as-memory)</b></td><td>Write large tool outputs to files, keep only a path + preview in context; re-read on demand (deep-agents: auto-offload results &gt; ~20k tokens)</td><td class="mid">Unlimited "memory"; costs an extra read when needed</td></tr>
+    <tr><td><b>Sub-agent isolation</b></td><td>Spawn a sub-agent with a <i>clean</i> context for a deep dive; only its condensed summary returns to the parent</td><td class="mid">Strong isolation; orchestration complexity</td></tr>
+  </table></div>
+  <div class="callout"><b>Compaction discipline</b> (Anthropic's context-engineering guidance): keep the <b>smallest possible set of high-signal tokens</b>; when compacting, preserve decisions, constraints, and unresolved questions, discard redundant raw tool output; prefer <b>lightweight identifiers</b> (paths, IDs, queries) over inlining bulk data.</div>
+</section>
+
+<!-- ============ STATE & CHECKPOINTING ============ -->
+<section id="state">
+  <h2>State, checkpointing &amp; resumability</h2>
+  <p class="lede">The persistence layer underneath short-term memory — and the thing that buys you multi-turn memory, fault tolerance, human-in-the-loop, and time travel.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🧱</span>State</h4><p>The typed data a graph/agent carries between nodes (messages + your custom fields: <code>plan</code>, <code>past_steps</code>, <code>scratchpad</code>…). <b>Reducers</b> (e.g., <code>add_messages</code>) define how node outputs merge into state.</p></div>
+    <div class="card blue"><h4><span class="icon">💾</span>Checkpointing</h4><p>Persisting a snapshot of state at <b>every superstep</b>. In LangGraph, compile with a <b>checkpointer</b>; every invocation under a <code>thread_id</code> appends checkpoints to that thread.</p></div>
+    <div class="card purple"><h4><span class="icon">🎁</span>What it buys you</h4><ul>
+      <li><b>Multi-turn memory</b> — same <code>thread_id</code> → prior state auto-loaded</li>
+      <li><b>Resumability / fault tolerance</b> — crash mid-task → resume from last checkpoint, don't re-run finished steps</li>
+      <li><b>Human-in-the-loop</b> — interrupt, wait for approval (possibly days), then resume</li>
+      <li><b>Time travel</b> — fork from any past checkpoint, replay with modified state</li>
+    </ul></div>
+    <div class="card amber"><h4><span class="icon">📆</span>Across sessions</h4><p>Same <code>thread_id</code> + <b>durable</b> checkpointer (Postgres/SQLite, not in-memory) = the conversation continues next week. <i>Different</i> threads share nothing through the checkpointer — cross-session knowledge must go through the long-term <b>store</b>. In-memory checkpointers are dev-only: process dies, memory dies.</p></div>
+  </div>
+  <div class="callout warn"><b>Durable execution framing:</b> checkpoint granularity determines replay cost; <b>idempotent tool calls</b> (or recording tool results in state) prevent double-execution on resume.</div>
+</section>
+
+<!-- ============ NVIDIA ============ -->
+<section id="nvidia">
+  <div class="kicker">Section 4 · The NVIDIA layer</div>
+  <h2>NVIDIA-specific pieces — the toggle and the memory plumbing</h2>
+  <p class="lede">The reasoning toggle and NIM serving are NVIDIA-specific exam bait; the memory <b>architecture</b> (checkpointer vs store, the taxonomy) is framework-generic — NeMo Agent Toolkit deliberately delegates memory backends to Mem0/Zep/Redis rather than reinventing them.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🎛️</span>Llama Nemotron reasoning models <span class="pill g">LN-Nano 8B · LN-Super 49B · LN-Ultra 253B</span></h4>
+      <p>NVIDIA's reasoning-model family with a <b>runtime reasoning toggle</b>. Post-trained with two system prompts so one checkpoint serves both modes: <code>"detailed thinking on"</code> → long chain-of-thought with thinking tokens; <code>"detailed thinking off"</code> → concise chat answers.</p>
+      <ul>
+        <li>Recommended sampling: <b>temp 0.6 / top_p 0.95 with thinking on; greedy (temp 0) with thinking off</b></li>
+        <li>Newer Nemotron Super 49B <b>v1.5</b> flips the convention: reasoning on by default, disable with <code>/no_think</code> in the system prompt</li>
+      </ul>
+    </div>
+    <div class="card blue"><h4><span class="icon">🔌</span>NIM reasoning-model support <span class="pill b">serving the toggle</span></h4>
+      <p>The system prompt must be the <b>first message</b>; standard OpenAI-compatible chat API otherwise — no special endpoint. Budget <code>max_tokens</code> generously (e.g., 32k) in thinking mode.</p>
+    </div>
+    <div class="card purple"><h4><span class="icon">🧰</span>NeMo Agent Toolkit memory module <span class="pill p">long-term memory plumbing</span></h4>
+      <p>Built around the <code>MemoryEditor</code> interface and <code>MemoryItem</code> model; providers plug in via YAML <code>_type</code> config. Shipped plugins: <b>Mem0</b> (<code>nvidia-nat-mem0ai</code>), <b>Zep Cloud</b> (<code>nvidia-nat-zep-cloud</code>), <b>Redis</b> (<code>nvidia-nat-redis</code>). Memory is exposed to agents as add/get memory <i>tools</i>, or wrapped with <code>auto_memory_agent</code> for automatic capture/recall without explicit tool calls.</p>
+    </div>
+    <div class="card cyan"><h4><span class="icon">🧲</span>NeMo Retriever embedding NIMs <span class="pill c">the recall half</span></h4>
+      <p>The same embedding NIMs from the RAG stack (NV-EmbedQA-E5-v5 etc.) embed memories for semantic search — long-term memory <i>is</i> a retrieval pipeline over your own past.</p>
+    </div>
+    <div class="card amber"><h4><span class="icon">📊</span>NeMo Evaluator system-prompt configs <span class="pill a">evaluating reasoning modes</span></h4>
+      <p>Eval configs can pass the reasoning system prompt, so you can benchmark a Nemotron NIM with <b>thinking on vs off</b>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DECISION FRAMEWORKS ============ -->
+<section id="frameworks">
+  <div class="kicker">Section 5 · Symptom → choice</div>
+  <h2>Decision frameworks</h2>
+
+  <h3>Reasoning technique selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Symptom / need</th><th>Choose</th><th>Why not the others</th></tr>
+    <tr><td>Multi-step problem, single answer, budget for 1 call</td><td class="good">CoT prompting</td><td>Sampling/search are overkill</td></tr>
+    <tr><td>Math/logic with verifiable answer; wrong ~30% of the time on one chain</td><td class="good">Self-consistency (N samples, majority vote, temp&nbsp;&gt;&nbsp;0)</td><td>ToT's search machinery unneeded when chains are independent</td></tr>
+    <tr><td>Needs exploration, lookahead, backtracking (puzzle, multi-constraint design)</td><td class="good">Tree-of-thoughts</td><td>Linear CoT can't recover from an early wrong branch</td></tr>
+    <tr><td>Hard reasoning, no prompt scaffolding wanted, latency tolerable</td><td class="good">Reasoning model (thinking on)</td><td>Prompt-level tricks underperform trained test-time compute</td></tr>
+    <tr><td>Same deployment must also serve fast/cheap chitchat</td><td class="good">Nemotron-style toggle: thinking off for easy traffic</td><td>Running thinking mode on everything = overthinking tax</td></tr>
+    <tr><td>Open-ended prose quality</td><td class="mid">None of the voting schemes — use judge/rubric loops</td><td>Self-consistency needs aggregatable answers</td></tr>
+  </table></div>
+
+  <h3>Memory architecture selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>"Remember what the user said 3 messages ago"</td><td class="good">Short-term: checkpointer + same <code>thread_id</code> (no store needed)</td></tr>
+    <tr><td>"Remember user's preferences next week, new conversation"</td><td class="good">Long-term store, namespace by user; recall via semantic search</td></tr>
+    <tr><td>"Remember facts about each customer/account"</td><td class="good">Entity memory (structured per-entity records in the store)</td></tr>
+    <tr><td>"Learn from past successful runs as examples"</td><td class="good">Episodic memory (save trajectories, few-shot retrieve)</td></tr>
+    <tr><td>"Agent should stop repeating a mistake / follow new house rules"</td><td class="good">Procedural memory (update instructions / system prompt)</td></tr>
+    <tr><td>"Facts change over time; need to know what was true when"</td><td class="good">Temporal knowledge graph memory (Zep/Graphiti, bi-temporal edges)</td></tr>
+    <tr><td>"History is blowing the context window"</td><td class="good">Summarization/compaction node + trimming; offload bulk to files/store</td></tr>
+    <tr><td>"Workflow must survive a crash / pause for approval"</td><td class="good">Durable checkpointer (Postgres) + interrupts; resume by <code>thread_id</code></td></tr>
+  </table></div>
+
+  <h3>Planning pattern selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Situation</th><th>Pattern</th></tr>
+    <tr><td>Predictable multi-step task, want cheap execution</td><td class="good">Plan-and-execute (big model plans, small model executes)</td></tr>
+    <tr><td>Environment surprises you constantly</td><td class="good">ReAct interleaved (re-decide every step)</td></tr>
+    <tr><td>Steps feed each other's inputs, token cost matters</td><td class="good">ReWOO (plan once with <code>#E</code> placeholders)</td></tr>
+    <tr><td>Long-horizon, many workstreams</td><td class="good">Hierarchical: supervisor plans milestones, sub-agents expand</td></tr>
+    <tr><td>Step failed mid-plan</td><td class="good">Replanner over <code>past_steps</code> → revised remaining plan (never blindly restart)</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 6 · Don't fall for these</div>
+  <h2>⚠ Exam traps &amp; gotchas</h2>
+  <div class="grid c2">
+    <div class="trap"><h4><span class="n">#1</span>Self-consistency ≠ ToT</h4><p>Self-consistency samples <b>independent complete chains</b> and votes; ToT <b>branches within</b> one search tree with state evaluation and backtracking. <span class="fix">"Majority vote" → self-consistency; "evaluate intermediate states / backtrack" → ToT.</span></p></div>
+    <div class="trap"><h4><span class="n">#2</span>Self-consistency at temperature 0 is pointless</h4><p>All samples identical; <b>diversity is the mechanism</b>. It also requires a <span class="fix">discrete final answer to vote on</span>.</p></div>
+    <div class="trap"><h4><span class="n">#3</span>Short-term vs long-term is about <i>scope</i>, not duration</h4><p>A checkpointer persisting to Postgres can hold a thread for a year and it's still <b>short-term</b> (thread-scoped). Cross-thread = long-term = store. <span class="fix">"New session, agent forgot prefs despite checkpointer" → you needed a store.</span></p></div>
+    <div class="trap"><h4><span class="n">#4</span>Episodic vs semantic</h4><p>Episodic = specific experienced <b>events</b> with context ("the time the user rejected the long email"); semantic = decontextualized <b>facts</b> ("user prefers short emails"). <span class="fix">Distilling episodes into facts is consolidation; the result lives in semantic memory.</span></p></div>
+    <div class="trap"><h4><span class="n">#5</span>Procedural memory is <i>how to behave</i>, not facts</h4><p>Its canonical implementation is <span class="fix">updating the agent's own instructions/system prompt</span>, not writing rows to a vector store.</p></div>
+    <div class="trap"><h4><span class="n">#6</span><code>thread_id</code> confusion</h4><p>Same <code>thread_id</code> = continue that conversation's state; new <code>thread_id</code> = blank short-term slate even with the same checkpointer. <span class="fix">Cross-user leakage: namespace the <i>store</i> by <code>user_id</code>; the checkpointer is per-thread anyway.</span></p></div>
+    <div class="trap"><h4><span class="n">#7</span>Checkpointer ≠ Store</h4><p>Checkpointer saves <b>graph state per thread</b> (enables resume/HITL/time-travel); Store is <b>application key-value/semantic memory across threads</b>. <span class="fix">LangGraph compiles with both: <code>compile(checkpointer=…, store=…)</code>. Questions love swapping them.</span></p></div>
+    <div class="trap"><h4><span class="n">#8</span>Bigger context window ≠ solved memory</h4><p>Context rot: quality degrades <b>monotonically</b> with input length on all tested frontier models, well below the limit. <span class="fix">Long-context models do not obsolete summarization, retrieval, or offloading.</span></p></div>
+    <div class="trap"><h4><span class="n">#9</span>Summarization is lossy</h4><p>A compaction step that drops constraints/decisions causes "goal drift" in long tasks. <span class="fix">Keep recent messages verbatim, summarize only the tail, pin critical constraints in a scratchpad/state field that never gets compacted.</span></p></div>
+    <div class="trap"><h4><span class="n">#10</span>Re-planning ≠ retrying</h4><p>Retry repeats the same failed step; re-planning feeds <code>past_steps</code> + the failure back to the planner and revises the <i>remaining</i> plan. <span class="fix">The replanner must be told what's already done or it loops.</span></p></div>
+    <div class="trap"><h4><span class="n">#11</span>Reasoning toggle direction</h4><p>Nemotron v1: <code>"detailed thinking on"</code>/<code>"off"</code> in the <b>system prompt</b> (first message). Super 49B <b>v1.5 inverts it</b>: reasoning on by default, <code>/no_think</code> disables. <span class="fix">Also: thinking-on wants temp 0.6/top_p 0.95, thinking-off wants greedy — backwards from intuition, a likely distractor.</span></p></div>
+    <div class="trap"><h4><span class="n">#12</span>More thinking isn't free or always better</h4><p>Test-time compute shows diminishing returns outside math/code and an <b>overthinking</b> failure mode (huge token bills on trivial queries). <span class="fix">"Enable maximum reasoning on all traffic" is wrong; route/toggle by difficulty.</span></p></div>
+    <div class="trap"><h4><span class="n">#13</span>Scratchpad ≠ memory store</h4><p>The scratchpad is <b>working</b> memory for the current task (state field or file, discarded/archived at the end); long-term memory is curated knowledge that survives the task. <span class="fix">Conflating them stuffs the store with junk.</span></p></div>
+    <div class="trap"><h4><span class="n">#14</span>In-memory checkpointer in production</h4><p><code>InMemorySaver</code> dies with the process; resumability claims require a durable backend (SQLite/Postgres). <span class="fix">"Agent loses all conversations on restart" → wrong checkpointer backend.</span></p></div>
+  </div>
+</section>
+
+<!-- ============ DRILLS ============ -->
+<section id="drills">
+  <div class="kicker">Section 7 · Test yourself</div>
+  <h2>Scenario drills — click to reveal</h2>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>A math-tutor agent gets multi-step problems right ~70% of the time with CoT. Latency budget allows several parallel calls; answers are numeric. Cheapest accuracy lift?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Self-consistency</b> — sample 5–10 CoT paths at temperature ~0.7, majority-vote the numeric answer.<span class="why">No retraining, no search scaffolding; ToT is overkill for problems that don't need backtracking.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>Your support agent greets returning users by name in the same chat, but next day (new conversation) it remembers nothing — even though you compiled the graph with a Postgres checkpointer. Why, and fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Checkpointers are thread-scoped</b>; a new conversation = new <code>thread_id</code> = fresh state.<span class="why">Add long-term memory: a Store (e.g., <code>PostgresStore</code>) namespaced by <code>user_id</code>, write profile facts during/after turns, semantically retrieve them at session start.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>A 50-step research agent starts ignoring instructions from the beginning of the task around step 30; token count is ~150k of a 200k window. What's happening and what do you add?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Context rot / lost-in-the-middle</b> — degradation begins well below the hard limit.<span class="why">Add a compaction node (summarize older history, keep recent verbatim), offload bulky tool outputs to files/store with just-in-time retrieval, and pin the task brief + constraints in a protected scratchpad/state field.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>An agent plans 6 steps; step 3's API returns "permission denied." It keeps retrying step 3 forever. Architectural fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>A replanner node</b>: route failures (with <code>past_steps</code> and the error) to a planner that emits a <i>revised remaining plan</i> (alternate tool, ask the user, skip-with-caveat) or a final <code>Response</code>.<span class="why">The LangGraph plan-and-execute pattern with <code>Act = Union[Response, Plan]</code> and a conditional edge.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span>The same Nemotron NIM must answer quick FAQs cheaply AND solve hard derivations. One deployment. How?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Use the reasoning toggle</b>: easy traffic with system prompt <code>"detailed thinking off"</code> (greedy decoding), hard traffic with <code>"detailed thinking on"</code> (temp 0.6/top_p 0.95, large max_tokens).<span class="why">One model, per-request behavior — no second deployment.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>An agent learned (from user feedback) to always include a risk-disclaimer paragraph. Which memory type, and the standard implementation?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Procedural memory</b> — a learned behavior, not a fact or event.<span class="why">Standard implementation: persist it as an updated instruction in the agent's <b>system prompt</b> (prompt-rewriting à la LangMem), not as a vector-store document it might fail to retrieve.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q7</span><span>Compliance asks: "If the orchestrator pod dies at step 40 of 60, do we re-run the first 39 steps (some are payments)?" Your answer with a properly built graph?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>No</b> — with a durable checkpointer, state is snapshotted every superstep; resume the same <code>thread_id</code> from the last checkpoint.<span class="why">Keep tool calls idempotent (or record results in state) so the resumed step doesn't double-charge.</span></div>
+  </details>
+
+  <h3>Builder's corner — habits that make this real</h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🏗️</span>Compile with both persistence layers from day one</h4><p><code>checkpointer</code> (durable: Postgres/SQLite) for thread state + <code>store</code> for cross-thread memory, namespaced <code>(org, user, category)</code>. Retro-fitting memory after launch means losing everything users already told you.</p></div>
+    <div class="card green"><h4><span class="icon">💰</span>Budget context like money</h4><p>Instrument tokens-per-turn; set a compaction trigger (~60–80% of window or a fixed token count), keep the last N messages verbatim, summarize the rest into a <code>RunningSummary</code>, and <b>never</b> compact the task brief or hard constraints — pin those in dedicated state fields.</p></div>
+    <div class="card green"><h4><span class="icon">✍️</span>Make memory writes deliberate, not vibes</h4><p>Decide hot-path tool (<code>manage_memory</code>) vs background consolidation per use case; dedupe/update instead of append-only (contradictory memories are worse than none); add temporal metadata so stale facts can be invalidated rather than deleted.</p></div>
+    <div class="card green"><h4><span class="icon">📐</span>Plans are data — type them</h4><p>Pydantic-validate planner output (<code>Plan: steps list</code>, <code>Act: Response | Plan</code>), store <code>past_steps</code> in state, and route every step failure through the replanner. An untyped free-text plan can't be validated, diffed, or resumed.</p></div>
+    <div class="card green"><h4><span class="icon">🎚️</span>Default thinking off, escalate on</h4><p>With toggle-able reasoning models, route by difficulty (heuristic or classifier): concise mode for the long tail of easy queries, detailed thinking for the hard few. Watch tokens-per-answer as the overthinking metric.</p></div>
+    <div class="card green"><h4><span class="icon">🗄️</span>Filesystem as overflow memory</h4><p>For long-horizon agents: write large tool outputs and a <code>todo.md</code>-style plan to files, keep only paths + previews in context, re-read on demand — and have the agent <b>recite</b> its objectives into the end of context periodically to fight goal drift.</p></div>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+  <div class="kicker">Section 8 · Rapid recall</div>
+  <h2>Quick quiz — one-line answers</h2>
+
+  <details class="drill"><summary><span class="qn">1</span><span>"Evaluate intermediate states and backtrack" — which reasoning technique?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Tree-of-thoughts (ToT)</b> — branching search with state evaluation and pruning, not independent chains + vote.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">2</span><span>What addresses cross-thread / cross-session memory in LangGraph?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The Store</b> (namespace + key, semantic search) — <i>not</i> the checkpointer, which is thread-scoped.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">3</span><span>"User prefers short emails" is which content type? And the time they rejected a long one?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Semantic</b> (decontextualized fact) vs <b>episodic</b> (a specific experienced event).</div>
+  </details>
+  <details class="drill"><summary><span class="qn">4</span><span>Canonical implementation of procedural memory?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Updating the agent's instructions / system prompt</b> (prompt-rewriting), not a vector-store document.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">5</span><span>Why doesn't a 1M-token window obsolete summarization?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Context rot</b> — quality degrades monotonically with input length, well below the limit (Chroma, 18 frontier models).</div>
+  </details>
+  <details class="drill"><summary><span class="qn">6</span><span>Nemotron Super 49B v1.5: how do you turn reasoning OFF?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b><code>/no_think</code> in the system prompt</b> — v1.5 has reasoning on by default (inverting the v1 <code>"detailed thinking on/off"</code> convention).</div>
+  </details>
+  <details class="drill"><summary><span class="qn">7</span><span>What must the replanner receive to avoid an infinite retry loop?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b><code>past_steps</code></b> (what's already done + the failure) so it revises the <i>remaining</i> plan rather than repeating the failed step.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">8</span><span>What makes an in-memory checkpointer unfit for production resumability?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer">It <b>dies with the process</b> — durable resumability needs SQLite/Postgres; <code>InMemorySaver</code> is dev-only.</div>
+  </details>
+</section>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code-companion">
+  <div class="kicker">Section 9 · Hands-on</div>
+  <h2>Code Companion — the domain in runnable snippets</h2>
+  <p class="lede">Every core idea from this domain, reduced to the smallest piece of code that exercises it: thread-scoped persistence, the Store API, compaction, hot-path memory tools, plan-and-execute with re-planning, self-consistency vs ToT, the Nemotron toggle, and the protected scratchpad.</p>
+
+  <div class="cc-grid">
+
+  <div class="card green">
+    <h4><span class="icon">🧵</span>1 · Short-term memory: checkpointer + <code>thread_id</code> <span class="pill g">thread-scoped persistence</span></h4>
+    <pre class="code-block"><code>from langgraph.checkpoint.memory import InMemorySaver  # dev; prod: langgraph.checkpoint.postgres.PostgresSaver
+
+checkpointer = InMemorySaver()
+graph = builder.compile(checkpointer=checkpointer)     # state now snapshots every superstep
+
+cfg = {"configurable": {"thread_id": "thread-1"}}
+graph.invoke({"messages": [{"role": "user", "content": "Hi, my name is Bob."}]}, cfg)
+out = graph.invoke({"messages": [{"role": "user", "content": "What's my name?"}]}, cfg)
+# &rarr; "Bob" &mdash; prior state auto-loaded because the thread_id matched
+
+graph.get_state(cfg)            # inspect the latest checkpoint (also: time travel via checkpoint history)</code></pre>
+    <p><b>What to notice:</b> memory here is a side effect of <b>persistence</b> — same <code>thread_id</code> = same conversation, new <code>thread_id</code> = blank slate (trap #6). The identical mechanism powers crash resume, human-in-the-loop interrupts, and time travel; swap <code>InMemorySaver</code> for <code>PostgresSaver</code> before claiming resumability in prod (trap #14).</p>
+  </div>
+
+  <div class="card cyan">
+    <h4><span class="icon">🗄️</span>2 · Long-term memory: Store API with semantic index <span class="pill c">cross-thread</span></h4>
+    <pre class="code-block"><code>from langgraph.store.memory import InMemoryStore       # prod: langgraph.store.postgres.PostgresStore
+
+store = InMemoryStore(index={"embed": embed_fn, "dims": 1536})   # embed_fn: list[str] -&gt; list[vector]
+graph = builder.compile(checkpointer=checkpointer, store=store)  # both layers together
+
+ns = ("memories", "user-123")                          # namespace tuple &mdash; scope by user!
+store.put(ns, "pref-style", {"text": "Prefers short, bullet-point answers"})
+store.put(ns, "fact-deploy", {"text": "Deploys to AWS us-east-1 via Terraform"})
+
+hits = store.search(ns, query="how does this user like responses formatted?", limit=2)
+print(hits[0].value["text"])    # semantic recall across ANY thread for user-123</code></pre>
+    <p><b>What to notice:</b> the Store is addressed by <b>namespace + key</b> and searched <b>semantically</b> — this is the checkpointer's complement (trap #7): checkpointer = one thread's state, store = knowledge across threads. Namespacing by user is also the cross-user-leakage answer.</p>
+  </div>
+
+  <div class="card purple">
+    <h4><span class="icon">🗜️</span>3 · Compaction: summarization node in the message pipeline <span class="pill p">RunningSummary</span></h4>
+    <pre class="code-block"><code>from langmem.short_term import SummarizationNode, RunningSummary
+
+summarize = SummarizationNode(
+    model=summarization_model,                 # a small/cheap LLM is fine here
+    token_counter=model.get_num_tokens_from_messages,
+    max_tokens=384,                            # budget for messages handed to the main LLM
+    max_tokens_before_summary=512,             # threshold that triggers compaction
+    max_summary_tokens=128,                    # cap on the summary itself
+)
+# graph: START &rarr; summarize &rarr; agent &rarr; ...   State carries a RunningSummary so already-
+# summarized messages are never re-summarized; recent messages pass through verbatim.</code></pre>
+    <p><b>What to notice:</b> compaction replaces the <i>older</i> history with a maintained <code>RunningSummary</code> while recent turns stay verbatim. The thresholds are the engineering knobs: trigger well below the model's window (context rot starts early, trap #8), and keep summaries short or they become the new bloat.</p>
+  </div>
+
+  <div class="card blue">
+    <h4><span class="icon">🛠️</span>4 · Vector-store memory: write/recall cycle inside an agent turn <span class="pill b">hot path</span></h4>
+    <pre class="code-block"><code>from langchain.tools import tool, ToolRuntime
+
+@tool
+def recall_memories(query: str, runtime: ToolRuntime) -&gt; str:
+    """Search long-term memories relevant to the current request."""
+    hits = runtime.store.search(("memories", runtime.context.user_id), query=query, limit=3)
+    return "\n".join(h.value["text"] for h in hits) or "no relevant memories"
+
+@tool
+def save_memory(fact: str, runtime: ToolRuntime) -&gt; str:
+    """Persist a durable fact about the user (use sparingly, for stable facts)."""
+    import uuid
+    runtime.store.put(("memories", runtime.context.user_id), str(uuid.uuid4()), {"text": fact})
+    return "saved"
+
+agent = create_agent(model, tools=[recall_memories, save_memory], store=store)</code></pre>
+    <p><b>What to notice:</b> this is <b>hot-path</b> memory — the agent decides when to read/write, which is transparent but spends a tool call and a decision per memory op. The alternative is a background consolidation job after the turn (Mem0/LangMem style). The docstrings are load-bearing: they're the only thing telling the model <i>when</i> memory is worth writing (scratchpad junk ≠ memory, trap #13).</p>
+  </div>
+
+  <div class="card red">
+    <h4><span class="icon">🗺️</span>5 · Plan-and-execute with re-planning on failure <span class="pill r">Act = Response | Plan</span></h4>
+    <pre class="code-block"><code>from pydantic import BaseModel
+from typing import Union
+from langgraph.graph import StateGraph, START, END
+
+class Plan(BaseModel):     steps: list[str]                 # ordered remaining steps
+class Response(BaseModel): response: str                    # final answer to user
+class Act(BaseModel):      action: Union[Response, Plan]    # replanner's structured choice
+
+def plan_step(state):                                       # planner LLM with structured output
+    return {"plan": planner.invoke({"objective": state["input"]}).steps}
+
+def execute_step(state):                                    # ReAct sub-agent runs ONLY step 1
+    result = executor.invoke({"task": state["plan"][0]})
+    return {"past_steps": [(state["plan"][0], result)]}     # accumulate what happened (incl. errors)
+
+def replan_step(state):                                     # sees objective + plan + past_steps
+    act = replanner.invoke(state)
+    return {"response": act.action.response} if isinstance(act.action, Response) \
+        else {"plan": act.action.steps}                     # revised REMAINING steps only
+
+g = StateGraph(PlanExecState)
+g.add_node("planner", plan_step); g.add_node("agent", execute_step); g.add_node("replan", replan_step)
+g.add_edge(START, "planner"); g.add_edge("planner", "agent"); g.add_edge("agent", "replan")
+g.add_conditional_edges("replan", lambda s: END if s.get("response") else "agent")</code></pre>
+    <p><b>What to notice:</b> the replanner returns <code>Act = Response | Plan</code> — a typed fork between "done" and "here's the <i>revised remaining</i> plan," driven by <code>past_steps</code> (so failures and results inform the next plan, trap #10). Executing only <code>plan[0]</code> per loop is what makes every step re-plannable.</p>
+  </div>
+
+  <div class="card amber">
+    <h4><span class="icon">🌳</span>6 · Self-consistency vote + tree-of-thoughts sketch <span class="pill a">vote vs search</span></h4>
+    <pre class="code-block"><code>from collections import Counter
+
+def self_consistency(question, n=7):
+    answers = [extract_final(llm.invoke(COT_PROMPT + question, temperature=0.7)) for _ in range(n)]
+    return Counter(answers).most_common(1)[0][0]            # majority vote over final answers
+
+def tree_of_thoughts(problem, breadth=3, depth=3):
+    frontier = [""]                                          # partial solution states
+    for _ in range(depth):
+        candidates = [s + "\n" + t for s in frontier
+                      for t in propose_thoughts(problem, s, k=breadth)]   # LLM: next-step proposals
+        scored = [(evaluate_state(problem, c), c) for c in candidates]    # LLM judge: sure/maybe/dead
+        frontier = [c for _, c in sorted(scored, reverse=True)[:breadth]] # prune &rarr; implicit backtrack
+    return frontier[0]</code></pre>
+    <p><b>What to notice:</b> self-consistency is <i>independent</i> chains + vote (needs temperature&nbsp;&gt;&nbsp;0 and a discrete <code>extract_final</code> answer — trap #2); ToT keeps a <b>frontier of partial states</b> with an explicit <i>evaluate-and-prune</i> step, which is where lookahead and backtracking come from (trap #1). Cost: n calls vs breadth×depth×2 calls.</p>
+  </div>
+
+  <div class="card green">
+    <h4><span class="icon">🎛️</span>7 · Nemotron reasoning toggle on a NIM endpoint <span class="pill g">one checkpoint, two behaviors</span></h4>
+    <pre class="code-block"><code>from openai import OpenAI
+client = OpenAI(base_url="http://0.0.0.0:8000/v1", api_key="not-used")   # local NIM
+
+def ask(question, thinking: bool):
+    return client.chat.completions.create(
+        model="nvidia/llama-3.3-nemotron-super-49b-v1",
+        messages=[{"role": "system", "content": f"detailed thinking {'on' if thinking else 'off'}"},
+                  {"role": "user", "content": question}],                 # system msg MUST be first
+        temperature=0.6 if thinking else 0.0,                             # recommended pairs
+        top_p=0.95 if thinking else 1.0,
+        max_tokens=32768 if thinking else 1024,                           # thinking eats tokens
+    )
+
+ask("Solve x*(sin(x)+2)=0", thinking=True)      # long CoT with thinking tokens
+ask("What's your return policy?", thinking=False)  # concise chat answer, same deployment</code></pre>
+    <p><b>What to notice:</b> the toggle is <i>just a system prompt</i> — one checkpoint, two behaviors, standard OpenAI client. Memorize the sampling pairs (0.6/0.95 on, greedy off) and the v1.5 inversion (<code>/no_think</code> to disable, reasoning on by default) — both are exam-grade distractors (trap #11).</p>
+  </div>
+
+  <div class="card cyan">
+    <h4><span class="icon">📌</span>8 · Scratchpad pattern: protected state field for long-horizon tasks <span class="pill c">never compacted</span></h4>
+    <pre class="code-block"><code>from typing import Annotated, TypedDict
+import operator
+
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]       # compactable &mdash; summarizer may rewrite this
+    scratchpad: Annotated[list[str], operator.add]  # append-only working notes &mdash; NEVER compacted
+    task_brief: str                               # pinned constraints &mdash; survives all compaction
+
+def take_note(state):                             # any node can persist a finding out-of-band
+    return {"scratchpad": [f"step-{len(state['scratchpad'])}: API v2 rejects bulk deletes"]}
+# Filesystem variant (deep-agents style): give the agent write_file/read_file tools and prompt it
+# to keep todo.md + findings.md, keeping only paths in context and re-reading on demand.</code></pre>
+    <p><b>What to notice:</b> the scratchpad lives in <b>state, outside the message list</b>, so summarization can compress chat history without destroying intermediate findings (trap #9). The filesystem variant is the same idea at unlimited scale — context holds <i>pointers</i> (paths), not payloads — exactly the deep-agents/Manus offloading pattern.</p>
+  </div>
+
+  </div>
+</section>
+
+<!-- ============ ENGINEER TAKES ============ -->
+<section id="voices">
+  <div class="kicker">Section 10 · Field notes</div>
+  <h2>What top engineers are saying (2025–26)</h2>
+  <p class="lede">The practitioners and papers that defined the modern cognition/memory/context discourse — finite attention budgets, context rot, the memory taxonomy, production memory pipelines, temporal knowledge graphs, filesystem-as-memory, and the test-time-compute debate.</p>
+
+  <div class="grid c2">
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Anthropic Engineering <span class="pill g">"Effective context engineering for AI agents" (Sep 2025)</span></h4>
+      <p>The post that reframed the discipline: context is a <b>finite attention budget</b>, and the job is finding "the smallest possible set of high-signal tokens" per turn. Its three long-horizon techniques — <b>compaction</b> (summarize and reinitialize near the window limit), <b>structured note-taking</b> (persistent memory outside the window at minimal overhead), and <b>sub-agent architectures</b> (clean contexts returning condensed summaries) — are this domain verbatim, plus "just-in-time retrieval" via lightweight identifiers instead of preloading.</p>
+      <p><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">anthropic.com/engineering/effective-context-engineering-for-ai-agents</a></p>
+    </div>
+    <div class="card blue">
+      <h4><span class="icon">🗣️</span>Chroma Research <span class="pill b">"Context Rot" (Jul 2025)</span></h4>
+      <p>Tested 18 frontier models (GPT-4.1, Claude 4, Gemini 2.5…) and found performance degrades <b>non-uniformly and monotonically</b> as input grows — models "do not use their context uniformly," and degradation appears on even trivially simple tasks long before the window limit. The empirical kill-shot for "just use a bigger context window" (trap #8) and the reason compaction/retrieval survive the long-context era.</p>
+      <p><a href="https://research.trychroma.com/context-rot" target="_blank" rel="noopener">research.trychroma.com/context-rot</a></p>
+    </div>
+    <div class="card purple">
+      <h4><span class="icon">🗣️</span>LangChain <span class="pill p">LangMem SDK launch (Feb 2025)</span></h4>
+      <p>Productized the <b>semantic / episodic / procedural</b> taxonomy for agent memory, with the sharpest framing of procedural memory in the discourse: save learned procedures <i>as updated instructions in the agent's prompt</i>, not as retrievable documents. Also pushed "memory tools in the hot path vs background consolidation" as the core write-path design choice.</p>
+      <p><a href="https://www.langchain.com/blog/langmem-sdk-launch" target="_blank" rel="noopener">langchain.com/blog/langmem-sdk-launch</a> · <a href="https://langchain-ai.github.io/langmem/" target="_blank" rel="noopener">langmem docs</a></p>
+    </div>
+    <div class="card amber">
+      <h4><span class="icon">🗣️</span>Mem0 (Chhikara et al.) <span class="pill a">"Production-Ready AI Agents with Scalable Long-Term Memory" (Apr 2025)</span></h4>
+      <p>The production-memory pipeline paper: dynamically <b>extract, consolidate, and retrieve</b> salient facts instead of replaying full history; on LOCOMO it reports ~26% relative accuracy gain over OpenAI's memory feature with ~91% lower p95 latency and ~90% token savings vs full-context — the quantitative case that curated memory beats brute-force context. The Mem0g variant adds graph memory for relational queries.</p>
+      <p><a href="https://arxiv.org/abs/2504.19413" target="_blank" rel="noopener">arxiv.org/abs/2504.19413</a></p>
+    </div>
+    <div class="card cyan">
+      <h4><span class="icon">🗣️</span>Zep (Rasmussen et al.) <span class="pill c">"A Temporal Knowledge Graph Architecture for Agent Memory" (Jan 2025)</span></h4>
+      <p>Argues flat vector recall fails when <i>facts change</i>: its Graphiti engine builds a <b>bi-temporal knowledge graph</b> (when a fact was true vs when it was ingested, edges carrying validity intervals) so outdated knowledge is invalidated, not overwritten. Reports 94.8% vs MemGPT's 93.4% on DMR and up to 18.5% accuracy gains with ~90% latency reduction on LongMemEval. The "memory with a sense of time" position in the memory-layer wars.</p>
+      <p><a href="https://arxiv.org/abs/2501.13956" target="_blank" rel="noopener">arxiv.org/abs/2501.13956</a></p>
+    </div>
+    <div class="card red">
+      <h4><span class="icon">🗣️</span>Manus <span class="pill r">"Context Engineering for AI Agents: Lessons from Building Manus" (Jul 2025)</span></h4>
+      <p>The practitioner's manifesto for filesystem-as-memory: treat the <b>file system as the ultimate context</b> — unlimited, persistent, agent-operated — keep only paths/references in the window, and make compression <b>restorable</b> rather than destructive. Also coined "recitation": the agent constantly rewrites a <code>todo.md</code> to recite objectives into recent attention, fighting lost-in-the-middle goal drift on ~50-tool-call tasks. LangChain's deep-agents runtime turned this into library defaults (auto-offload tool results &gt;20k tokens, summarize at 85% window).</p>
+      <p><a href="https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus" target="_blank" rel="noopener">manus.im/blog/Context-Engineering…</a> · <a href="https://www.langchain.com/blog/context-management-for-deepagents" target="_blank" rel="noopener">deep-agents context management</a></p>
+    </div>
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>The test-time-compute debate <span class="pill g">2025</span></h4>
+      <p>NVIDIA's <b>Llama-Nemotron</b> paper made per-request reasoning a product feature (one model post-trained on both <code>detailed thinking on/off</code> modes), while a counter-literature emerged on limits: "Scaling over Scaling" measures a <b>test-time scaling plateau</b> where extra reasoning tokens stop buying accuracy, and follow-ups document <b>overthinking</b> — reasoning models burning thousands of tokens on trivial arithmetic for near-zero gain. Field consensus circa 2026: test-time compute is real but must be <b>routed</b> — spend it on hard problems, toggle it off for the easy long tail.</p>
+      <p><a href="https://arxiv.org/abs/2505.00949" target="_blank" rel="noopener">arxiv.org/abs/2505.00949</a> · <a href="https://arxiv.org/abs/2505.20522" target="_blank" rel="noopener">scaling plateau</a> · <a href="https://arxiv.org/pdf/2502.12215" target="_blank" rel="noopener">do o1-like models truly scale?</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>LangGraph persistence (checkpointers, threads, Store) — <a href="https://docs.langchain.com/oss/python/langgraph/persistence">docs.langchain.com/…/langgraph/persistence</a></li>
+    <li>LangGraph/LangChain memory concepts &amp; long-term memory — <a href="https://docs.langchain.com/oss/python/langchain/long-term-memory">docs.langchain.com/…/long-term-memory</a> · <a href="https://langchain-ai.github.io/langgraph/concepts/memory/">langgraph memory concepts</a></li>
+    <li>LangMem SDK (semantic/episodic/procedural, summarization) — <a href="https://www.langchain.com/blog/langmem-sdk-launch">langchain.com/blog/langmem-sdk-launch</a> · <a href="https://langchain-ai.github.io/langmem/">langmem docs</a></li>
+    <li>LangGraph plan-and-execute tutorial — <a href="https://langchain-ai.github.io/langgraph/tutorials/plan-and-execute/plan-and-execute/">langchain-ai.github.io/…/plan-and-execute</a></li>
+    <li>Anthropic — Effective context engineering for AI agents — <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">anthropic.com/engineering/effective-context-engineering-for-ai-agents</a></li>
+    <li>Chroma — Context Rot research — <a href="https://research.trychroma.com/context-rot">research.trychroma.com/context-rot</a></li>
+    <li>NVIDIA NIM reasoning models (detailed thinking toggle) — <a href="https://docs.nvidia.com/nim/large-language-models/latest/reasoning-model.html">docs.nvidia.com/nim/…/reasoning-model</a></li>
+    <li>Llama-Nemotron: Efficient Reasoning Models (paper) — <a href="https://arxiv.org/abs/2505.00949">arxiv.org/abs/2505.00949</a></li>
+    <li>NeMo Agent Toolkit memory module — <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/build-workflows/memory.html">docs.nvidia.com/nemo/agent-toolkit/…/memory</a></li>
+    <li>Mem0 paper — <a href="https://arxiv.org/abs/2504.19413">arxiv.org/abs/2504.19413</a> · Zep/Graphiti paper — <a href="https://arxiv.org/abs/2501.13956">arxiv.org/abs/2501.13956</a></li>
+    <li>CoT — <a href="https://arxiv.org/abs/2201.11903">arxiv.org/abs/2201.11903</a> · Self-consistency — <a href="https://arxiv.org/abs/2203.11171">arxiv.org/abs/2203.11171</a> · Tree of Thoughts — <a href="https://arxiv.org/abs/2305.10601">arxiv.org/abs/2305.10601</a></li>
+    <li>Test-time scaling limits — <a href="https://arxiv.org/abs/2505.20522">arxiv.org/abs/2505.20522</a> (plateau) · <a href="https://arxiv.org/pdf/2502.12215">arxiv.org/pdf/2502.12215</a> (do o1-like models truly scale?)</li>
+    <li>Deep agents context management — <a href="https://www.langchain.com/blog/context-management-for-deepagents">langchain.com/blog/context-management-for-deepagents</a> · <a href="https://docs.langchain.com/oss/python/deepagents/overview">deepagents overview</a></li>
+    <li>Manus — context engineering lessons — <a href="https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus">manus.im/blog/Context-Engineering…</a></li>
+    <li>NCP-AAI exam framing — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">nvidia.com certification</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 5: Cognition, Planning, and Memory (10%) · Built from personal study notes. All facts sourced from the notes above.</p>
+</footer>
+
+<!-- ============ THREE.JS SCENE — the agent's mind ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06090f);
+scene.fog = new THREE.Fog(0x06090f, 55, 140);
+
+const camera = new THREE.PerspectiveCamera(52, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
+camera.position.set(0, 14, 38);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 14;
+controls.maxDistance = 100;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.0));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.1);
+key.position.set(10, 24, 16);
+scene.add(key);
+const coreLight = new THREE.PointLight(0x76b900, 120, 70);
+coreLight.position.set(0, 2, 0);
+scene.add(coreLight);
+const purpleFill = new THREE.PointLight(0xb07cff, 50, 70);
+purpleFill.position.set(-20, 12, -8);
+scene.add(purpleFill);
+
+// ---------- text sprite helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(8,11,18,0.86)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.strokeStyle = border;
+  g.lineWidth = 4;
+  g.beginPath();
+  g.roundRect(3, 3, w - 6, h - 6, 18);
+  g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  const k = 0.012 * scale;
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+const hoverables = [];
+
+// ---------- CENTRAL REASONING CORE: context window as a ring of token slots ----------
+const coreGroup = new THREE.Group();
+scene.add(coreGroup);
+
+// glowing inner core
+const core = new THREE.Mesh(
+  new THREE.IcosahedronGeometry(2.4, 2),
+  new THREE.MeshStandardMaterial({ color: 0x1c3a07, emissive: 0x76b900, emissiveIntensity: 0.85, roughness: 0.3, metalness: 0.3 })
+);
+core.userData = { title: 'Reasoning core', desc: 'The agent reasoning over its context this turn — CoT / self-consistency / ToT / test-time compute all happen here, against whatever tokens fill the ring.' };
+coreGroup.add(core);
+hoverables.push(core);
+
+// ring of token slots
+const N_SLOTS = 32;
+const slots = [];
+const RING_R = 5.6;
+const slotOff = new THREE.MeshStandardMaterial({ color: 0x1b2840, emissive: 0x101826, emissiveIntensity: 0.2, roughness: 0.6 });
+for (let i = 0; i < N_SLOTS; i++) {
+  const a = (i / N_SLOTS) * Math.PI * 2;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.5), slotOff.clone());
+  m.position.set(Math.cos(a) * RING_R, Math.sin(a) * RING_R, 0);
+  m.lookAt(0, 0, 0);
+  coreGroup.add(m);
+  slots.push(m);
+}
+// invisible hover hull for the ring
+const ringHit = new THREE.Mesh(new THREE.TorusGeometry(RING_R, 0.9, 8, 40), new THREE.MeshBasicMaterial({ visible: false }));
+ringHit.userData = { title: 'Context window = finite token slots', desc: 'A fixed budget of attention. Slots fill (green) as messages, retrieved memories and tool results pour in; compaction frees them again. Quality rots long before the ring is full (context rot).' };
+coreGroup.add(ringHit);
+hoverables.push(ringHit);
+coreGroup.rotation.x = -0.35;
+
+const coreLbl = makeLabel('CONTEXT WINDOW — finite token slots', { border: '#76b900', color: '#a4e040', scale: 1.05 });
+coreLbl.position.set(0, 9.4, 0);
+scene.add(coreLbl);
+
+// ---------- MEMORY STORES (orbiting) ----------
+// 1) short-term buffer — close, fast-pulsing
+const buffer = new THREE.Mesh(
+  new THREE.SphereGeometry(1.3, 24, 24),
+  new THREE.MeshStandardMaterial({ color: 0x123a5a, emissive: 0x4da3ff, emissiveIntensity: 0.7, roughness: 0.35 })
+);
+buffer.userData = { title: 'Short-term buffer', desc: 'Thread-scoped state: messages, scratchpad, current plan. Persisted by a checkpointer keyed by thread_id. Fast-pulsing because it touches every step.' };
+scene.add(buffer);
+hoverables.push(buffer);
+const bufferLbl = makeLabel('short-term buffer', { border: '#4da3ff', color: '#a9d4ff', scale: 0.62 });
+scene.add(bufferLbl);
+
+// 2) long-term vector store — crystal lattice, further out
+const latticeGroup = new THREE.Group();
+const latMat = new THREE.MeshStandardMaterial({ color: 0x0c3a37, emissive: 0x3fd2c7, emissiveIntensity: 0.55, roughness: 0.25, metalness: 0.4, transparent: true, opacity: 0.92 });
+for (let xi = -1; xi <= 1; xi++) for (let yi = -1; yi <= 1; yi++) for (let zi = -1; zi <= 1; zi++) {
+  if (xi === 0 && yi === 0 && zi === 0) continue;
+  const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), latMat);
+  o.position.set(xi * 1.25, yi * 1.25, zi * 1.25);
+  latticeGroup.add(o);
+}
+const latHit = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 3.4), new THREE.MeshBasicMaterial({ visible: false }));
+latHit.userData = { title: 'Long-term vector store', desc: 'Cross-thread semantic memory: embed → similarity search at recall time. Addressed by namespace + key, e.g. ("memories", user_id). Survives any single conversation.' };
+latticeGroup.add(latHit);
+hoverables.push(latHit);
+scene.add(latticeGroup);
+const latLbl = makeLabel('long-term vector store', { border: '#3fd2c7', color: '#a6efe8', scale: 0.62 });
+scene.add(latLbl);
+
+// 3) episodic log — spiral tape
+const episGroup = new THREE.Group();
+const spiralPts = [];
+for (let i = 0; i <= 120; i++) {
+  const t = i / 120;
+  const a = t * Math.PI * 6;
+  spiralPts.push(new THREE.Vector3(Math.cos(a) * (0.5 + t * 1.7), (t - 0.5) * 3.2, Math.sin(a) * (0.5 + t * 1.7)));
+}
+const spiral = new THREE.Mesh(
+  new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spiralPts), 140, 0.16, 8, false),
+  new THREE.MeshStandardMaterial({ color: 0x3a2a06, emissive: 0xe8a33d, emissiveIntensity: 0.6, roughness: 0.4 })
+);
+episGroup.add(spiral);
+const episHit = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.6, 12), new THREE.MeshBasicMaterial({ visible: false }));
+episHit.userData = { title: 'Episodic log', desc: 'Specific past experiences/events with their context — successful interaction traces saved and replayed as few-shot examples. "What happened," not "what is true."' };
+episGroup.add(episHit);
+hoverables.push(episHit);
+scene.add(episGroup);
+const episLbl = makeLabel('episodic log', { border: '#e8a33d', color: '#f4cc88', scale: 0.62 });
+scene.add(episLbl);
+
+// 4) procedural store — gear cluster
+const gearGroup = new THREE.Group();
+function makeGear(r, teeth, col) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.3, 24), new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: col, emissiveIntensity: 0.5, roughness: 0.5, metalness: 0.4 }));
+  body.rotation.x = Math.PI / 2;
+  g.add(body);
+  for (let i = 0; i < teeth; i++) {
+    const a = (i / teeth) * Math.PI * 2;
+    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.34), new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: col, emissiveIntensity: 0.5 }));
+    tooth.position.set(Math.cos(a) * (r + 0.12), Math.sin(a) * (r + 0.12), 0);
+    g.add(tooth);
+  }
+  return g;
+}
+const g1 = makeGear(0.85, 12, 0xb07cff); g1.position.set(0, 0.4, 0);
+const g2 = makeGear(0.6, 9, 0xb07cff); g2.position.set(1.3, -0.3, 0.2);
+gearGroup.add(g1, g2);
+const gearHit = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 1.6), new THREE.MeshBasicMaterial({ visible: false }));
+gearHit.userData = { title: 'Procedural store', desc: 'How to act — learned rules and behaviors. Canonically implemented by rewriting the agent\'s own system-prompt instructions, not as vector-store rows.' };
+gearGroup.add(gearHit);
+hoverables.push(gearHit);
+scene.add(gearGroup);
+const gearLbl = makeLabel('procedural store', { border: '#b07cff', color: '#d8c1ff', scale: 0.62 });
+scene.add(gearLbl);
+
+// ---------- summary crystal (compaction target) ----------
+const summaryCrystal = new THREE.Mesh(
+  new THREE.OctahedronGeometry(1.0, 0),
+  new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: 0xb07cff, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.5, transparent: true, opacity: 0.9 })
+);
+summaryCrystal.position.set(-9, 7.5, -3);
+summaryCrystal.userData = { title: 'Summary crystal (compaction)', desc: 'The compaction beam compresses old tokens into a running summary — preserve decisions/constraints, drop redundant raw output. Lossy: bad summaries cause goal drift.' };
+scene.add(summaryCrystal);
+hoverables.push(summaryCrystal);
+const compLbl = makeLabel('compaction → summary', { border: '#b07cff', color: '#d8c1ff', scale: 0.6 });
+compLbl.position.set(-9, 9.2, -3);
+scene.add(compLbl);
+
+// ---------- PLANNER SATELLITE: decomposes a task orb into sub-tasks ----------
+const plannerGroup = new THREE.Group();
+plannerGroup.position.set(13, 6, -2);
+scene.add(plannerGroup);
+const planner = new THREE.Mesh(
+  new THREE.TorusKnotGeometry(0.7, 0.24, 64, 8),
+  new THREE.MeshStandardMaterial({ color: 0x103a3a, emissive: 0x3fd2c7, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5 })
+);
+planner.userData = { title: 'Planner satellite', desc: 'Decomposes the goal into ordered sub-tasks. Plan-and-execute: plan upfront, execute one step at a time, validate, and re-plan on failure.' };
+plannerGroup.add(planner);
+hoverables.push(planner);
+const planLbl = makeLabel('planner — decompose & re-plan', { border: '#3fd2c7', color: '#a6efe8', scale: 0.72 });
+planLbl.position.set(13, 8.4, -2);
+scene.add(planLbl);
+
+// sub-task orbs (one will fail red)
+const subDefs = [
+  { ok: true,  desc: 'Sub-task 1 — completed. Already-done steps are never re-included by the replanner.' },
+  { ok: true,  desc: 'Sub-task 2 — completed.' },
+  { ok: false, desc: 'Sub-task 3 — FAILED (e.g. "permission denied"). Routes past_steps + the error to the replanner, which emits a revised REMAINING plan — not a blind retry.' },
+  { ok: true,  desc: 'Sub-task 4 — revised replacement step produced by re-planning.' },
+];
+const subOrbs = [];
+subDefs.forEach((d, i) => {
+  const col = d.ok ? 0x76b900 : 0xe0455a;
+  const o = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 18, 18),
+    new THREE.MeshStandardMaterial({ color: 0x111a10, emissive: col, emissiveIntensity: 0.75, roughness: 0.4 })
+  );
+  const a = (i / subDefs.length) * Math.PI * 2;
+  o.position.set(13 + Math.cos(a) * 3.4, 6 + Math.sin(a) * 1.0, -2 + Math.sin(a) * 3.4);
+  o.userData = { title: d.ok ? 'Sub-task (ok)' : 'Sub-task (FAILED → re-plan)', desc: d.desc, baseA: a, ok: d.ok };
+  scene.add(o);
+  hoverables.push(o);
+  subOrbs.push(o);
+  // line from planner to sub-task
+  const ln = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(13, 6, -2), o.position.clone()]),
+    new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.4 })
+  );
+  scene.add(ln);
+  o.userData.link = ln;
+});
+
+// ambient star dust
+{
+  const n = 360, gg = new THREE.BufferGeometry(), arr = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    arr[i * 3] = (Math.random() - 0.5) * 170;
+    arr[i * 3 + 1] = (Math.random() - 0.5) * 90;
+    arr[i * 3 + 2] = (Math.random() - 0.5) * 170;
+  }
+  gg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  scene.add(new THREE.Points(gg, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// ---------- recall + compaction beams (dynamic geometry) ----------
+function beam(color, op) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  return new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: op }));
+}
+const recallBeam = beam(0x3fd2c7, 0.0); scene.add(recallBeam);
+const recallBeam2 = beam(0xe8a33d, 0.0); scene.add(recallBeam2);
+const compactBeam = beam(0xb07cff, 0.0); scene.add(compactBeam);
+
+// recall particles travelling store -> ring
+const RP = 40;
+const rpGeo = new THREE.BufferGeometry();
+const rpPos = new Float32Array(RP * 3);
+const rpT = new Float32Array(RP);
+const rpSrc = new Int8Array(RP);
+for (let i = 0; i < RP; i++) { rpT[i] = Math.random(); rpSrc[i] = Math.floor(Math.random() * 3); }
+rpGeo.setAttribute('position', new THREE.BufferAttribute(rpPos, 3));
+const recallPts = new THREE.Points(rpGeo, new THREE.PointsMaterial({ color: 0x9cd63a, size: 0.3, transparent: true, opacity: 0.9 }));
+scene.add(recallPts);
+
+function setBeam(line, a, b) {
+  const p = line.geometry.attributes.position.array;
+  p[0] = a.x; p[1] = a.y; p[2] = a.z; p[3] = b.x; p[4] = b.y; p[5] = b.z;
+  line.geometry.attributes.position.needsUpdate = true;
+}
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+let hovered = null;
+
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+let filled = 0;          // how many slots are lit
+let fillDir = 1;
+
+function storePos(idx) {
+  if (idx === 0) return latticeGroup.position;
+  if (idx === 1) return episGroup.position;
+  return gearGroup.position;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // core breathe + spin
+  core.rotation.y += dt * 0.5; core.rotation.x += dt * 0.2;
+  core.material.emissiveIntensity = 0.7 + 0.25 * Math.sin(t * 2.2);
+  coreGroup.rotation.z = t * 0.12;
+
+  // context ring fills and compacts
+  filled += fillDir * dt * 4.5;
+  if (filled >= N_SLOTS) { filled = N_SLOTS; fillDir = -1; }       // full → compaction frees slots
+  if (filled <= 4) { filled = 4; fillDir = 1; }
+  const fillN = Math.floor(filled);
+  slots.forEach((s, i) => {
+    const lit = i < fillN;
+    const frac = i / N_SLOTS;
+    const col = lit ? (frac > 0.78 ? 0xe0455a : 0x76b900) : 0x1b2840;  // near-full slots tint red (rot)
+    s.material.color.setHex(lit ? 0x1c3a07 : 0x1b2840);
+    s.material.emissive.setHex(col);
+    s.material.emissiveIntensity = lit ? 0.7 : 0.2;
+    s.scale.setScalar(lit ? 1.0 + 0.12 * Math.sin(t * 6 + i) : 0.8);
+  });
+
+  // orbiting memory stores
+  buffer.position.set(Math.cos(t * 0.6) * 8.5, 1.4 + Math.sin(t * 1.6) * 0.5, Math.sin(t * 0.6) * 8.5);
+  buffer.material.emissiveIntensity = 0.5 + 0.4 * Math.abs(Math.sin(t * 5));   // fast pulse
+  bufferLbl.position.copy(buffer.position).add(new THREE.Vector3(0, 1.7, 0));
+
+  latticeGroup.position.set(Math.cos(t * 0.32 + 1.0) * 15, 3.2 + Math.sin(t * 0.5) * 0.6, Math.sin(t * 0.32 + 1.0) * 15);
+  latticeGroup.rotation.y += dt * 0.4; latticeGroup.rotation.x += dt * 0.15;
+  latLbl.position.copy(latticeGroup.position).add(new THREE.Vector3(0, 2.8, 0));
+
+  episGroup.position.set(Math.cos(t * 0.28 + 3.4) * 16, -1.5 + Math.sin(t * 0.4) * 0.6, Math.sin(t * 0.28 + 3.4) * 16);
+  episGroup.rotation.y += dt * 0.6;
+  episLbl.position.copy(episGroup.position).add(new THREE.Vector3(0, 2.6, 0));
+
+  gearGroup.position.set(Math.cos(t * 0.3 + 5.2) * 14.5, 4.0 + Math.sin(t * 0.45) * 0.5, Math.sin(t * 0.3 + 5.2) * 14.5);
+  g1.rotation.z += dt * 1.2; g2.rotation.z -= dt * 1.6;
+  gearLbl.position.copy(gearGroup.position).add(new THREE.Vector3(0, 2.2, 0));
+
+  summaryCrystal.rotation.y += dt * 0.7; summaryCrystal.rotation.x += dt * 0.3;
+  summaryCrystal.position.y = 7.5 + Math.sin(t * 0.9) * 0.3;
+
+  // recall beam: cycle which store is being pulled into the ring
+  const which = Math.floor(t * 0.5) % 3;
+  const src = storePos(which);
+  const ringPt = new THREE.Vector3(Math.cos(t * 2) * RING_R, Math.sin(t * 2) * RING_R, 0).applyEuler(coreGroup.rotation);
+  setBeam(recallBeam, src, ringPt);
+  recallBeam.material.opacity = 0.35 + 0.25 * Math.sin(t * 4);
+  const src2 = storePos((which + 1) % 3);
+  setBeam(recallBeam2, src2, ringPt.clone().multiplyScalar(-0.6));
+  recallBeam2.material.opacity = 0.18;
+
+  // compaction beam: ring -> summary crystal when ring is shrinking (compacting)
+  setBeam(compactBeam, ringPt.clone().multiplyScalar(0.8), summaryCrystal.position);
+  compactBeam.material.opacity = fillDir < 0 ? 0.35 + 0.2 * Math.sin(t * 6) : 0.05;
+
+  // recall particles flowing store -> core
+  const pos = recallPts.geometry.attributes.position.array;
+  for (let i = 0; i < RP; i++) {
+    rpT[i] = (rpT[i] + dt * 0.5) % 1;
+    const s = storePos(rpSrc[i]);
+    pos[i * 3] = s.x + (0 - s.x) * rpT[i];
+    pos[i * 3 + 1] = s.y + (2 - s.y) * rpT[i];
+    pos[i * 3 + 2] = s.z + (0 - s.z) * rpT[i];
+  }
+  recallPts.geometry.attributes.position.needsUpdate = true;
+
+  // planner satellite + sub-task orbs; failing orb pulses red, others orbit
+  planner.rotation.y += dt * 0.9; planner.rotation.x += dt * 0.4;
+  subOrbs.forEach((o, i) => {
+    const a = o.userData.baseA + t * 0.55;
+    o.position.set(13 + Math.cos(a) * 3.4, 6 + Math.sin(a * 1.3) * 1.0, -2 + Math.sin(a) * 3.4);
+    if (!o.userData.ok) {
+      const pulse = 0.5 + 0.5 * Math.abs(Math.sin(t * 4));
+      o.material.emissiveIntensity = 0.5 + pulse;
+      o.scale.setScalar(1 + 0.18 * pulse);
+    }
+    // update link line
+    const lp = o.userData.link.geometry.attributes.position.array;
+    lp[0] = 13; lp[1] = 6; lp[2] = -2; lp[3] = o.position.x; lp[4] = o.position.y; lp[5] = o.position.z;
+    o.userData.link.geometry.attributes.position.needsUpdate = true;
+  });
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// resize
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

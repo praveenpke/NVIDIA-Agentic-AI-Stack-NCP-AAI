@@ -18,7 +18,8 @@
   ::selection{background:var(--green);color:var(--on-accent)}
 
   /* NAV */
-  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;scrollbar-width:thin}
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 96px 0 12px;scrollbar-width:thin}
+  nav::after{content:"";flex:0 0 1px}
   nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
   nav a:hover{color:var(--text)}
   nav a.brand{color:var(--green);font-weight:800}
@@ -485,7 +486,7 @@
 
   <div class="grid c3">
     <div class="card blue"><h4><span class="icon">🧪</span>LangSmith</h4><p>Deepest LangChain/LangGraph integration: node-level state diffs, full execution graphs, trajectory replay against new model versions.</p></div>
-    <div class="card green"><h4><span class="icon">🔓</span>Langfuse</h4><p>The open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached ~6M SDK installs/month, and was <b>acquired by ClickHouse in January 2026</b>.</p></div>
+    <div class="card green"><h4><span class="icon">🔓</span>Langfuse</h4><p>The open-source leader; MIT-licensed its formerly commercial modules (LLM-as-judge evals, annotation queues, playground) in June 2025, reached <b>~23M SDK installs/month</b> (6M+ Docker pulls), and was <b>acquired by ClickHouse in January 2026</b>.</p></div>
     <div class="card cyan"><h4><span class="icon">🔥</span>Arize Phoenix</h4><p>Open-source, OpenTelemetry-native via the OpenInference conventions; strongest for notebook- and eval-heavy workflows.</p></div>
     <div class="card purple"><h4><span class="icon">🧠</span>Braintrust</h4><p>Closed-source, eval-first (regression harness as the center of gravity) with tracing attached.</p></div>
     <div class="card amber"><h4><span class="icon">🏢</span>Datadog &amp; Honeycomb</h4><p>Pulled LLM traces into general-purpose observability for teams that want infra correlation.</p></div>

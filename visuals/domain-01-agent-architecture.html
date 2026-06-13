@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 1 — Agent Architecture and Design</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 96px 0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:780px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* 3D SCENE */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-canvas{width:100%;height:100%;display:block;max-width:100%}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:330px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#8fa0b8}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:860px;margin-bottom:26px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;color:var(--green)}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-all}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* SVG diagrams */
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* BAR CHART */
+  .bars{display:flex;flex-direction:column;gap:14px;margin:14px 0}
+  .bar-row{display:grid;grid-template-columns:170px 1fr 150px;gap:12px;align-items:center;font-size:.84rem}
+  .bar-row .label{text-align:right;color:var(--text);font-weight:600}
+  .bar-row .track{background:var(--bg3);border-radius:8px;height:26px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .bar-row .fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-left:10px;font-size:.7rem;font-weight:700;color:var(--on-accent);white-space:nowrap}
+  .bar-row .note{color:var(--muted);font-size:.74rem}
+  @media (max-width:640px){.bar-row{grid-template-columns:1fr;gap:4px}.bar-row .label{text-align:left}}
+
+  /* LADDER */
+  .ladder{display:flex;align-items:flex-end;gap:10px;margin:22px 0;padding:8px 4px;overflow-x:auto}
+  .rung{flex:1;min-width:130px;border-radius:12px 12px 6px 6px;padding:14px 12px;text-align:center;position:relative;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel))}
+  .rung .step-num{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:var(--on-accent);font-weight:800;font-size:.7rem;border-radius:999px;padding:2px 10px}
+  .rung h5{font-size:.9rem;margin:6px 0 4px}
+  .rung p{font-size:.72rem;color:var(--muted)}
+  .rung .cost{margin-top:8px;font-size:.68rem;font-weight:700;letter-spacing:.04em}
+  .arrow-up{align-self:center;color:var(--green);font-size:1.3rem;flex:0 0 auto}
+
+  /* TRADE-OFF AXES */
+  .axis{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:12px 0}
+  .axis h4{font-size:.95rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .axis .ends{display:flex;justify-content:space-between;gap:10px;font-size:.76rem;font-weight:700;margin-bottom:6px}
+  .axis .track{height:10px;border-radius:999px;position:relative;margin-bottom:12px;border:1px solid var(--line)}
+  .axis .knob{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg);box-shadow:0 0 0 2px var(--line);transform:translate(-50%,-50%)}
+  .axis p.levers{font-size:.82rem;color:var(--muted)}
+  .axis p.levers b{color:var(--text)}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%),var(--panel);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · D1</a>
+  <a href="#scene-wrap">3D Topologies</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#workflows">Workflows vs Agents</a>
+  <a href="#patterns">Reasoning Patterns</a>
+  <a href="#single-multi">Single vs Multi</a>
+  <a href="#topologies">Topologies</a>
+  <a href="#frameworks">Frameworks</a>
+  <a href="#mcp-a2a">MCP vs A2A</a>
+  <a href="#tradeoffs">Trade-offs</a>
+  <a href="#tools">Tool Design</a>
+  <a href="#nvidia">NVIDIA Layer</a>
+  <a href="#decisions">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#drills">Drills</a>
+  <a href="#quiz">Quiz</a>
+  <a href="#code-companion">Code Companion</a>
+  <a href="#voices">Engineer Takes</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Domain 1 <span class="pct">15% · ~9–10 questions</span></div>
+  <h1>Agent Architecture <span class="accent">&amp;</span> Design</h1>
+  <p class="hook">The highest-weighted domain, and the one everything else hangs off: before you can evaluate, secure, or deploy an agent, you have to <b>choose its shape</b>. Name the canonical reasoning patterns (ReAct, Reflexion, Plan-and-Execute), decide <b>one generalist vs a team of specialists</b> — and the right multi-agent topology when a team wins — map requirements onto frameworks (LangGraph, AutoGen, CrewAI, NeMo Agent Toolkit) and standards (MCP, A2A), and design tools the model can actually use safely.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover objects for info</div>
+  <div class="scene-legend">
+    <h4>Legend — multi-agent topology playground</h4>
+    <ul>
+      <li><span class="sw" style="background:#76b900"></span><span>Green octahedron = supervisor agent, elevated above its workers (hub-and-spoke)</span></li>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Cyan particles = messages/tasks flowing along the edges</span></li>
+      <li><span class="sw" style="background:#4da3ff"></span><span>Blue ring = peer-to-peer mesh — any agent hands off to any other</span></li>
+      <li><span class="sw" style="background:#e8a33d"></span><span>Amber chain = pipeline — one-way baton pass through fixed stages</span></li>
+      <li><span class="sw" style="background:#b07cff"></span><span>Purple board = blackboard — no messages, agents read/write shared memory</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why &amp; how to think about it</div>
+  <h2>Mental model — staffing a construction project</h2>
+  <p class="lede">A <b>workflow</b> is a prefab house: every step is known upfront, so you script it — fastest, cheapest, most predictable. An <b>agent</b> is a skilled solo contractor: goal, tools, budget — they figure out the steps. A <b>multi-agent system</b> is a general contractor with subcontractors. The cardinal rule (Anthropic): hire the <b>simplest crew</b> that can do the job.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">🏠</span>Workflow</h4><p><b>Prefab house</b> — every step known upfront, scripted. Fastest, cheapest, most predictable.</p></div>
+    <div class="card blue"><h4><span class="icon">👷</span>Single agent</h4><p><b>Skilled solo contractor</b>: ReAct = work a bit, look at the result, decide the next move; Plan-and-Execute = draft the full blueprint first, then build; Reflexion = redo the wall after writing yourself a note about why it cracked.</p></div>
+    <div class="card purple"><h4><span class="icon">🏗️</span>Multi-agent</h4><p><b>General contractor + subs</b>: supervisor/worker = GC delegates and integrates; pipeline = framing → electrical → drywall; peer-to-peer = partners handing work directly; blackboard = one shared whiteboard in the site office.</p></div>
+    <div class="card cyan"><h4><span class="icon">🔌</span>The standards</h4><p><b>MCP</b> is the standardized power outlet every tool plugs into; <b>A2A</b> is the contract language between firms that never see each other's internal books.</p></div>
+  </div>
+
+  <h3>The escalation ladder <span class="tag">every rung buys capability at the price of latency, cost, debuggability</span></h3>
+  <div class="ladder">
+    <div class="rung" style="border-bottom:4px solid var(--green)"><span class="step-num">1</span><h5>💬 Prompt</h5><p>One model call, no orchestration</p><div class="cost" style="color:var(--green)">cheapest · most predictable</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--cyan)"><span class="step-num">2</span><h5>🧭 Workflow</h5><p>LLMs + tools on <b>predefined code paths</b> — you own the control flow</p><div class="cost" style="color:var(--cyan)">scripted · auditable</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--blue)"><span class="step-num">3</span><h5>🤖 Single agent</h5><p>LLM dynamically directs its own process &amp; tool use</p><div class="cost" style="color:var(--blue)">~4× chat tokens</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--purple)"><span class="step-num">4</span><h5>👥 Multi-agent</h5><p>Teams of specialists under a topology</p><div class="cost" style="color:var(--purple)">~15× chat tokens — must earn it</div></div>
+  </div>
+  <div class="callout"><b>Climb, never jump:</b> prompt → workflow → single agent → multi-agent. Anthropic's core advice is to find the <b>simplest</b> solution and only add agency when it measurably wins.</div>
+
+  <h3>The shape-choosing decision flow</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 980 600" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--muted)"/></marker>
+        <marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--purple)"/></marker>
+      </defs>
+      <rect x="395" y="8" width="190" height="38" rx="9" style="fill:var(--panel2);stroke:var(--green)"/>
+      <text x="490" y="32" text-anchor="middle" style="fill:var(--text)" font-size="13" font-weight="700">Task arrives</text>
+
+      <polygon points="490,68 665,106 490,144 315,106" style="fill:var(--panel);stroke:var(--cyan)"/>
+      <text x="490" y="102" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">Steps knowable upfront?</text>
+      <text x="490" y="120" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">compliance / predictability?</text>
+      <line x1="490" y1="46" x2="490" y2="68" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arrM)"/>
+
+      <rect x="18" y="76" width="246" height="62" rx="10" style="fill:color-mix(in srgb, var(--cyan) 10%, var(--panel));stroke:var(--cyan)"/>
+      <text x="141" y="97" text-anchor="middle" style="fill:var(--cyan)" font-size="12" font-weight="700">Workflow</text>
+      <text x="141" y="113" text-anchor="middle" style="fill:var(--muted)" font-size="10">chaining · routing · parallelization ·</text>
+      <text x="141" y="127" text-anchor="middle" style="fill:var(--muted)" font-size="10">orchestrator-workers · evaluator-optimizer</text>
+      <line x1="315" y1="106" x2="264" y2="106" style="stroke:var(--cyan)" stroke-width="1.8" marker-end="url(#arrM)"/>
+      <text x="289" y="98" style="fill:var(--cyan)" font-size="11" text-anchor="middle">Yes</text>
+
+      <polygon points="490,168 690,208 490,248 290,208" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="490" y="203" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">Can one agent with good tools</text>
+      <text x="490" y="221" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">+ good context do it?</text>
+      <line x1="490" y1="144" x2="490" y2="168" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arrM)"/>
+      <text x="505" y="162" style="fill:var(--muted)" font-size="11">No</text>
+
+      <rect x="18" y="178" width="246" height="62" rx="10" style="fill:color-mix(in srgb, var(--blue) 10%, var(--panel));stroke:var(--blue)"/>
+      <text x="141" y="199" text-anchor="middle" style="fill:var(--blue)" font-size="12" font-weight="700">Single agent</text>
+      <text x="141" y="215" text-anchor="middle" style="fill:var(--muted)" font-size="10">ReAct loop or Plan-and-Execute;</text>
+      <text x="141" y="229" text-anchor="middle" style="fill:var(--muted)" font-size="10">add Reflexion for retry-able tasks</text>
+      <line x1="290" y1="208" x2="264" y2="208" style="stroke:var(--blue)" stroke-width="1.8" marker-end="url(#arrM)"/>
+      <text x="278" y="200" style="fill:var(--blue)" font-size="11" text-anchor="middle">Yes</text>
+
+      <polygon points="490,272 645,310 490,348 335,310" style="fill:var(--panel);stroke:var(--purple)"/>
+      <text x="490" y="306" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">Coordination style?</text>
+      <text x="490" y="324" text-anchor="middle" style="fill:var(--muted)" font-size="10">parallel breadth or conflicting specializations</text>
+      <line x1="490" y1="248" x2="490" y2="272" style="stroke:var(--muted)" stroke-width="1.8" marker-end="url(#arrM)"/>
+      <text x="505" y="266" style="fill:var(--muted)" font-size="11">No</text>
+
+      <g font-size="10.5">
+        <rect x="10" y="392" width="228" height="60" rx="10" style="fill:var(--panel);stroke:var(--green)"/>
+        <text x="124" y="413" text-anchor="middle" style="fill:var(--green)" font-size="12" font-weight="700">Supervisor / hierarchical</text>
+        <text x="124" y="429" text-anchor="middle" style="fill:var(--muted)">central control,</text>
+        <text x="124" y="443" text-anchor="middle" style="fill:var(--muted)">easy debugging</text>
+        <rect x="248" y="392" width="228" height="60" rx="10" style="fill:var(--panel);stroke:var(--amber)"/>
+        <text x="362" y="413" text-anchor="middle" style="fill:var(--amber)" font-size="12" font-weight="700">Pipeline hand-off</text>
+        <text x="362" y="429" text-anchor="middle" style="fill:var(--muted)">fixed stage order</text>
+        <rect x="486" y="392" width="228" height="60" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+        <text x="600" y="413" text-anchor="middle" style="fill:var(--blue)" font-size="12" font-weight="700">Peer-to-peer / network</text>
+        <text x="600" y="429" text-anchor="middle" style="fill:var(--muted)">flexible direct hand-offs</text>
+        <rect x="724" y="392" width="246" height="60" rx="10" style="fill:var(--panel);stroke:var(--purple)"/>
+        <text x="847" y="413" text-anchor="middle" style="fill:var(--purple)" font-size="12" font-weight="700">Blackboard / shared state</text>
+        <text x="847" y="429" text-anchor="middle" style="fill:var(--muted)">opportunistic collaboration</text>
+        <text x="847" y="443" text-anchor="middle" style="fill:var(--muted)">via shared memory</text>
+      </g>
+      <line x1="400" y1="335" x2="150" y2="392" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="455" y1="345" x2="380" y2="392" style="stroke:var(--amber)" stroke-width="1.6" marker-end="url(#arrM)"/>
+      <line x1="525" y1="345" x2="590" y2="392" style="stroke:var(--blue)" stroke-width="1.6" marker-end="url(#arrM)"/>
+      <line x1="580" y1="335" x2="830" y2="392" style="stroke:var(--purple)" stroke-width="1.6" marker-end="url(#arrP)"/>
+
+      <rect x="240" y="512" width="500" height="46" rx="10" style="fill:var(--panel2);stroke:var(--green)" stroke-width="2"/>
+      <text x="490" y="532" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="700">Tools: MCP servers · function calling</text>
+      <text x="490" y="550" text-anchor="middle" style="fill:var(--muted)" font-size="11">idempotent · structured errors · least privilege</text>
+      <line x1="124" y1="452" x2="320" y2="512" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="362" y1="452" x2="420" y2="512" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="600" y1="452" x2="560" y2="512" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="847" y1="452" x2="660" y2="512" style="stroke:var(--green)" stroke-width="1.6" marker-end="url(#arr)"/>
+      <line x1="141" y1="240" x2="280" y2="518" style="stroke:var(--green)" stroke-width="1.4" stroke-dasharray="3 4" marker-end="url(#arr)"/>
+
+      <rect x="760" y="285" width="200" height="50" rx="10" style="fill:var(--panel);stroke:var(--purple)" stroke-dasharray="6 4"/>
+      <text x="860" y="306" text-anchor="middle" style="fill:var(--purple)" font-size="11.5" font-weight="700">A2A protocol between agents</text>
+      <text x="860" y="322" text-anchor="middle" style="fill:var(--muted)" font-size="10">cross-org / cross-framework</text>
+      <line x1="200" y1="392" x2="760" y2="312" style="stroke:var(--purple)" stroke-width="1.4" stroke-dasharray="6 5" marker-end="url(#arrP)"/>
+    </svg>
+    <div class="caption">The map of the whole domain: <b>workflow if steps are knowable · single agent until it demonstrably breaks · topology by coordination style · everything plugs into well-designed tools</b>.</div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOWS VS AGENTS ============ -->
+<section id="workflows">
+  <div class="kicker">Section 2 · Core concepts</div>
+  <h2>Workflows vs agents — the Anthropic framing</h2>
+  <p class="lede"><b>Workflow:</b> "LLMs and tools orchestrated through <b>predefined code paths</b>." You own the control flow. <b>Agent:</b> "LLMs <b>dynamically direct their own processes and tool usage</b>," gaining "ground truth from the environment at each step" (tool results), with stopping conditions for control.</p>
+
+  <h3>The five named workflow patterns <span class="tag">know all five — they show up as distractors</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Pattern</th><th>Shape</th><th>Use when</th></tr>
+    <tr><td><b>Prompt chaining</b></td><td>Sequential LLM calls, each consumes the previous output; programmatic gates between steps</td><td class="good">Task decomposes into fixed steps; trade latency for per-step accuracy</td></tr>
+    <tr><td><b>Routing</b></td><td>Classifier LLM directs input to a specialized handler/prompt/model</td><td class="good">Distinct input categories handled better separately (also: cheap model for easy queries, big model for hard)</td></tr>
+    <tr><td><b>Parallelization</b></td><td><b>Sectioning</b> (independent subtasks at once) or <b>voting</b> (same task N times, aggregate)</td><td class="good">Speed, or confidence via diverse attempts</td></tr>
+    <tr><td><b>Orchestrator-workers</b></td><td>Central LLM dynamically decomposes the task and delegates to workers, then synthesizes</td><td class="good">Subtasks can't be predicted in advance (vs parallelization's fixed splits)</td></tr>
+    <tr><td><b>Evaluator-optimizer</b></td><td>Generator LLM + critic LLM in a feedback loop</td><td class="good">Clear evaluation criteria exist and iteration measurably helps</td></tr>
+  </table></div>
+
+  <div class="callout"><b>It's a spectrum of "agenticness," not a binary</b> (Harrison Chase) — production systems mix both: agentic steps inside workflow scaffolding.</div>
+</section>
+
+<!-- ============ REASONING PATTERNS ============ -->
+<section id="patterns">
+  <h2>Agent reasoning patterns</h2>
+  <p class="lede">The canonical loops, what each one buys you, and what it costs. The favorite trap pairs: <b>ReAct vs Plan-and-Execute</b> (interleaved vs upfront) and <b>router vs supervisor</b> (once vs in-the-loop).</p>
+
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">🔁</span>ReAct <span class="pill g">Yao et al., 2022</span></h4>
+      <p>Interleave <b>Thought → Action → Observation</b> every step; the next thought conditions on the latest tool result.</p>
+      <ul><li><b>Strengths:</b> grounded in environment feedback; adapts mid-task; reduces hallucinated facts</li>
+      <li><b>Costs:</b> one LLM call <b>per step</b> → latency &amp; tokens compound; can thrash in loops (needs a max-step budget)</li></ul></div>
+    <div class="card blue"><h4><span class="icon">🗺️</span>Plan-and-Execute</h4>
+      <p>Planner LLM writes the <b>whole multi-step plan upfront</b>; executor runs steps; optional <b>re-plan</b> on surprises.</p>
+      <ul><li><b>Strengths:</b> fewer big-model calls (planner once, cheap executor); explicit inspectable plan</li>
+      <li><b>Costs:</b> plan goes stale if the environment changes mid-run; bad for exploratory tasks</li></ul></div>
+    <div class="card cyan"><h4><span class="icon">🧩</span>ReWOO <span class="pill c">Xu et al., 2023</span></h4>
+      <p><b>Reasoning WithOut Observation:</b> planner emits a full plan with <b>placeholder variables</b> (#E1, #E2) wired between steps; worker fills them; solver synthesizes.</p>
+      <ul><li><b>Strengths:</b> cuts token usage hard — no observation re-fed into planning each step; plan verifiable before execution</li>
+      <li><b>Costs:</b> zero mid-course correction unless you add a re-planner</li></ul></div>
+    <div class="card purple"><h4><span class="icon">📝</span>Reflexion <span class="pill p">Shinn et al., 2023</span></h4>
+      <p>Actor attempts → evaluator scores → <b>self-reflection LLM writes a verbal critique</b> stored in an <b>episodic memory buffer</b> → retry conditioned on past critiques.</p>
+      <ul><li><b>Strengths:</b> "verbal reinforcement learning" — improves across trials <b>without weight updates</b>; big gains on code (91% HumanEval pass@1 vs GPT-4's 80%)</li>
+      <li><b>Costs:</b> needs a resettable/retryable task + an evaluator signal; more passes = more cost/latency</li></ul></div>
+    <div class="card red"><h4><span class="icon">♾️</span>Autonomous loop <span class="pill r">AutoGPT lineage</span></h4>
+      <p>Open-ended goal → agent loops plan/act/observe until it declares done.</p>
+      <ul><li><b>Strengths:</b> maximum autonomy, minimal scaffolding</li>
+      <li><b>Costs:</b> maximum risk — runaway cost, derailment; demands budgets, stop conditions, checkpoints, HITL gates</li></ul></div>
+    <div class="card amber"><h4><span class="icon">🔀</span>Router &amp; Supervisor</h4>
+      <p><b>Router:</b> one classification step dispatches to a specialist (then usually <b>done</b> — no return loop). Cheap, fast, predictable; single-shot.</p>
+      <p style="margin-top:8px"><b>Supervisor:</b> an LLM agent <b>iteratively</b> delegates to sub-agents, reviews results, re-delegates, synthesizes. Central control + dynamic decomposition; becomes a bottleneck &amp; token sink ("telephone" hand-off games).</p></div>
+  </div>
+
+  <div class="callout warn"><b>⚠ Router vs supervisor is a favorite trap:</b> a router decides <b>once</b> and hands off; a supervisor <b>stays in the loop</b>, receiving results and deciding next steps repeatedly. "Agent that coordinates sub-agents in a loop" → supervisor.</div>
+</section>
+
+<!-- ============ SINGLE VS MULTI ============ -->
+<section id="single-multi">
+  <div class="kicker">Section 3 · One agent or many</div>
+  <h2>Single-agent vs multi-agent</h2>
+  <p class="lede"><b>Default to one agent until it demonstrably breaks.</b> The dispute between Anthropic's research-system results and Cognition's "Don't Build Multi-Agents" is about <b>task structure</b> — parallelizable reads vs coupled writes — not ideology.</p>
+
+  <div class="grid c2">
+    <div class="card purple"><h4><span class="icon">👥</span>Decompose into specialists when…</h4>
+      <ul>
+        <li>The task is <b>breadth-first / parallelizable</b> with independent subtasks (research across many sources) — Anthropic's orchestrator-worker research system beat single-agent Claude Opus 4 by <b>90.2%</b> on internal research evals</li>
+        <li>The toolset or instruction set is <b>too large/conflicting</b> for one context window (tool confusion, prompt bloat)</li>
+        <li>Different steps need <b>different models/costs/permissions</b> (cheap drafter, expensive reviewer; sandboxed coder)</li>
+        <li>Organizational/team boundaries: different teams own different agents (then think A2A)</li>
+      </ul></div>
+    <div class="card blue"><h4><span class="icon">🧍</span>Stay single-agent when…</h4>
+      <ul>
+        <li>Subtasks are <b>tightly coupled</b> and every decision depends on shared evolving context — <b>most coding tasks</b> (Cognition: parallel sub-agents make <b>conflicting implicit decisions</b>; "actions carry implicit decisions")</li>
+        <li>The task is low-value: multi-agent must <b>earn</b> its token spend</li>
+      </ul></div>
+  </div>
+
+  <h3>The token bill <span class="tag">token usage explained 80% of performance variance in Anthropic's evals</span></h3>
+  <div class="bars">
+    <div class="bar-row"><div class="label">Chat</div><div class="track"><div class="fill" style="width:8%;background:linear-gradient(90deg,var(--green-dim),var(--green))">1×</div></div><div class="note">baseline</div></div>
+    <div class="bar-row"><div class="label">Single agent</div><div class="track"><div class="fill" style="width:27%;background:linear-gradient(90deg,var(--blue),var(--cyan))">~4× chat tokens</div></div><div class="note">agents alone</div></div>
+    <div class="bar-row"><div class="label">Multi-agent system</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--amber),var(--red))">~15× chat tokens</div></div><div class="note">must earn the spend</div></div>
+  </div>
+  <div class="callout"><b>The exam answer often is "stay single-agent / share full context"</b> — especially for coding scenarios with tight cross-file coupling.</div>
+</section>
+
+<!-- ============ TOPOLOGIES ============ -->
+<section id="topologies">
+  <h2>Multi-agent topologies</h2>
+  <p class="lede">Memorize the <b>communication axis</b>: supervisor = hub-and-spoke messages · peer-to-peer = direct messages · blackboard = <b>no</b> messages, shared memory · pipeline = one-way baton pass.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">⭐</span>Supervisor / worker</h4>
+      <svg viewBox="0 0 160 90" style="width:100%;max-width:160px;height:auto;display:block;margin:4px auto 8px">
+        <circle cx="80" cy="18" r="10" style="fill:var(--green)"/>
+        <circle cx="25" cy="70" r="7" style="fill:var(--panel2);stroke:var(--green)"/><circle cx="62" cy="74" r="7" style="fill:var(--panel2);stroke:var(--green)"/><circle cx="98" cy="74" r="7" style="fill:var(--panel2);stroke:var(--green)"/><circle cx="135" cy="70" r="7" style="fill:var(--panel2);stroke:var(--green)"/>
+        <line x1="80" y1="26" x2="27" y2="64" style="stroke:var(--green)" opacity=".6"/><line x1="80" y1="26" x2="63" y2="67" style="stroke:var(--green)" opacity=".6"/><line x1="80" y1="26" x2="97" y2="67" style="stroke:var(--green)" opacity=".6"/><line x1="80" y1="26" x2="133" y2="64" style="stroke:var(--green)" opacity=".6"/>
+      </svg>
+      <p>Star-shaped: central supervisor delegates, workers report back, supervisor synthesizes. Hierarchical = supervisors managing supervisors.</p></div>
+    <div class="card blue"><h4><span class="icon">🕸️</span>Peer-to-peer / network</h4>
+      <svg viewBox="0 0 160 90" style="width:100%;max-width:160px;height:auto;display:block;margin:4px auto 8px">
+        <circle cx="80" cy="14" r="7" style="fill:var(--panel2);stroke:var(--blue)"/><circle cx="22" cy="48" r="7" style="fill:var(--panel2);stroke:var(--blue)"/><circle cx="138" cy="48" r="7" style="fill:var(--panel2);stroke:var(--blue)"/><circle cx="50" cy="80" r="7" style="fill:var(--panel2);stroke:var(--blue)"/><circle cx="110" cy="80" r="7" style="fill:var(--panel2);stroke:var(--blue)"/>
+        <g style="stroke:var(--blue)" opacity=".45"><line x1="80" y1="14" x2="22" y2="48"/><line x1="80" y1="14" x2="138" y2="48"/><line x1="80" y1="14" x2="50" y2="80"/><line x1="80" y1="14" x2="110" y2="80"/><line x1="22" y1="48" x2="138" y2="48"/><line x1="22" y1="48" x2="50" y2="80"/><line x1="22" y1="48" x2="110" y2="80"/><line x1="138" y1="48" x2="50" y2="80"/><line x1="138" y1="48" x2="110" y2="80"/><line x1="50" y1="80" x2="110" y2="80"/></g>
+      </svg>
+      <p>Any agent hands off directly to any other (swarm); control travels <b>with</b> the hand-off.</p></div>
+    <div class="card amber"><h4><span class="icon">➡️</span>Pipeline</h4>
+      <svg viewBox="0 0 160 90" style="width:100%;max-width:160px;height:auto;display:block;margin:4px auto 8px">
+        <circle cx="20" cy="45" r="8" style="fill:var(--panel2);stroke:var(--amber)"/><circle cx="60" cy="45" r="8" style="fill:var(--panel2);stroke:var(--amber)"/><circle cx="100" cy="45" r="8" style="fill:var(--panel2);stroke:var(--amber)"/><circle cx="140" cy="45" r="8" style="fill:var(--panel2);stroke:var(--amber)"/>
+        <g style="stroke:var(--amber)"><line x1="28" y1="45" x2="50" y2="45"/><line x1="68" y1="45" x2="90" y2="45"/><line x1="108" y1="45" x2="130" y2="45"/></g>
+        <g style="fill:var(--amber)"><polygon points="50,41 56,45 50,49"/><polygon points="90,41 96,45 90,49"/><polygon points="130,41 136,45 130,49"/></g>
+      </svg>
+      <p>Fixed order: each agent transforms the artifact and passes it on. One-way baton.</p></div>
+    <div class="card purple"><h4><span class="icon">🗒️</span>Blackboard</h4>
+      <svg viewBox="0 0 160 90" style="width:100%;max-width:160px;height:auto;display:block;margin:4px auto 8px">
+        <rect x="55" y="32" width="50" height="28" rx="4" style="fill:color-mix(in srgb, var(--purple) 25%, var(--panel2));stroke:var(--purple)"/>
+        <circle cx="25" cy="20" r="7" style="fill:var(--panel2);stroke:var(--purple)"/><circle cx="135" cy="20" r="7" style="fill:var(--panel2);stroke:var(--purple)"/><circle cx="25" cy="74" r="7" style="fill:var(--panel2);stroke:var(--purple)"/><circle cx="135" cy="74" r="7" style="fill:var(--panel2);stroke:var(--purple)"/>
+        <g style="stroke:var(--purple)" opacity=".5" stroke-dasharray="3 3"><line x1="31" y1="24" x2="56" y2="38"/><line x1="129" y1="24" x2="104" y2="38"/><line x1="31" y1="70" x2="56" y2="55"/><line x1="129" y1="70" x2="104" y2="55"/></g>
+      </svg>
+      <p>Agents don't message each other; all read/write a <b>common workspace</b> and act opportunistically.</p></div>
+  </div>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Topology</th><th>Control flow</th><th>Strengths</th><th>Weaknesses</th><th>Canonical example</th></tr>
+    <tr><td><b>Supervisor / worker</b> (hierarchical when supervisors manage supervisors)</td><td>Central supervisor delegates, workers report back, supervisor synthesizes; star-shaped</td><td class="good">Single point of control, easy to debug/trace, clear accountability; workers stay simple</td><td class="bad">Supervisor = bottleneck + single point of failure; context lost in hand-offs; extra hop latency</td><td>LangGraph supervisor, Anthropic research system (lead + parallel subagents + CitationAgent), CrewAI hierarchical process</td></tr>
+    <tr><td><b>Peer-to-peer / network (swarm)</b></td><td>Any agent can hand off directly to any other (full or sparse mesh); control travels <b>with</b> the hand-off</td><td class="good">No central bottleneck; flexible, local decisions; natural for "transfer to the right specialist"</td><td class="bad">Hard to trace/predict; risk of ping-pong loops; N² communication paths</td><td>OpenAI Swarm-style handoffs, LangGraph network architecture, A2A meshes</td></tr>
+    <tr><td><b>Blackboard / shared state</b></td><td>Agents don't message each other; all read/write a <b>common workspace</b> and act opportunistically when they can contribute</td><td class="good">Decouples agents (add/remove freely); good for ill-structured problems; full shared visibility</td><td class="bad">Needs concurrency control + a control component deciding who writes when; contention</td><td>Classic HEARSAY-II architecture; LangGraph shared-state graphs are a modern blackboard</td></tr>
+    <tr><td><b>Pipeline (sequential hand-off)</b></td><td>Fixed order: each agent transforms the artifact and passes it on</td><td class="good">Simple, predictable, easy to test stage-by-stage; per-stage model choice</td><td class="bad">Rigid; errors compound downstream; no backtracking unless you add loops</td><td>Research → outline → draft → edit chains; CrewAI sequential process</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ FRAMEWORKS ============ -->
+<section id="frameworks">
+  <div class="kicker">Section 4 · Orchestration &amp; standards</div>
+  <h2>Orchestration frameworks</h2>
+  <p class="lede">Map requirements onto the right runtime: <b>LangGraph</b> = stateful graphs + checkpointing, <b>AutoGen/AG2</b> = conversation-centric teams, <b>CrewAI</b> = role-based crews, <b>NeMo Agent Toolkit</b> = the unification layer over all of them.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Framework</th><th>Core abstraction</th><th>Statefulness / control</th><th>Distinctives</th><th>When</th></tr>
+    <tr><td><b>LangGraph</b></td><td>Agents as <b>stateful graphs</b>: nodes (functions/LLM calls) + edges (fixed or conditional) over a typed shared <code>State</code>; low-level orchestration with agent abstractions (<code>create_react_agent</code>, supervisor/swarm libs) on top</td><td class="good"><b>Checkpointing is the headline</b>: a checkpointer persists state per <code>thread_id</code> → resume after crash, human-in-the-loop interrupts, "time travel" replay, durable long-running runs</td><td><code>add_conditional_edges</code> for routing, <code>Command(goto=, update=)</code> for hand-offs, <code>Send</code> for map-reduce fan-out; LangSmith tracing</td><td class="good">You need explicit control flow, cycles, persistence, HITL — production default for custom topologies</td></tr>
+    <tr><td><b>AutoGen / AG2</b></td><td><b>Conversation-centric</b>: <code>ConversableAgent</code>s (assistant + user-proxy) solve tasks by <b>talking</b>; <code>GroupChat</code> + <code>GroupChatManager</code> for teams</td><td>Conversation history is the state; manager selects next speaker</td><td>AutoGen 0.4+ rebuilt as event-driven/actor runtime (<code>autogen-agentchat</code>); <b>AG2</b> is the community fork of classic 0.2 API; strong code-execution agents</td><td class="mid">Research/prototyping multi-agent chat dynamics, code-gen-and-run loops</td></tr>
+    <tr><td><b>CrewAI</b></td><td><b>Role-based teams</b>: <code>Agent(role, goal, backstory)</code> + <code>Task</code>s assembled into a <code>Crew</code>; <code>Process.sequential</code> or <code>Process.hierarchical</code> (auto-spawned manager LLM delegates)</td><td>Crews are high-level/opinionated; <b>Flows</b> add event-driven, fine-grained deterministic control</td><td>Standalone (not built on LangChain); fastest path to a role-played pipeline</td><td class="mid">Quick specialist pipelines where roles map cleanly; less custom control</td></tr>
+    <tr><td><b>NeMo Agent Toolkit (NAT)</b> (open source, fka AgentIQ/AIQ)</td><td><b>Not a competing framework — a unification layer</b>: treats <b>agents, tools, and whole workflows as composable function calls</b>, declared in YAML</td><td class="good">Framework-agnostic: wraps LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, ADK agents into one workflow</td><td>Built-in agent types (ReAct, Tool-Calling, ReWOO, Reasoning, Router); profiler + <code>nat eval</code>; serves/consumes <b>MCP and A2A</b></td><td class="good">Compose teams across frameworks, profile/optimize them, expose them as services — NVIDIA's answer to "frameworks don't interoperate"</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ MCP VS A2A ============ -->
+<section id="mcp-a2a">
+  <h2>MCP vs A2A — hands vs phone line</h2>
+  <p class="lede">They are <b>complementary, not competing</b> — the A2A docs themselves recommend MCP for tools and A2A for agent collaboration. Rule of thumb: if the remote thing is a <b>deterministic capability</b>, wrap it in MCP; if it's <b>another reasoning entity</b> you can't or shouldn't open up (different org/framework, long-running, negotiates), talk A2A.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 960 380" font-family="inherit">
+      <defs>
+        <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrPu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--purple)"/></marker>
+      </defs>
+      <!-- MCP half -->
+      <text x="240" y="28" text-anchor="middle" style="fill:var(--green)" font-size="15" font-weight="800">MCP — "gives an agent hands"</text>
+      <text x="240" y="46" text-anchor="middle" style="fill:var(--muted)" font-size="11">vertical: model ↔ capabilities (Anthropic, Nov 2024)</text>
+      <rect x="140" y="62" width="200" height="42" rx="9" style="fill:var(--panel);stroke:var(--green)"/>
+      <text x="240" y="88" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">Host → client (the agent/app)</text>
+      <line x1="240" y1="104" x2="240" y2="138" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arrG)"/>
+      <text x="320" y="126" text-anchor="middle" style="fill:var(--muted)" font-size="10">JSON-RPC 2.0 · stdio / streamable HTTP</text>
+      <rect x="140" y="140" width="200" height="42" rx="9" style="fill:var(--panel);stroke:var(--green)"/>
+      <text x="240" y="160" text-anchor="middle" style="fill:var(--green)" font-size="12" font-weight="700">MCP server</text>
+      <text x="240" y="175" text-anchor="middle" style="fill:var(--muted)" font-size="10">exposes tools · resources · prompts</text>
+      <line x1="240" y1="182" x2="240" y2="216" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arrG)"/>
+      <rect x="140" y="218" width="200" height="40" rx="9" style="fill:var(--panel);stroke:var(--line)"/>
+      <text x="240" y="243" text-anchor="middle" style="fill:var(--muted)" font-size="11">tools · data · context</text>
+      <rect x="115" y="282" width="250" height="40" rx="9" style="fill:color-mix(in srgb, var(--green) 8%, var(--panel));stroke:var(--green)" stroke-dasharray="5 4"/>
+      <text x="240" y="299" text-anchor="middle" style="fill:var(--green)" font-size="10.5" font-weight="700">Discovery: client lists tools at connect time</text>
+      <text x="240" y="314" text-anchor="middle" style="fill:var(--muted)" font-size="10.5"><tspan font-family="monospace">tools/list</tspan> · unit of work = a tool call (request/response)</text>
+
+      <line x1="480" y1="20" x2="480" y2="340" style="stroke:var(--line)" stroke-dasharray="4 6"/>
+
+      <!-- A2A half -->
+      <text x="720" y="28" text-anchor="middle" style="fill:var(--purple)" font-size="15" font-weight="800">A2A — "gives agents a phone line"</text>
+      <text x="720" y="46" text-anchor="middle" style="fill:var(--muted)" font-size="11">horizontal: peer agents across vendors/frameworks/orgs (Google, Apr 2025 → Linux Foundation, v1.0)</text>
+      <rect x="520" y="90" width="160" height="56" rx="9" style="fill:var(--panel);stroke:var(--purple)"/>
+      <text x="600" y="113" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">A2A client agent</text>
+      <text x="600" y="130" text-anchor="middle" style="fill:var(--muted)" font-size="10">opaque — internals hidden</text>
+      <rect x="760" y="90" width="160" height="56" rx="9" style="fill:var(--panel);stroke:var(--purple)"/>
+      <text x="840" y="113" text-anchor="middle" style="fill:var(--text)" font-size="12" font-weight="700">A2A server agent</text>
+      <text x="840" y="130" text-anchor="middle" style="fill:var(--muted)" font-size="10">no shared memory, tools, state</text>
+      <line x1="680" y1="108" x2="760" y2="108" style="stroke:var(--purple)" stroke-width="2" marker-end="url(#arrPu)"/>
+      <line x1="760" y1="128" x2="680" y2="128" style="stroke:var(--purple)" stroke-width="2" marker-end="url(#arrPu)"/>
+      <text x="720" y="100" text-anchor="middle" style="fill:var(--muted)" font-size="9.5">JSON-RPC 2.0 / gRPC / HTTP+JSON · SSE · webhooks</text>
+      <rect x="700" y="160" width="240" height="38" rx="9" style="fill:color-mix(in srgb, var(--purple) 10%, var(--panel));stroke:var(--purple)" stroke-dasharray="5 4"/>
+      <text x="820" y="176" text-anchor="middle" style="fill:var(--purple)" font-size="10.5" font-weight="700">Agent Card — /.well-known/agent-card.json</text>
+      <text x="820" y="191" text-anchor="middle" style="fill:var(--muted)" font-size="10">name · url · capabilities · skills · securitySchemes</text>
+      <!-- task lifecycle -->
+      <text x="720" y="236" text-anchor="middle" style="fill:var(--text)" font-size="11.5" font-weight="700">Unit of work = a Task with lifecycle (built for long-running work)</text>
+      <g font-size="10">
+        <rect x="510" y="250" width="84" height="30" rx="7" style="fill:var(--panel);stroke:var(--blue)"/><text x="552" y="269" text-anchor="middle" style="fill:var(--blue)">submitted</text>
+        <rect x="612" y="250" width="84" height="30" rx="7" style="fill:var(--panel);stroke:var(--amber)"/><text x="654" y="269" text-anchor="middle" style="fill:var(--amber)">working</text>
+        <rect x="714" y="250" width="226" height="30" rx="7" style="fill:var(--panel);stroke:var(--green)"/><text x="827" y="269" text-anchor="middle" style="fill:var(--green)">completed / failed / canceled / rejected</text>
+        <line x1="594" y1="265" x2="612" y2="265" style="stroke:var(--muted)" marker-end="url(#arrPu)"/>
+        <line x1="696" y1="265" x2="714" y2="265" style="stroke:var(--muted)" marker-end="url(#arrPu)"/>
+        <rect x="560" y="296" width="200" height="30" rx="7" style="fill:color-mix(in srgb, var(--red) 8%, var(--panel));stroke:var(--red)" stroke-dasharray="4 3"/>
+        <text x="660" y="315" text-anchor="middle" style="fill:var(--red)">input-required · auth-required (interrupts)</text>
+        <line x1="654" y1="280" x2="654" y2="296" style="stroke:var(--red)" stroke-dasharray="3 3"/>
+      </g>
+    </svg>
+    <div class="caption"><b>MCP connects an agent to tools, data, and context (vertical); A2A connects agent to agent (horizontal).</b> "Replace MCP with A2A" is always wrong — they're complementary. NAT supports both directions for both.</div>
+  </div>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th></th><th>MCP (Model Context Protocol)</th><th>A2A (Agent2Agent Protocol)</th></tr>
+    <tr><td><b>Origin</b></td><td>Anthropic, Nov 2024; open standard</td><td>Google, Apr 2025; donated to the Linux Foundation; v1.0 spec</td></tr>
+    <tr><td><b>Connects</b></td><td>An agent/app to <b>tools, data, context</b> (vertical: model ↔ capabilities)</td><td><b>Agent to agent</b> (horizontal: peer services), across vendors/frameworks/orgs</td></tr>
+    <tr><td><b>Roles</b></td><td>Host → client → <b>server</b>; server exposes <b>tools, resources, prompts</b></td><td>A2A <b>client</b> agent ↔ A2A <b>server</b> (remote) agent; agents stay <b>opaque</b> — no shared memory, tools, or internal state</td></tr>
+    <tr><td><b>Discovery</b></td><td>Client lists tools at connect time (<code>tools/list</code>)</td><td><b>Agent Card</b> — JSON at <code>/.well-known/agent-card.json</code>: <code>name</code>, <code>description</code>, <code>url</code>, <code>capabilities</code> (streaming, pushNotifications), <code>skills</code>, <code>securitySchemes</code>, signature</td></tr>
+    <tr><td><b>Wire</b></td><td>JSON-RPC 2.0 over <b>stdio</b> or <b>streamable HTTP</b></td><td>JSON-RPC 2.0 / gRPC / HTTP+JSON; <b>SSE</b> streaming; webhook push notifications</td></tr>
+    <tr><td><b>Unit of work</b></td><td>A tool call (request/response)</td><td>A <b>Task</b> with lifecycle: <code>submitted → working → completed / failed / canceled / rejected</code>, plus <code>input-required</code> &amp; <code>auth-required</code> interrupts — built for <b>long-running</b> work</td></tr>
+    <tr><td><b>One-liner</b></td><td class="good">"Gives an agent hands"</td><td class="good">"Gives agents a phone line"</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ TRADE-OFFS ============ -->
+<section id="tradeoffs">
+  <div class="kicker">Section 5 · Design trade-offs</div>
+  <h2>The four axes — every architecture choice slides a dial</h2>
+  <p class="lede">Scenario questions in this domain are usually one of these four tensions in disguise. Know the <b>levers</b> that move each dial.</p>
+
+  <div class="grid c2">
+    <div class="axis">
+      <h4><span class="icon">⏱️</span>Latency vs accuracy</h4>
+      <div class="ends"><span style="color:var(--green)">fast</span><span style="color:var(--blue)">accurate</span></div>
+      <div class="track" style="background:linear-gradient(90deg,var(--green),var(--blue))"><span class="knob" style="left:55%"></span></div>
+      <p class="levers"><b>Tension:</b> every extra thought/reflection/critique step improves quality and adds seconds; ReAct's per-step calls vs ReWOO's one-shot plan.<br><b>Levers:</b> step budgets; plan-then-execute for known tasks; parallel tool calls (Anthropic: cut research time up to 90%); streaming partial results; smaller models on the hot path.</p>
+    </div>
+    <div class="axis">
+      <h4><span class="icon">💸</span>Cost vs capability</h4>
+      <div class="ends"><span style="color:var(--green)">cheap</span><span style="color:var(--purple)">capable</span></div>
+      <div class="track" style="background:linear-gradient(90deg,var(--green),var(--purple))"><span class="knob" style="left:45%"></span></div>
+      <p class="levers"><b>Tension:</b> multi-agent ≈ 15× chat tokens; bigger models per node; more retries.<br><b>Levers:</b> model cascades (router sends easy → small NIM, hard → frontier); cache/reuse context; cap Reflexion trials; only go multi-agent for high-value tasks.</p>
+    </div>
+    <div class="axis">
+      <h4><span class="icon">🎛️</span>Autonomy vs controllability</h4>
+      <div class="ends"><span style="color:var(--red)">autonomous</span><span style="color:var(--green)">controlled</span></div>
+      <div class="track" style="background:linear-gradient(90deg,var(--red),var(--green))"><span class="knob" style="left:62%"></span></div>
+      <p class="levers"><b>Tension:</b> more freedom = handles novelty, but unpredictable paths, harder audits, bigger blast radius.<br><b>Levers:</b> slide left on the workflow↔agent spectrum for regulated steps; HITL approval gates (interrupts), max iterations, allowlisted tools, sandboxing, checkpoints for rollback.</p>
+    </div>
+    <div class="axis">
+      <h4><span class="icon">💾</span>Statefulness vs statelessness</h4>
+      <div class="ends"><span style="color:var(--cyan)">durable state</span><span style="color:var(--amber)">stateless</span></div>
+      <div class="track" style="background:linear-gradient(90deg,var(--cyan),var(--amber))"><span class="knob" style="left:40%"></span></div>
+      <p class="levers"><b>Tension:</b> long-running, resumable, personalized agents need durable state; stateless agents scale horizontally and replay deterministically.<br><b>Levers:</b> externalize state (LangGraph checkpointer, DB-backed threads); 12-factor: make the agent a <b>stateless reducer</b> over an event log — state lives outside the process; unify execution + business state.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOOL DESIGN ============ -->
+<section id="tools">
+  <h2>Tool design — a product for the model</h2>
+  <p class="lede">A tool = <b>name + description + JSON Schema parameters</b> (function calling). The description <b>is</b> prompt engineering — the model picks tools by reading it.</p>
+
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">🧰</span>Fewer, higher-level tools</h4><p><b>Consolidate</b>: <code>schedule_event</code> instead of <code>list_users</code> + <code>list_events</code> + <code>create_event</code>. <b>Namespace</b> related tools (<code>asana_projects_search</code>) to prevent confusion in large toolsets.</p></div>
+    <div class="card blue"><h4><span class="icon">📐</span>Schemas</h4><p>Strict types, enums, <code>required</code>, <code>additionalProperties: false</code>; describe formats with examples ("e.g. 'pay_8x2'"); return <b>meaningful, token-efficient</b> context (names not UUIDs; pagination/filtering/truncation defaults; optionally a <code>response_format: concise|detailed</code> param).</p></div>
+    <div class="card amber"><h4><span class="icon">🔁</span>Idempotency</h4><p>Agents <b>retry</b> — networks fail, loops re-fire. Reads are naturally idempotent; side-effecting tools (payments, emails, ticket creation) need an <b>idempotency key</b>: same key ⇒ server returns the original result instead of repeating the side effect. <b>Never assume exactly-once execution.</b></p></div>
+    <div class="card red"><h4><span class="icon">🧯</span>Error contract</h4><p>Errors are <b>model input</b>, not exceptions. Return structured, in-band errors — <code>{ok: false, error: {code, retryable, hint}}</code> — with <b>specific, actionable</b> guidance, not opaque codes or stack-trace dumps (12-factor #9: <b>compact errors into the context window</b>). But count consecutive failures and escalate to a human instead of looping.</p></div>
+    <div class="card purple"><h4><span class="icon">🔒</span>Least privilege</h4><p>Scope each tool (and each sub-agent's toolset) to the minimum needed — this is also the Domain-on-safety hook.</p></div>
+    <div class="card cyan"><h4><span class="icon">🧪</span>Evaluate the tools themselves</h4><p>Test tools with real multi-call tasks (Anthropic's tool-writing guidance) — descriptions that teach, returns the model can actually use.</p></div>
+  </div>
+</section>
+
+<!-- ============ NVIDIA ============ -->
+<section id="nvidia">
+  <div class="kicker">Section 6 · The NVIDIA layer</div>
+  <h2>NVIDIA stack — who builds, who serves, who connects</h2>
+  <p class="lede"><b>Positioning sentence to memorize:</b> NAT is <b>not</b> another agent framework and doesn't replace LangGraph/CrewAI — it's the <b>connective, observability, and packaging layer</b> ("framework-agnostic… agents as composable function calls") that lets heterogeneous agents interoperate, get profiled, and be served over MCP/A2A.</p>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🤖</span>NeMo Agent Toolkit <span class="pill g">the architecture answer</span></h4>
+      <p><code>pip install nvidia-nat</code>, CLI <code>nat</code> — framework-agnostic library to <b>build, connect, profile, and optimize teams of agents</b>. Core idea: <b>every agent, tool, and workflow is a function call</b> → composable and reusable across frameworks.</p>
+      <ul>
+        <li>Declarative <b>workflow YAML</b> with <code>functions:</code> (tools <b>and</b> sub-agents), <code>llms:</code>, <code>embedders:</code>, <code>workflow:</code> sections; <code>_type</code> selects the component</li>
+        <li>Built-in agent <code>_type</code>s: <b><code>react_agent</code></b>, <b><code>tool_calling_agent</code></b>, <b><code>rewoo_agent</code></b>, <b><code>reasoning_agent</code></b>, plus a <b>router</b></li>
+        <li>CLI: <code>nat run</code> (execute), <code>nat serve</code> (REST/UI endpoint), <code>nat eval</code> (Domain 3)</li>
+        <li>Plugins for LangChain/LangGraph, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, Google ADK</li>
+        <li><b>MCP:</b> acts as MCP <b>client</b> (consume remote tools) and MCP <b>server</b> (publish any workflow function as a tool). <b>A2A:</b> serve workflows as A2A agents and call remote A2A agents — distributed teams with auth</li>
+        <li>Profiler captures per-step latency/tokens/bottlenecks</li>
+      </ul></div>
+    <div class="card blue"><h4><span class="icon">⚡</span>NIM <span class="pill b">model-serving substrate</span></h4>
+      <p>NVIDIA Inference Microservices — what the agents call. <b>OpenAI-API-compatible</b> endpoints (<code>base_url=.../v1</code>) locally or via build.nvidia.com.</p>
+      <ul><li>In NAT YAML: <code>_type: nim</code> with <code>model_name:</code></li><li>Agent nodes are model-agnostic — swap NIMs without changing the graph</li></ul></div>
+    <div class="card cyan"><h4><span class="icon">🧠</span>Nemotron models</h4>
+      <p>NVIDIA's agent-tuned open model family (reasoning toggles, tool calling). Typical orchestrator/executor choices in NVIDIA examples (e.g., Nemotron Nano for sub-agents, larger for supervisors).</p></div>
+    <div class="card purple"><h4><span class="icon">📘</span>NVIDIA AI Blueprints</h4>
+      <p>Reference <b>architectures</b>: prebuilt, customizable agentic workflows — e.g., <b>AI-Q research assistant</b> (a NAT-based multi-agent deep-research blueprint), customer-service assistant, vulnerability analysis.</p>
+      <p style="margin-top:8px"><b>Exam angle:</b> Blueprints = validated starting designs combining NIM + NeMo + NAT, <b>not a runtime component</b>.</p></div>
+    <div class="card amber"><h4><span class="icon">🧩</span>NeMo microservices</h4>
+      <p>Customizer, Evaluator, Guardrails, Data Store — the platform around the architecture: tune the models inside nodes, evaluate workflows, add runtime rails.</p>
+      <p style="margin-top:8px"><b>Architecture hook:</b> Guardrails wrap agent I/O; Evaluator/<code>nat eval</code> close the loop (Domain 3).</p></div>
+  </div>
+  <div class="callout"><b>"Which NVIDIA component lets a CrewAI agent and a LangGraph agent compose into one workflow?"</b> → NeMo Agent Toolkit.</div>
+</section>
+
+<!-- ============ DECISION FRAMEWORKS ============ -->
+<section id="decisions">
+  <div class="kicker">Section 7 · Decision frameworks</div>
+  <h2>Requirement → pick — the three selection tables</h2>
+
+  <h3>Pattern selection <span class="tag">the big one</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Requirement</th><th>Pick</th><th>Why not the others</th></tr>
+    <tr><td>Steps fully known, compliance demands predictability</td><td class="good"><b>Workflow</b> (prompt chaining + gates)</td><td>Agent autonomy adds variance you must then audit</td></tr>
+    <tr><td>Distinct query categories, cost control</td><td class="good"><b>Routing</b> (cheap classifier → specialist/model tier)</td><td>One mega-prompt handles all categories worse</td></tr>
+    <tr><td>Unknown number/type of subtasks, dynamic decomposition</td><td class="good"><b>Orchestrator-workers / supervisor agent</b></td><td>Parallelization needs <b>predefined</b> splits</td></tr>
+    <tr><td>Exploratory task, environment feedback changes the path</td><td class="good"><b>ReAct loop</b></td><td>Upfront plans go stale</td></tr>
+    <tr><td>Many tool steps, path predictable, latency/token budget tight</td><td class="good"><b>Plan-and-Execute / ReWOO</b></td><td>ReAct pays an LLM call per step</td></tr>
+    <tr><td>Retryable task with a checkable success signal (code+tests)</td><td class="good"><b>Reflexion loop</b> on top</td><td>Without an evaluator signal, reflection is vibes</td></tr>
+    <tr><td>Improve quality against clear criteria</td><td class="good"><b>Evaluator-optimizer</b></td><td>Reflexion is the <b>agent-trial</b> variant; this is the workflow variant</td></tr>
+  </table></div>
+
+  <h3>Topology selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Situation</th><th>Topology</th></tr>
+    <tr><td>Need central audit point, simple debugging, dynamic delegation</td><td class="good">Supervisor/worker</td></tr>
+    <tr><td>Org of teams: supervisors of supervisors</td><td class="good">Hierarchical</td></tr>
+    <tr><td>Fixed transformation stages, testable in isolation</td><td class="good">Pipeline</td></tr>
+    <tr><td>Specialists that should hand off directly without a middleman</td><td class="good">Peer-to-peer / swarm</td></tr>
+    <tr><td>Many agents opportunistically contributing partial results to one artifact</td><td class="good">Blackboard / shared state</td></tr>
+    <tr><td>Agents in different orgs/frameworks, opaque internals, long-running tasks</td><td class="good">A2A-connected agents</td></tr>
+  </table></div>
+
+  <h3>Framework selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>Custom graph topology, cycles, persistence, HITL interrupts, time travel</td><td class="good">LangGraph (StateGraph + checkpointer)</td></tr>
+    <tr><td>Multi-agent <b>conversation</b> dynamics, code-write-and-execute loops</td><td class="good">AutoGen / AG2 (GroupChat)</td></tr>
+    <tr><td>Fast role-based crew, sequential or manager-delegated</td><td class="good">CrewAI (Process.sequential / hierarchical)</td></tr>
+    <tr><td>Mix agents from several frameworks; profile tokens/latency; publish over MCP/A2A; NVIDIA stack</td><td class="good">NeMo Agent Toolkit</td></tr>
+    <tr><td>Tool/data access standard for any of the above</td><td class="good">MCP</td></tr>
+    <tr><td>Agent↔agent interop standard across vendors</td><td class="good">A2A</td></tr>
+  </table></div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 8 · Don't fall for these</div>
+  <h2>⚠ Exam traps &amp; gotchas</h2>
+  <div class="grid c2">
+    <div class="trap"><h4><span class="n">#1</span>ReAct vs Plan-and-Execute</h4><p>ReAct <b>interleaves</b> thought/action/observation each step (adaptive, expensive); Plan-and-Execute commits to a full <b>upfront plan</b> then executes (cheap, rigid). <span class="fix">"Reduce per-step LLM calls for a predictable task" → Plan-and-Execute/ReWOO, never "more ReAct".</span></p></div>
+    <div class="trap"><h4><span class="n">#2</span>Reflexion ≠ fine-tuning</h4><p>Reflexion improves via <b>verbal self-critique stored in episodic memory across retries</b> — <b>no gradient updates, no reward model</b>. <span class="fix">"Improves over trials without weight changes" → Reflexion.</span></p></div>
+    <div class="trap"><h4><span class="n">#3</span>ReWOO's trick is the missing O</h4><p>Plans with placeholder variables (#E1→#E2), <b>no observations fed back during planning</b> → big token savings. <span class="fix">The cost is no mid-course correction.</span></p></div>
+    <div class="trap"><h4><span class="n">#4</span>Router vs supervisor</h4><p>Router classifies and dispatches <b>once</b>; supervisor <b>iterates</b>: delegate → review → re-delegate → synthesize. <span class="fix">"Agent that coordinates sub-agents in a loop" → supervisor.</span></p></div>
+    <div class="trap"><h4><span class="n">#5</span>MCP vs A2A inversion</h4><p>MCP = agent↔<b>tools/context</b> (client-server, tools/resources/prompts); A2A = <b>agent↔agent</b> (opaque peers, Agent Cards, Tasks). <span class="fix">They're complementary; "replace MCP with A2A" is always wrong.</span></p></div>
+    <div class="trap"><h4><span class="n">#6</span>Agent Card details</h4><p>A2A discovery via JSON at <b><code>/.well-known/agent-card.json</code></b> (name, url, capabilities, skills, securitySchemes); transports JSON-RPC 2.0 / gRPC / REST with SSE streaming. <span class="fix">MCP has no agent card — its discovery is <code>tools/list</code> after connect.</span></p></div>
+    <div class="trap"><h4><span class="n">#7</span>A2A task states</h4><p>Long-running lifecycle: submitted → working → terminal (completed/failed/canceled/rejected) with <b>input-required</b> and auth-required as <b>interrupt</b> (non-terminal) states. <span class="fix">"Agent pauses to ask the caller for info" → <code>input-required</code>.</span></p></div>
+    <div class="trap"><h4><span class="n">#8</span>Multi-agent ≠ always better</h4><p>Tightly coupled tasks (most coding) degrade with parallel sub-agents (conflicting implicit decisions — Cognition); plus ~15× token cost. <span class="fix">The exam answer often is "stay single-agent / share full context".</span></p></div>
+    <div class="trap"><h4><span class="n">#9</span>Blackboard vs message-passing</h4><p>Blackboard agents <b>never message each other</b>; coordination happens through reads/writes to a shared workspace. <span class="fix">"Agents communicate via a shared memory store" → blackboard, not peer-to-peer.</span></p></div>
+    <div class="trap"><h4><span class="n">#10</span>LangGraph checkpointing</h4><p>= persisting <b>graph state</b> per thread (resume, HITL, replay/time-travel) — <b>nothing to do with model checkpoints</b>. <span class="fix">Compile with a checkpointer + pass <code>thread_id</code>; this is what makes stateful, interruptible agents possible.</span></p></div>
+    <div class="trap"><h4><span class="n">#11</span>Idempotency</h4><p>Retried side-effecting tool calls must not repeat the effect; fix = <b>idempotency key</b> honored server-side (replay returns the original result). <span class="fix">"Set temperature=0" or "tell the agent not to retry" are distractors.</span></p></div>
+    <div class="trap"><h4><span class="n">#12</span>Tool errors go back to the model</h4><p>Structured, compact, actionable errors in-band so the agent self-corrects; raising an unhandled exception (or dumping stack traces) kills or bloats the loop. <span class="fix">But cap retries and escalate to humans.</span></p></div>
+    <div class="trap"><h4><span class="n">#13</span>NAT is not a framework competitor</h4><p>It <b>wraps</b> LangGraph/CrewAI/etc. agents as function calls, profiles them, and serves them over MCP/A2A. <span class="fix">"CrewAI agent + LangGraph agent in one workflow" → NeMo Agent Toolkit.</span></p></div>
+    <div class="trap"><h4><span class="n">#14</span>CrewAI process modes</h4><p><code>sequential</code> = fixed task order (pipeline); <code>hierarchical</code> = auto-created <b>manager</b> LLM delegates (supervisor). AutoGen's signature is <b>GroupChat</b> (conversation, manager picks next speaker). <span class="fix">Swapping these is a classic distractor.</span></p></div>
+    <div class="trap"><h4><span class="n">#15</span>Autonomy is a dial, not a virtue</h4><p>For regulated/high-stakes steps the right answer slides <b>toward</b> workflows, approval gates, and step budgets — <span class="fix">even though "fully autonomous agent" sounds more advanced.</span></p></div>
+  </div>
+</section>
+
+<!-- ============ DRILLS ============ -->
+<section id="drills">
+  <div class="kicker">Section 9 · Test yourself</div>
+  <h2>Scenario drills — click to reveal</h2>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>A loan-approval flow has five fixed steps and auditors require the same path every time. The team proposes an autonomous ReAct agent. Better call?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Workflow (prompt chaining with programmatic gates)</b>.<span class="why">Steps are knowable upfront and predictability is a requirement; agent autonomy adds unauditable path variance (autonomy vs controllability axis).</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>A market-research assistant must scan dozens of independent sources and synthesize; quality matters more than cost. Architecture?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Supervisor/orchestrator-worker multi-agent</b> with parallel research sub-agents (each given objective, output format, tool guidance, boundaries).<span class="why">Breadth-first, parallelizable, high-value: exactly where multi-agent earns its ~15× tokens. A coding refactor with tight cross-file coupling would flip the answer to single-agent.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>Your ReAct agent reliably executes the same 6 tool steps for a known report task, but latency and token bills are too high. Cheapest architectural fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Switch to Plan-and-Execute / ReWOO</b>.<span class="why">Plan once with placeholder wiring, execute steps without re-invoking the planner each observation; reserve re-planning for failures.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>An agent calling <code>create_ticket</code> occasionally times out, retries, and files duplicate tickets. Fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Idempotency key in the tool schema, honored server-side</b>.<span class="why">A replayed key returns the original ticket instead of creating a new one; plus a structured error contract so the agent knows the retry semantics.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span>Two business units — one on CrewAI, one on LangGraph — must let their agents collaborate without exposing internals, including tasks that run for hours. Standard?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>A2A</b> — opaque peer agents, Agent Card discovery, task lifecycle with streaming/push for long-running work.<span class="why">MCP is the wrong layer (tools/context, not peer agents); NAT can <b>serve</b> each workflow over A2A.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>A procurement agent must pause for human approval before any purchase &gt;$10k, possibly resuming days later after a crash. Which capability/framework feature?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>LangGraph with a durable checkpointer + interrupt (HITL)</b>.<span class="why">State persists per <code>thread_id</code>, the graph pauses at the approval node and resumes exactly where it left off.</span></div>
+  </details>
+
+  <h3>Builder's corner — habits that make this real</h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🪜</span>Climb the autonomy ladder, never jump it</h4><p>Prompt → workflow → single agent → multi-agent. Find the <b>simplest</b> solution and only add agency when it measurably wins; every rung multiplies tokens, latency, and failure modes.</p></div>
+    <div class="card green"><h4><span class="icon">🔍</span>Context engineering before topology</h4><p>Most "the agent is dumb" failures are "the model never saw the right context" (Chase). Before adding sub-agents, fix what each step sees: <b>full traces over summaries</b> where decisions matter (Cognition), compression only when the window forces it.</p></div>
+    <div class="card green"><h4><span class="icon">🛠️</span>Design tools like a product for the model</h4><p>Consolidated, namespaced, descriptions that teach, token-efficient returns, idempotency keys on every side-effecting call, structured errors with hints. Then <b>evaluate the tools themselves</b> with real multi-call tasks.</p></div>
+    <div class="card green"><h4><span class="icon">💾</span>Externalize all state from day one</h4><p>Checkpointed graph state (LangGraph) or an event log with the agent as a <b>stateless reducer</b> (12-factor). Buys pause/resume, HITL, horizontal scaling, replayable debugging for free later. Make the boundaries standard: tools behind MCP, cross-team agents behind A2A, the workflow in NAT YAML — so any piece can be swapped, profiled, evaluated without rewiring.</p></div>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+  <h2>Lightning quiz — one-liners the exam loves</h2>
+  <p class="lede">Fast recall checks pulled straight from the traps. Answer before you flip.</p>
+
+  <details class="drill"><summary><span class="qn">A1</span><span>Which pattern improves across trials <b>without weight updates</b>, storing verbal critiques in an episodic memory buffer?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Reflexion</b> — "verbal reinforcement learning"; no gradient updates, no reward model.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">A2</span><span>An A2A remote agent pauses to ask the calling agent for more information. Which task state?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b><code>input-required</code></b> — an interrupt (non-terminal) state, alongside <code>auth-required</code>.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">A3</span><span>Where does an A2A client discover a remote agent's capabilities?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>The Agent Card</b> — JSON at <code>/.well-known/agent-card.json</code> (name, url, capabilities, skills, securitySchemes). MCP's discovery is <code>tools/list</code> after connect.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">A4</span><span>CrewAI <code>Process.hierarchical</code> does what?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Auto-creates a manager LLM that delegates</b> (supervisor pattern); <code>sequential</code> = fixed task order (pipeline). AutoGen's signature is GroupChat.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">A5</span><span>Agents coordinate <b>only via a shared memory store</b>, never messaging each other. Which topology?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Blackboard / shared state</b> — not peer-to-peer. Classic HEARSAY-II; LangGraph shared-state graphs are a modern blackboard.</div>
+  </details>
+  <details class="drill"><summary><span class="qn">A6</span><span>Where do ReWOO's token savings come from?</span><span class="flip"><span class="show">Show ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>No observations fed back during planning</b> — the plan is emitted once with placeholder variables (#E1→#E2) wired between steps. Cost: zero mid-course correction unless you add a re-planner.</div>
+  </details>
+</section>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code-companion">
+  <div class="kicker">Section 10 · Hands-on</div>
+  <h2>Code Companion — the domain in runnable snippets</h2>
+  <p class="lede">Every core idea from this domain, reduced to the smallest piece of code that exercises it: a raw ReAct loop, a LangGraph supervisor, conditional-edge routing with checkpointing, MCP both sides, the A2A handshake, idempotent tool contracts, and a NAT multi-agent YAML.</p>
+
+  <div class="card green">
+    <h4><span class="icon">🔁</span>1 · ReAct loop from scratch <span class="pill g">no framework, just the pattern</span></h4>
+    <pre class="code-block"><code>import json, os
+from openai import OpenAI  # NIM endpoints are OpenAI-API compatible
+
+client = OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=os.environ["NVIDIA_API_KEY"])
+TOOLS = [{"type": "function", "function": {
+    "name": "get_weather", "description": "Current weather for a city.",
+    "parameters": {"type": "object", "properties": {"city": {"type": "string"}},
+                   "required": ["city"]}}}]
+REGISTRY = {"get_weather": lambda city: f"{city}: 31C, clear"}
+
+def react_loop(user_msg, max_steps=8):
+    messages = [{"role": "user", "content": user_msg}]
+    for _ in range(max_steps):                       # hard step budget = controllability
+        r = client.chat.completions.create(model="meta/llama-3.3-70b-instruct",
+                                           messages=messages, tools=TOOLS)
+        msg = r.choices[0].message
+        messages.append(msg)
+        if not msg.tool_calls:                       # no Action requested -&gt; final answer
+            return msg.content
+        for tc in msg.tool_calls:                    # Act...
+            obs = REGISTRY[tc.function.name](**json.loads(tc.function.arguments))
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": str(obs)})
+    return "stopped: step budget exhausted"          # never loop forever</code></pre>
+    <p><b>What to notice:</b> the entire ReAct pattern is just <b>while model wants tools: execute, append observation, re-ask</b> — the Thought lives in the assistant message, the Action is <code>tool_calls</code>, the Observation is the appended <code>role: "tool"</code> message. The <code>max_steps</code> cap and the explicit exhaustion return are the autonomy-vs-controllability dial in two lines.</p>
+  </div>
+
+  <div class="card blue">
+    <h4><span class="icon">⭐</span>2 · Supervisor/worker team in LangGraph <span class="pill b">prebuilt supervisor</span></h4>
+    <pre class="code-block"><code>from langgraph.prebuilt import create_react_agent      # 2025+: also exposed as create_agent in the `langchain` pkg
+from langgraph_supervisor import create_supervisor      # pip install langgraph-supervisor
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+model = ChatNVIDIA(model="meta/llama-3.3-70b-instruct")
+research_agent = create_react_agent(model, tools=[web_search], name="research_expert",
+                                    prompt="You are a researcher. Do not do math.")
+math_agent = create_react_agent(model, tools=[add, multiply], name="math_expert",
+                                prompt="You are a math expert. Use one tool at a time.")
+
+app = create_supervisor(
+    [research_agent, math_agent], model=model,
+    prompt=("You manage a research expert and a math expert. "
+            "Delegate; do not answer substantive questions yourself."),
+).compile()
+out = app.invoke({"messages": [{"role": "user",
+                                "content": "Combined FAANG headcount in 2024?"}]})</code></pre>
+    <p><b>What to notice:</b> the supervisor is itself an agent whose "tools" are auto-generated hand-off tools (<code>transfer_to_research_expert</code>, …) — <b>delegation is tool calling</b>. Control always returns to the supervisor after each worker finishes (hub-and-spoke); workers are named so hand-offs and traces are legible.</p>
+  </div>
+
+  <div class="card cyan">
+    <h4><span class="icon">🔀</span>3 · Router with conditional edges + checkpointing <span class="pill c">statefulness</span></h4>
+    <pre class="code-block"><code>from typing import Literal
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver   # prod: SqliteSaver/PostgresSaver
+
+class State(TypedDict):
+    query: str; category: str; answer: str
+
+def classify(state: State) -&gt; dict:
+    label = llm.invoke(f"One word, billing|tech|general: {state['query']}").content.strip()
+    return {"category": label}
+
+def route(state: State) -&gt; Literal["billing", "tech", "general"]:
+    return state["category"]                           # returned value picks the edge
+
+builder = StateGraph(State)
+builder.add_node("classify", classify)
+for name, fn in [("billing", billing_node), ("tech", tech_node), ("general", general_node)]:
+    builder.add_node(name, fn); builder.add_edge(name, END)
+builder.add_edge(START, "classify")
+builder.add_conditional_edges("classify", route)       # the routing pattern, one line
+
+graph = builder.compile(checkpointer=MemorySaver())    # persistence: resume, replay, HITL
+graph.invoke({"query": "I was double charged"},
+             config={"configurable": {"thread_id": "user-42"}})</code></pre>
+    <p><b>What to notice:</b> <code>add_conditional_edges</code> is Anthropic's "routing" workflow expressed as graph topology — the LLM classifies, <b>code</b> dispatches. The checkpointer + <code>thread_id</code> pair is LangGraph statefulness (trap #10): every super-step is persisted per thread, which is what later enables interrupts and time travel without any extra agent logic.</p>
+  </div>
+
+  <div class="card green">
+    <h4><span class="icon">🔌</span>4 · Minimal MCP server + an agent consuming it <span class="pill g">both sides of the protocol</span></h4>
+    <pre class="code-block"><code># server.py — pip install "mcp[cli]"
+from mcp.server.fastmcp import FastMCP
+mcp = FastMCP("orders")
+
+@mcp.tool()
+def get_order_status(order_id: str) -&gt; str:
+    """Look up the current status of an order by its ID."""
+    return DB.get(order_id, "not found")
+
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")   # or "stdio" for local subprocess use</code></pre>
+    <pre class="code-block"><code># agent side — pip install langchain-mcp-adapters
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+
+client = MultiServerMCPClient({"orders": {"transport": "streamable_http",
+                                          "url": "http://localhost:8000/mcp"}})
+tools = await client.get_tools()                  # MCP tools -&gt; framework-native tools
+agent = create_react_agent(model, tools)</code></pre>
+    <p><b>What to notice:</b> the function signature + docstring <b>are</b> the tool schema — FastMCP derives the JSON Schema from type hints, which is why typing and docstrings are load-bearing. The agent side shows MCP's value: the agent never imports the order system; it discovers tools over the protocol, so servers can be swapped/added without touching agent code. NAT does the same with <code>_type: mcp_client</code>, and can publish any workflow function as an MCP server.</p>
+  </div>
+
+  <div class="card purple">
+    <h4><span class="icon">📇</span>5 · A2A agent card + handshake sketch <span class="pill p">discovery → message/send → task lifecycle</span></h4>
+    <pre class="code-block"><code>// GET https://agents.example.com/.well-known/agent-card.json
+{
+  "protocolVersion": "1.0", "name": "currency-agent",
+  "description": "Converts amounts between currencies using live FX rates.",
+  "url": "https://agents.example.com/a2a/currency",
+  "capabilities": {"streaming": true, "pushNotifications": false},
+  "defaultInputModes": ["text/plain"], "defaultOutputModes": ["text/plain"],
+  "skills": [{"id": "convert", "name": "Currency conversion",
+              "description": "Convert an amount between two currencies.",
+              "tags": ["finance", "fx"]}],
+  "securitySchemes": {"bearer": {"type": "http", "scheme": "bearer"}}
+}</code></pre>
+    <pre class="code-block"><code># Client handshake (JSON-RPC 2.0 binding), after fetching the card above:
+req = {"jsonrpc": "2.0", "id": 1, "method": "message/send",
+       "params": {"message": {"role": "user", "messageId": "m-1",
+                              "parts": [{"kind": "text", "text": "Convert 100 USD to EUR"}]}}}
+# Response is either an immediate Message, or a Task:
+#   {"id": "t-77", "status": {"state": "working"}}
+# -&gt; poll tasks/get (or subscribe via SSE) until state is terminal:
+#    completed | failed | canceled | rejected — or "input-required" -&gt; send a follow-up message</code></pre>
+    <p><b>What to notice:</b> discovery (well-known card) → capability check (<code>skills</code>, <code>capabilities</code>, auth) → <code>message/send</code> → task lifecycle is the whole A2A loop. The remote agent is <b>opaque</b> — no tools or memory are shared, only Messages and Task artifacts cross the wire — which is precisely what makes it work across vendors and frameworks (traps #5/#7).</p>
+  </div>
+
+  <div class="card amber">
+    <h4><span class="icon">🧾</span>6 · Tool schema with idempotency key + error contract <span class="pill a">retry-safe by design</span></h4>
+    <pre class="code-block"><code>{ "name": "payments_refund_create",
+  "description": "Refund a payment. Safe to retry: resending the same idempotency_key returns the original result without refunding twice.",
+  "parameters": { "type": "object",
+    "properties": {
+      "payment_id":   {"type": "string", "description": "From payments_list, e.g. 'pay_8x2'"},
+      "amount_cents": {"type": "integer", "minimum": 1},
+      "idempotency_key": {"type": "string",
+        "description": "Caller-generated UUID, one per logical refund attempt."}},
+    "required": ["payment_id", "amount_cents", "idempotency_key"],
+    "additionalProperties": false } }</code></pre>
+    <pre class="code-block"><code>def payments_refund_create(payment_id, amount_cents, idempotency_key):
+    if idempotency_key in LEDGER:               # replayed retry -&gt; same result, no new side effect
+        return LEDGER[idempotency_key]
+    try:
+        r = gateway.refund(payment_id, amount_cents)
+    except GatewayError as e:                   # error contract: structured, in-band, actionable
+        return {"ok": False, "error": {"code": e.code, "retryable": e.transient,
+                "hint": "Amount exceeds refundable balance; call payments_get first."}}
+    LEDGER[idempotency_key] = {"ok": True, "refund_id": r.id, "status": r.status}
+    return LEDGER[idempotency_key]</code></pre>
+    <p><b>What to notice:</b> the namespaced name, example-bearing descriptions, and <code>additionalProperties: false</code> are tool-design hygiene; the ledger check is the idempotency pattern that makes agent retries safe (trap #11); and errors come back as data with a <code>retryable</code> flag and a <code>hint</code> the model can act on — never an opaque code or an exception that kills the loop (trap #12).</p>
+  </div>
+
+  <div class="card green">
+    <h4><span class="icon">📄</span>7 · NeMo Agent Toolkit YAML <span class="pill g">a multi-agent workflow, declaratively</span></h4>
+    <pre class="code-block"><code># config.yml — run: nat run --config_file config.yml --input "..."   (pip install "nvidia-nat[langchain]")
+llms:
+  orchestrator_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.2
+
+functions:
+  wikipedia_search:
+    _type: wiki_search
+    max_results: 3
+  current_datetime:
+    _type: current_datetime
+  math_agent:                       # an *agent* registered as a function
+    _type: tool_calling_agent
+    llm_name: orchestrator_llm
+    tool_names: [calculator_multiply, calculator_divide]
+    description: "Useful for performing simple mathematical calculations."
+  internet_agent:
+    _type: tool_calling_agent
+    llm_name: orchestrator_llm
+    tool_names: [wikipedia_search, current_datetime]
+    description: "Useful for performing simple internet searches."
+
+workflow:                           # top-level supervisor
+  _type: react_agent
+  llm_name: orchestrator_llm
+  tool_names: [math_agent, internet_agent]
+  verbose: true</code></pre>
+    <p><b>What to notice:</b> this is NAT's "agents as function calls" thesis made concrete — the sub-agents sit in <code>functions:</code> right beside plain tools, and their <code>description</code> is what the top-level <code>react_agent</code> reads to delegate, so a supervisor/worker hierarchy needs zero orchestration code. The same file drives <code>nat run</code>, <code>nat serve</code> (REST endpoint), <code>nat eval</code> (Domain 3), and can be exposed over MCP or A2A.</p>
+  </div>
+</section>
+
+<!-- ============ ENGINEER TAKES ============ -->
+<section id="voices">
+  <div class="kicker">Section 11 · Field notes</div>
+  <h2>What top engineers are saying (2025–26)</h2>
+  <p class="lede">The practitioners whose posts this domain is quietly built from — the workflows/agents taxonomy, the multi-agent dispute, context engineering over topology, and tools as a product for the model.</p>
+
+  <div class="grid c2">
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Erik Schluntz &amp; Barry Zhang (Anthropic) <span class="pill g">"Building Effective Agents"</span></h4>
+      <p>The founding taxonomy of this domain: workflows ("predefined code paths") vs agents ("dynamically direct their own processes"), the five workflow patterns, and the discipline of restraint — "start with simple prompts… add multi-step agentic systems only when simpler solutions fall short," and if you use a framework, "ensure you understand the underlying code."</p>
+      <p><b>Why it matters:</b> nearly every exam question in this domain is a rephrasing of this post.</p>
+      <p><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">anthropic.com/engineering/building-effective-agents</a></p>
+    </div>
+    <div class="card red">
+      <h4><span class="icon">🗣️</span>Walden Yan (Cognition) <span class="pill r">"Don't Build Multi-Agents"</span></h4>
+      <p>The contrarian anchor: two principles — "share context, and share full agent traces, not just individual messages" and "actions carry implicit decisions, and conflicting decisions carry bad results" — together imply that parallel sub-agents on coupled tasks drift into incompatible choices (their Flappy Bird example: one sub-agent builds a Mario-style background, another a mismatched bird). His prescription: single-threaded agents with context compression before any decomposition.</p>
+      <p><a href="https://cognition.ai/blog/dont-build-multi-agents" target="_blank" rel="noopener">cognition.ai/blog/dont-build-multi-agents</a></p>
+    </div>
+    <div class="card blue">
+      <h4><span class="icon">🗣️</span>Anthropic <span class="pill b">"How we built our multi-agent research system"</span></h4>
+      <p>The empirical counterweight: an orchestrator-worker system (Opus lead + parallel Sonnet subagents) beat single-agent Opus by <b>90.2%</b> on research evals, with token usage explaining 80% of variance — but at ~<b>15× chat tokens</b>, and explicitly <b>not</b> for tasks with tight interdependencies "like most coding."</p>
+      <p><b>Why it matters:</b> together with Cognition's post, this gives the exam's real answer — the dispute is about <b>task structure</b> (parallelizable reads vs coupled writes), not ideology.</p>
+      <p><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener">anthropic.com/engineering/multi-agent-research-system</a></p>
+    </div>
+    <div class="card cyan">
+      <h4><span class="icon">🗣️</span>Harrison Chase (LangChain) <span class="pill c">"How to think about agent frameworks"</span></h4>
+      <p>"The hard part of building reliable agentic systems is making sure the LLM has the appropriate context at each step" — most failures are context failures, not model failures; agent-vs-workflow is a <b>spectrum of agenticness</b>; and frameworks should be judged as orchestration layers (LangGraph: low-level orchestration "with a series of agent abstractions built on top") rather than opaque agent abstractions you'll outgrow.</p>
+      <p><a href="https://www.langchain.com/blog/how-to-think-about-agent-frameworks" target="_blank" rel="noopener">langchain.com/blog/how-to-think-about-agent-frameworks</a></p>
+    </div>
+    <div class="card purple">
+      <h4><span class="icon">🗣️</span>Dex Horthy <span class="pill p">"12-Factor Agents"</span></h4>
+      <p>Production heuristics that read like this domain's checklist: <b>own your control flow</b> (#8), <b>small, focused agents</b> (#10), <b>tools are just structured outputs</b> (#4), <b>compact errors into the context window</b> (#9), <b>make your agent a stateless reducer</b> (#12). His thesis: good AI software comes from "small, modular concepts" incorporated into existing products, not from handing control flow to a framework.</p>
+      <p><a href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener">github.com/humanlayer/12-factor-agents</a></p>
+    </div>
+    <div class="card amber">
+      <h4><span class="icon">🗣️</span>Anthropic <span class="pill a">"Writing effective tools for agents"</span></h4>
+      <p>Tool design as ergonomics for a model: consolidate workflows into single tools, namespace large toolsets, return semantically meaningful (not UUID-soup) and token-efficient responses, and write error messages with "specific and actionable improvements, rather than opaque error codes" — then evaluate tools with real multi-call tasks and even let agents propose tool improvements.</p>
+      <p><b>Why it matters:</b> the source behind the whole tool-design section.</p>
+      <p><a href="https://www.anthropic.com/engineering/writing-tools-for-agents" target="_blank" rel="noopener">anthropic.com/engineering/writing-tools-for-agents</a></p>
+    </div>
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>NVIDIA <span class="pill g">NeMo Agent Toolkit positioning</span></h4>
+      <p>NVIDIA's bet is that the framework wars resolve by <b>interop, not victory</b>: an open-source toolkit "for efficiently connecting and optimizing teams of AI agents" that treats agents/tools/workflows as composable function calls across LangChain, CrewAI, LlamaIndex, Semantic Kernel, AutoGen, Agno, and ADK — with profiling, <code>nat eval</code>, and first-class MCP <b>and</b> A2A in both client and server directions.</p>
+      <p><b>For the exam:</b> NAT = the connective and observability layer over whatever framework builds the agent.</p>
+      <p><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit" target="_blank" rel="noopener">github.com/NVIDIA/NeMo-Agent-Toolkit</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>Anthropic — Building effective agents — <a href="https://www.anthropic.com/engineering/building-effective-agents">anthropic.com/engineering/building-effective-agents</a></li>
+    <li>Anthropic — How we built our multi-agent research system — <a href="https://www.anthropic.com/engineering/multi-agent-research-system">anthropic.com/engineering/multi-agent-research-system</a></li>
+    <li>Anthropic — Writing effective tools for agents — <a href="https://www.anthropic.com/engineering/writing-tools-for-agents">anthropic.com/engineering/writing-tools-for-agents</a></li>
+    <li>Cognition — Don't Build Multi-Agents — <a href="https://cognition.ai/blog/dont-build-multi-agents">cognition.ai/blog/dont-build-multi-agents</a></li>
+    <li>LangChain — How to think about agent frameworks — <a href="https://www.langchain.com/blog/how-to-think-about-agent-frameworks">langchain.com/blog/how-to-think-about-agent-frameworks</a></li>
+    <li>LangGraph multi-agent concepts &amp; supervisor — <a href="https://langchain-ai.github.io/langgraph/concepts/multi_agent/">langchain-ai.github.io/langgraph/concepts/multi_agent</a> · <a href="https://github.com/langchain-ai/langgraph-supervisor-py">langgraph-supervisor-py</a></li>
+    <li>12-Factor Agents (Dex Horthy) — <a href="https://github.com/humanlayer/12-factor-agents">github.com/humanlayer/12-factor-agents</a></li>
+    <li>A2A protocol specification (v1.0) — <a href="https://a2a-protocol.org/latest/specification/">a2a-protocol.org/latest/specification</a></li>
+    <li>MCP spec &amp; Python SDK — <a href="https://modelcontextprotocol.io/specification/">modelcontextprotocol.io/specification</a> · <a href="https://github.com/modelcontextprotocol/python-sdk">python-sdk</a></li>
+    <li>NeMo Agent Toolkit — <a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit">GitHub</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/index.html">docs</a> · <a href="https://docs.nvidia.com/nemo/agent-toolkit/1.2/workflows/workflow-configuration.html">workflow configuration</a></li>
+    <li>ReAct paper — <a href="https://arxiv.org/abs/2210.03629">arxiv.org/abs/2210.03629</a> · Reflexion — <a href="https://arxiv.org/abs/2303.11366">arxiv.org/abs/2303.11366</a> · ReWOO — <a href="https://arxiv.org/abs/2305.18323">arxiv.org/abs/2305.18323</a></li>
+    <li>NCP-AAI exam framing — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">nvidia.com certification</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 1: Agent Architecture and Design (15%) · Built from personal study notes. All facts sourced from the notes above.</p>
+</footer>
+
+<!-- ============ THREE.JS SCENE ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 70, 150);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
+camera.position.set(2, 19, 38);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(2, 3, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 10;
+controls.maxDistance = 95;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.3);
+key.position.set(12, 28, 14);
+scene.add(key);
+const greenFill = new THREE.PointLight(0x76b900, 70, 60);
+greenFill.position.set(-14, 12, 2);
+scene.add(greenFill);
+const purpleFill = new THREE.PointLight(0xb07cff, 55, 55);
+purpleFill.position.set(22, 9, -2);
+scene.add(purpleFill);
+const blueFill = new THREE.PointLight(0x4da3ff, 45, 50);
+blueFill.position.set(10, 9, -10);
+scene.add(blueFill);
+
+// ---------- ground ----------
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(240, 240),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2.0;
+scene.add(ground);
+const grid = new THREE.GridHelper(240, 120, 0x1b2840, 0x121a2a);
+grid.position.y = -1.98;
+scene.add(grid);
+
+// ---------- text sprite helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.strokeStyle = border;
+  g.lineWidth = 4;
+  const r = 18;
+  g.beginPath();
+  g.roundRect(3, 3, w - 6, h - 6, r);
+  g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  const k = 0.012 * scale;
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+// ---------- helpers ----------
+const pulsers = [];   // meshes whose emissive pulses
+function makeNode(color, radius = 0.85) {
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 22, 22),
+    new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.45, roughness: 0.35, metalness: 0.15 })
+  );
+  m.userData.emBase = 0.45;
+  pulsers.push(m);
+  return m;
+}
+function makeEdge(a, b, color, opacity = 0.5) {
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([a, b]),
+    new THREE.LineBasicMaterial({ color, transparent: true, opacity })
+  );
+  scene.add(line);
+  return line;
+}
+
+// message-flow segments: particles travel a -> b, then re-pick a random segment
+const flowSegs = [];
+function addFlow(a, b) { flowSegs.push({ a: a.clone(), b: b.clone() }); }
+
+// ============================================================
+// 1) SUPERVISOR / WORKER — the hero cluster (elevated supervisor)
+// ============================================================
+const SUP_C = new THREE.Vector3(-15, 0, -1);
+const supPos = new THREE.Vector3(SUP_C.x, 7.4, SUP_C.z);
+
+const supervisor = new THREE.Mesh(
+  new THREE.OctahedronGeometry(1.55),
+  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.65, roughness: 0.3, metalness: 0.2 })
+);
+supervisor.position.copy(supPos);
+supervisor.userData = {
+  title: 'Supervisor agent',
+  desc: 'Iteratively delegates to sub-agents, reviews results, re-delegates, synthesizes. NOT a router: a router classifies once and hands off; the supervisor stays in the loop. Cost: it becomes a bottleneck and token sink.',
+  emBase: 0.65
+};
+pulsers.push(supervisor);
+scene.add(supervisor);
+
+const supLbl = makeLabel('SUPERVISOR', { border: '#76b900', color: '#a4e040', scale: 0.9 });
+supLbl.position.set(supPos.x, supPos.y + 2.3, supPos.z);
+scene.add(supLbl);
+
+const workerPositions = [];
+for (let i = 0; i < 4; i++) {
+  const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
+  const p = new THREE.Vector3(SUP_C.x + Math.cos(ang) * 5.2, 1.1, SUP_C.z + Math.sin(ang) * 5.2);
+  workerPositions.push(p);
+  const w = makeNode(0x9cd63a, 0.8);
+  w.position.copy(p);
+  scene.add(w);
+  makeEdge(supPos, p, 0x76b900, 0.55);
+  addFlow(supPos, p);   // task down
+  addFlow(p, supPos);   // result up
+}
+const supTitle = makeLabel('SUPERVISOR / WORKER — hub-and-spoke', { border: '#76b900', color: '#76b900', scale: 1.15 });
+supTitle.position.set(SUP_C.x, 12.2, SUP_C.z);
+scene.add(supTitle);
+
+// cluster hit volume covers only the worker ring (supervisor mesh is its own hover target)
+const supHit = new THREE.Mesh(new THREE.BoxGeometry(13, 4.6, 13), new THREE.MeshBasicMaterial({ visible: false }));
+supHit.position.set(SUP_C.x, 1.2, SUP_C.z);
+supHit.userData = {
+  title: 'Supervisor / worker topology',
+  desc: 'Use when you need a central audit point, easy debugging, and dynamic delegation; hierarchical = supervisors managing supervisors. Weaknesses: supervisor is a bottleneck and single point of failure; context lost in hand-offs. Examples: LangGraph supervisor, Anthropic research system, CrewAI hierarchical.'
+};
+scene.add(supHit);
+
+// ============================================================
+// 2) PEER-TO-PEER MESH (swarm)
+// ============================================================
+const MESH_C = new THREE.Vector3(9, 1.4, -10);
+const meshPositions = [];
+for (let i = 0; i < 5; i++) {
+  const ang = (i / 5) * Math.PI * 2 + Math.PI / 2;
+  const p = new THREE.Vector3(MESH_C.x + Math.cos(ang) * 4.4, MESH_C.y, MESH_C.z + Math.sin(ang) * 4.4);
+  meshPositions.push(p);
+  const n = makeNode(0x4da3ff, 0.78);
+  n.position.copy(p);
+  scene.add(n);
+}
+for (let i = 0; i < meshPositions.length; i++) {
+  for (let j = i + 1; j < meshPositions.length; j++) {
+    makeEdge(meshPositions[i], meshPositions[j], 0x4da3ff, 0.3);
+    addFlow(meshPositions[i], meshPositions[j]);
+    addFlow(meshPositions[j], meshPositions[i]);
+  }
+}
+const meshTitle = makeLabel('PEER-TO-PEER MESH — direct hand-offs', { border: '#4da3ff', color: '#4da3ff', scale: 1.05 });
+meshTitle.position.set(MESH_C.x, 8.0, MESH_C.z);
+scene.add(meshTitle);
+const meshHit = new THREE.Mesh(new THREE.BoxGeometry(11.5, 5, 11.5), new THREE.MeshBasicMaterial({ visible: false }));
+meshHit.position.set(MESH_C.x, 1.4, MESH_C.z);
+meshHit.userData = {
+  title: 'Peer-to-peer / network (swarm) topology',
+  desc: 'Any agent hands off directly to any other; control travels WITH the hand-off. Use for specialists that should transfer work without a middleman. Weaknesses: hard to trace, ping-pong loop risk, N-squared communication paths. Examples: OpenAI Swarm-style handoffs, LangGraph network, A2A meshes.'
+};
+scene.add(meshHit);
+
+// ============================================================
+// 3) PIPELINE (sequential hand-off)
+// ============================================================
+const PIPE_Z = 10, PIPE_Y = 1.3;
+const pipeXs = [1, 6, 11, 16];
+const pipePositions = pipeXs.map(x => new THREE.Vector3(x, PIPE_Y, PIPE_Z));
+const pipeColors = [0xe8a33d, 0xe8a33d, 0xe8a33d, 0xe8a33d];
+pipePositions.forEach((p, i) => {
+  const n = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 1.5, 1.5),
+    new THREE.MeshStandardMaterial({ color: pipeColors[i], emissive: pipeColors[i], emissiveIntensity: 0.4, roughness: 0.35 })
+  );
+  n.position.copy(p);
+  n.userData.emBase = 0.4;
+  pulsers.push(n);
+  scene.add(n);
+  if (i > 0) {
+    makeEdge(pipePositions[i - 1], p, 0xe8a33d, 0.6);
+    addFlow(pipePositions[i - 1], p);   // one-way only
+  }
+});
+const pipeTitle = makeLabel('PIPELINE — one-way baton pass', { border: '#e8a33d', color: '#e8a33d', scale: 1.05 });
+pipeTitle.position.set(8.5, 6.4, PIPE_Z);
+scene.add(pipeTitle);
+const pipeHit = new THREE.Mesh(new THREE.BoxGeometry(19, 4.4, 5), new THREE.MeshBasicMaterial({ visible: false }));
+pipeHit.position.set(8.5, 1.4, PIPE_Z);
+pipeHit.userData = {
+  title: 'Pipeline (sequential hand-off) topology',
+  desc: 'Fixed order: each agent transforms the artifact and passes it on — research, outline, draft, edit. Use for fixed transformation stages, testable in isolation, per-stage model choice. Weaknesses: rigid; errors compound downstream; no backtracking unless you add loops. Example: CrewAI sequential process.'
+};
+scene.add(pipeHit);
+
+// ============================================================
+// 4) BLACKBOARD (shared state — no messages)
+// ============================================================
+const BB_C = new THREE.Vector3(23, 0, -2);
+const board = new THREE.Mesh(
+  new THREE.BoxGeometry(4.6, 0.35, 3.4),
+  new THREE.MeshStandardMaterial({ color: 0xb07cff, emissive: 0xb07cff, emissiveIntensity: 0.55, roughness: 0.3 })
+);
+board.position.set(BB_C.x, 1.7, BB_C.z);
+board.userData = {
+  title: 'The blackboard (shared workspace)',
+  desc: 'Agents never message each other — all coordination is reads/writes to this common workspace, acting opportunistically when they can contribute. Classic HEARSAY-II; LangGraph shared-state graphs are a modern blackboard. Needs concurrency control + a control component deciding who writes when.',
+  emBase: 0.55
+};
+pulsers.push(board);
+scene.add(board);
+const boardTop = new THREE.Vector3(BB_C.x, 2.1, BB_C.z);
+for (let i = 0; i < 4; i++) {
+  const ang = (i / 4) * Math.PI * 2;
+  const p = new THREE.Vector3(BB_C.x + Math.cos(ang) * 4.3, 1.1, BB_C.z + Math.sin(ang) * 4.3);
+  const n = makeNode(0xcdb1ff, 0.72);
+  n.position.copy(p);
+  scene.add(n);
+  makeEdge(p, boardTop, 0xb07cff, 0.28);
+  addFlow(p, boardTop);   // write
+  addFlow(boardTop, p);   // read
+}
+const bbTitle = makeLabel('BLACKBOARD — shared memory, no messages', { border: '#b07cff', color: '#b07cff', scale: 1.05 });
+bbTitle.position.set(BB_C.x, 7.6, BB_C.z);
+scene.add(bbTitle);
+const bbHit = new THREE.Mesh(new THREE.BoxGeometry(11, 4.6, 11), new THREE.MeshBasicMaterial({ visible: false }));
+bbHit.position.set(BB_C.x, 0.8, BB_C.z);
+bbHit.userData = {
+  title: 'Blackboard / shared-state topology',
+  desc: 'Use when many agents opportunistically contribute partial results to one artifact, and for ill-structured problems. Decouples agents (add/remove freely), full shared visibility. If a scenario says "agents communicate via a shared memory store" — this, not peer-to-peer.'
+};
+scene.add(bbHit);
+
+// ============================================================
+// message particles along all flow segments
+// ============================================================
+const N_P = 170;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(N_P * 3);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x3fd2c7, size: 0.32, transparent: true, opacity: 0.95 }));
+scene.add(particles);
+const pState = [];
+for (let i = 0; i < N_P; i++) {
+  pState.push({ seg: Math.floor(Math.random() * flowSegs.length), t: Math.random(), v: 0.25 + Math.random() * 0.35 });
+}
+
+// ambient star dust
+{
+  const n = 420, g = new THREE.BufferGeometry(), a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = (Math.random() - 0.5) * 170;
+    a[i * 3 + 1] = Math.random() * 48;
+    a[i * 3 + 2] = (Math.random() - 0.5) * 170;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+const hoverables = [supervisor, supHit, meshHit, pipeHit, board, bbHit];
+let hovered = null;
+
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // supervisor slowly spins + bobs — the elevated boss
+  supervisor.rotation.y += dt * 0.6;
+  supervisor.position.y = supPos.y + Math.sin(t * 1.1) * 0.25;
+
+  // node pulse
+  pulsers.forEach((m, i) => {
+    m.material.emissiveIntensity = (m.userData.emBase || 0.45) + 0.16 * Math.sin(t * 2 + i * 0.7);
+  });
+
+  // particles along flows
+  const pos = particles.geometry.attributes.position.array;
+  for (let i = 0; i < N_P; i++) {
+    const s = pState[i];
+    s.t += s.v * dt;
+    if (s.t >= 1) { s.t = 0; s.seg = Math.floor(Math.random() * flowSegs.length); }
+    const seg = flowSegs[s.seg];
+    pos[i * 3]     = seg.a.x + (seg.b.x - seg.a.x) * s.t;
+    pos[i * 3 + 1] = seg.a.y + (seg.b.y - seg.a.y) * s.t + Math.sin(s.t * Math.PI) * 0.25;
+    pos[i * 3 + 2] = seg.a.z + (seg.b.z - seg.a.z) * s.t;
+  }
+  particles.geometry.attributes.position.needsUpdate = true;
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// resize
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI Domain 2 — Agent Development</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 96px 0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{padding:64px 24px 40px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:780px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* 3D SCENE — stays hardcoded dark in both themes */
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-canvas{width:100%;height:100%;display:block;max-width:100%}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend ul{list-style:none}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#8fa0b8}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:860px;margin-bottom:26px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .grid.c4{grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:color-mix(in srgb, var(--muted) 45%, var(--line))}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b,.card li b{color:var(--text)}
+  .card ul{margin:8px 0 0 18px;font-size:.85rem;color:var(--muted)}
+  .card li{margin:4px 0}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+  pre.code-block{font-family:var(--mono);font-size:.78rem;line-height:1.55;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0;overflow-x:auto;color:var(--green)}
+  pre.code-block code{background:none;border:none;padding:0;font-size:inherit;color:inherit}
+  .card p a{color:var(--blue);text-decoration:none;word-break:break-all}
+  .card p a:hover{text-decoration:underline}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.c{background:color-mix(in srgb, var(--cyan) 13%, transparent);color:var(--cyan);border:1px solid color-mix(in srgb, var(--cyan) 40%, transparent)}
+
+  /* TABLES */
+  .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
+  .tbl th{background:var(--bg3);color:var(--green);text-align:left;padding:10px 12px;font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--line)}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td b{color:var(--text)}
+  .tbl td.good{background:color-mix(in srgb, var(--green) 8%, transparent);color:var(--green)}
+  .tbl td.bad{background:color-mix(in srgb, var(--red) 8%, transparent);color:var(--red)}
+  .tbl td.mid{background:color-mix(in srgb, var(--amber) 7%, transparent);color:var(--amber)}
+  .tbl-scroll{overflow-x:auto}
+
+  /* SVG diagrams */
+  .diagram{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+  .diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .diagram .caption{text-align:center;color:var(--muted);font-size:.78rem;margin-top:8px}
+
+  /* BAR CHART */
+  .bars{display:flex;flex-direction:column;gap:14px;margin:14px 0}
+  .bar-row{display:grid;grid-template-columns:170px 1fr 150px;gap:12px;align-items:center;font-size:.84rem}
+  .bar-row .label{text-align:right;color:var(--text);font-weight:600}
+  .bar-row .track{background:var(--bg3);border-radius:8px;height:26px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .bar-row .fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-left:10px;font-size:.7rem;font-weight:700;color:var(--on-accent);white-space:nowrap}
+  .bar-row .note{color:var(--muted);font-size:.74rem}
+  @media (max-width:640px){.bar-row{grid-template-columns:1fr;gap:4px}.bar-row .label{text-align:left}}
+
+  /* LADDER (reliability order) */
+  .ladder{display:flex;align-items:flex-end;gap:10px;margin:22px 0;padding:8px 4px;overflow-x:auto}
+  .rung{flex:1;min-width:130px;border-radius:12px 12px 6px 6px;padding:14px 12px;text-align:center;position:relative;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),var(--panel))}
+  .rung .step-num{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:var(--on-accent);font-weight:800;font-size:.7rem;border-radius:999px;padding:2px 10px}
+  .rung h5{font-size:.9rem;margin:6px 0 4px}
+  .rung p{font-size:.72rem;color:var(--muted)}
+  .rung .cost{margin-top:8px;font-size:.68rem;font-weight:700;letter-spacing:.04em}
+  .arrow-up{align-self:center;color:var(--green);font-size:1.3rem;flex:0 0 auto}
+
+  /* TRAPS */
+  .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),transparent 70%),var(--panel);border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px;margin:10px 0}
+  .trap h4{color:var(--red);font-size:.9rem;margin-bottom:5px;display:flex;gap:8px;align-items:baseline}
+  .trap h4 .n{color:var(--red);font-family:var(--mono);font-size:.78rem}
+  .trap p{font-size:.84rem;color:var(--muted)}
+  .trap p b{color:var(--text)}
+  .trap .fix{color:var(--green);font-weight:600}
+
+  /* DRILLS */
+  details.drill{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:12px 0;overflow:hidden}
+  details.drill summary{cursor:pointer;padding:18px 20px;font-size:.92rem;font-weight:600;list-style:none;display:flex;gap:14px;align-items:flex-start;transition:background .15s}
+  details.drill summary::-webkit-details-marker{display:none}
+  details.drill summary:hover{background:var(--panel2)}
+  details.drill summary .qn{flex:0 0 auto;background:var(--bg3);border:1px solid var(--green);color:var(--green);border-radius:8px;font-family:var(--mono);font-size:.78rem;font-weight:800;padding:4px 10px}
+  details.drill summary .flip{margin-left:auto;flex:0 0 auto;color:var(--green);font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;align-self:center}
+  details.drill[open] summary .flip .show{display:none}
+  details.drill:not([open]) summary .flip .hide{display:none}
+  details.drill .answer{border-top:1px dashed var(--line);padding:16px 20px 18px;background:color-mix(in srgb, var(--green) 5%, transparent);font-size:.88rem;color:var(--muted)}
+  details.drill .answer b{color:var(--green)}
+  details.drill .answer .why{display:block;margin-top:6px;font-size:.82rem}
+
+  /* QUIZ */
+  .quiz-q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+  .quiz-q .qt{font-weight:700;font-size:.94rem;margin-bottom:12px}
+  .quiz-q .qt .qn{color:var(--green);font-family:var(--mono);margin-right:8px}
+  .quiz-q .opt{display:block;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:.86rem;padding:10px 14px;margin:7px 0;cursor:pointer;font-family:inherit;transition:border-color .15s}
+  .quiz-q .opt:hover{border-color:var(--green)}
+  .quiz-q.answered .opt{cursor:default;opacity:.75}
+  .quiz-q .opt.correct{border-color:var(--green);background:color-mix(in srgb, var(--green) 12%, var(--bg2));opacity:1;color:var(--text)}
+  .quiz-q .opt.wrong{border-color:var(--red);background:color-mix(in srgb, var(--red) 12%, var(--bg2));opacity:1}
+  .quiz-q .expl{display:none;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;font-size:.82rem;color:var(--muted)}
+  .quiz-q .expl b{color:var(--green)}
+  .quiz-q.answered .expl{display:block}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--green) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--green) 40%, transparent);border-left:4px solid var(--green);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem}
+  .callout b{color:var(--green)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2)}
+  footer h3{margin-top:0}
+  footer ul{list-style:none;columns:2;column-gap:40px;font-size:.8rem}
+  footer li{margin:6px 0;break-inside:avoid}
+  footer a{color:var(--blue);text-decoration:none;word-break:break-all}
+  footer a:hover{text-decoration:underline}
+  footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+  @media(max-width:760px){footer ul{columns:1}}
+
+  .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#top">NCP-AAI · D2</a>
+  <a href="#scene-wrap">3D Assembly Line</a>
+  <a href="#mental">Mental Model</a>
+  <a href="#prompting">Prompting</a>
+  <a href="#structured">Structured Output</a>
+  <a href="#tools">Tools &amp; MCP</a>
+  <a href="#langgraph">LangGraph</a>
+  <a href="#multimodal">Multimodal</a>
+  <a href="#reliability">Reliability</a>
+  <a href="#streaming">Streaming</a>
+  <a href="#prototyping">NVIDIA Stack</a>
+  <a href="#frameworks">Decisions</a>
+  <a href="#traps">Exam Traps</a>
+  <a href="#drills">Drills</a>
+  <a href="#quiz">Quiz</a>
+  <a href="#code-companion">Code Companion</a>
+  <a href="#voices">Engineer Takes</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="domain-chip">Domain 2 <span class="pct">15% · ~9–10 questions</span></div>
+  <h1>Agent <span class="accent">Development</span></h1>
+  <p class="hook">The <b>build domain</b> — tied for the highest weight on the exam. It tests whether you can take a model endpoint and turn it into a <b>working, reliable agent</b>: shape behavior with prompts, give it tools it can actually call (and survive when those calls fail), structure multi-step work as an explicit graph with pause points for humans, handle images/documents/audio, and stream results while doing it all concurrently. Questions are heavily <b>"which mechanism solves this?"</b> — JSON mode vs constrained decoding, retry vs fallback, conditional edge vs interrupt, MCP tool vs bespoke function.</p>
+</header>
+
+<!-- ============ 3D SCENE ============ -->
+<div id="scene-wrap">
+  <canvas id="scene-canvas"></canvas>
+  <div class="scene-hint">🖱 drag to orbit · scroll to zoom · hover stations for info</div>
+  <div class="scene-legend">
+    <h4>Legend — the agent assembly line</h4>
+    <ul>
+      <li><span class="sw" style="background:#76b900"></span><span>Green gate = Prompt Assembly — each request orb gets its system prompt + few-shot ring</span></li>
+      <li><span class="sw" style="background:#3fd2c7"></span><span>Cyan validator reshapes orbs into schema-true cubes; <span style="color:#ff8fa0">red</span> = malformed, bounced back to re-decode</span></li>
+      <li><span class="sw" style="background:#4da3ff"></span><span>Blue Tool-Call station — parallel arms hit tool pods; one pod errors and retries with <span style="color:#e8a33d">amber backoff glow</span></span></li>
+      <li><span class="sw" style="background:#b07cff"></span><span>Purple Streaming Exit — finished cubes dissolve into a token stream toward the user</span></li>
+    </ul>
+  </div>
+  <div id="scene-tooltip"></div>
+</div>
+
+<main>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <div class="kicker">Section 1 · Why &amp; how to think about it</div>
+  <h2>Mental model — onboarding a call-center employee</h2>
+  <p class="lede">In production, this domain is the gap between a chatbot demo and an agent you'd let touch an order database. Every mechanism below maps to something you'd give a new call-center hire.</p>
+
+  <div class="grid c4">
+    <div class="card green"><h4><span class="icon">📘</span>System prompt</h4><p>The <b>training manual</b> — role, rules, escalation policy. Few-shot examples are <b>recorded sample calls</b>; chain-of-thought is "work the problem out loud on scratch paper before answering."</p></div>
+    <div class="card blue"><h4><span class="icon">🖥️</span>Tools &amp; MCP</h4><p>Tools are the <b>systems on their desk</b> — CRM lookup, refund terminal — each with a labeled form (JSON schema) they must fill in correctly. MCP is the <b>standardized headset jack</b>: any vendor's system plugs into any employee's desk.</p></div>
+    <div class="card purple"><h4><span class="icon">🗺️</span>Workflow graph</h4><p>The <b>call-script flowchart</b>: boxes (nodes), arrows (edges), decision diamonds (conditional edges), and a mandatory "supervisor sign-off before refunds over $500" step (HITL interrupt). Checkpoints <b>save the call state</b> so a dropped call resumes mid-sentence tomorrow.</p></div>
+    <div class="card amber"><h4><span class="icon">🛟</span>Streaming &amp; reliability</h4><p>Streaming is <b>talking to the customer while the lookup runs</b> instead of dead air. Reliability engineering is the <b>contingency binder</b>: retry twice with growing pauses, use the backup system (fallback model), never read an unverified account number aloud (output validation).</p></div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 980 440" font-family="inherit">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--green)"/></marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker>
+        <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--red)"/></marker>
+        <marker id="arrP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--purple)"/></marker>
+      </defs>
+      <!-- row 1 -->
+      <rect x="15" y="22" width="150" height="52" rx="10" style="fill:var(--panel2);stroke:var(--text)"/>
+      <text x="90" y="44" text-anchor="middle" style="fill:var(--text)" font-size="13" font-weight="700">User request</text>
+      <rect x="210" y="22" width="220" height="52" rx="10" style="fill:var(--panel);stroke:var(--green)"/>
+      <text x="320" y="44" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="700">Prompt assembly</text>
+      <text x="320" y="62" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">system + few-shot + template (registry vX)</text>
+      <rect x="475" y="22" width="190" height="52" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="570" y="44" text-anchor="middle" style="fill:var(--blue)" font-size="13" font-weight="700">LLM call</text>
+      <text x="570" y="62" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">NIM / build.nvidia.com endpoint</text>
+      <rect x="740" y="22" width="225" height="52" rx="10" style="fill:var(--panel);stroke:var(--purple)" stroke-dasharray="6 4"/>
+      <text x="852" y="44" text-anchor="middle" style="fill:var(--purple)" font-size="13" font-weight="700">HITL interrupt</text>
+      <text x="852" y="62" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">checkpoint saved · wait for human</text>
+      <line x1="165" y1="48" x2="210" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="430" y1="48" x2="475" y2="48" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="665" y1="40" x2="740" y2="40" style="stroke:var(--purple)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrP)"/>
+      <text x="702" y="32" text-anchor="middle" style="fill:var(--purple)" font-size="10">risky action</text>
+      <line x1="740" y1="58" x2="665" y2="58" style="stroke:var(--purple)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrP)"/>
+      <text x="702" y="74" text-anchor="middle" style="fill:var(--purple)" font-size="10">Command(resume)</text>
+      <!-- diamond -->
+      <polygon points="570,120 700,162 570,204 440,162" style="fill:var(--panel2);stroke:var(--amber)"/>
+      <text x="570" y="158" text-anchor="middle" style="fill:var(--amber)" font-size="13" font-weight="700">Response type?</text>
+      <text x="570" y="176" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">tool_calls | final answer</text>
+      <line x1="570" y1="74" x2="570" y2="120" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- tools branch -->
+      <rect x="120" y="136" width="240" height="52" rx="10" style="fill:var(--panel);stroke:var(--blue)"/>
+      <text x="240" y="158" text-anchor="middle" style="fill:var(--blue)" font-size="13" font-weight="700">Execute tools</text>
+      <text x="240" y="176" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">parallel where independent</text>
+      <line x1="440" y1="162" x2="360" y2="162" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrB)"/>
+      <text x="402" y="153" text-anchor="middle" style="fill:var(--blue)" font-size="10.5">tool_calls</text>
+      <path d="M 240 136 C 240 90 380 60 472 56" fill="none" style="stroke:var(--blue)" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#arrB)"/>
+      <text x="300" y="100" text-anchor="middle" style="fill:var(--blue)" font-size="10">results or errors as tool messages</text>
+      <!-- validation -->
+      <rect x="470" y="252" width="200" height="52" rx="10" style="fill:var(--panel);stroke:var(--cyan)"/>
+      <text x="570" y="274" text-anchor="middle" style="fill:var(--cyan)" font-size="13" font-weight="700">Output validation</text>
+      <text x="570" y="292" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">Pydantic / JSON schema</text>
+      <line x1="570" y1="204" x2="570" y2="252" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="600" y="232" style="fill:var(--muted)" font-size="10.5">final answer</text>
+      <!-- retry -->
+      <rect x="120" y="252" width="240" height="52" rx="10" style="fill:var(--panel);stroke:var(--red)"/>
+      <text x="240" y="274" text-anchor="middle" style="fill:var(--red)" font-size="13" font-weight="700">Retry w/ backoff → fallback</text>
+      <text x="240" y="292" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">re-prompt with the validation error</text>
+      <line x1="470" y1="278" x2="360" y2="278" style="stroke:var(--red)" stroke-width="2" marker-end="url(#arrR)"/>
+      <text x="415" y="270" text-anchor="middle" style="fill:var(--red)" font-size="10.5">invalid</text>
+      <path d="M 200 252 C 180 160 320 80 470 60" fill="none" style="stroke:var(--red)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrR)"/>
+      <!-- stream -->
+      <rect x="460" y="356" width="220" height="52" rx="10" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)" stroke-width="2"/>
+      <text x="570" y="378" text-anchor="middle" style="fill:var(--green)" font-size="13" font-weight="700">Stream to user</text>
+      <text x="570" y="396" text-anchor="middle" style="fill:var(--muted)" font-size="10.5">tokens + progress events</text>
+      <line x1="570" y1="304" x2="570" y2="356" style="stroke:var(--green)" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="595" y="334" style="fill:var(--green)" font-size="10.5">valid</text>
+    </svg>
+    <div class="caption">The loop is the point: <b>assemble context → call model → route on output (tool / answer / human) → validate → recover or stream → checkpoint everything</b> — every box is a named exam topic.</div>
+  </div>
+</section>
+
+<!-- ============ PROMPTING ============ -->
+<section id="prompting">
+  <div class="kicker">Section 2 · Core concepts</div>
+  <h2>Prompt engineering</h2>
+  <p class="lede">Seven techniques the exam names directly — and for each, the gotcha that turns it into a wrong-answer option.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Technique</th><th>What it is</th><th>When</th><th>Gotcha</th></tr>
+    <tr><td><b>System prompt</b></td><td>Persistent role + rules + constraints in the <code>system</code> message, separate from user turns</td><td class="good">Always — identity, tone, tool policy, refusal rules live here</td><td class="bad">Don't bury per-request data in it; it's for <b>stable</b> instructions. Treat it as versioned code (12-factor: "own your prompts")</td></tr>
+    <tr><td><b>Zero-shot</b></td><td>Instruction only, no examples</td><td class="good">Strong models, simple/common tasks</td><td>Cheapest; first thing to try</td></tr>
+    <tr><td><b>Few-shot (in-context learning)</b></td><td>2–8 worked input→output examples in the prompt</td><td class="good">Format/style/edge-case steering without training</td><td class="bad">Examples dominate instructions when they conflict; order and label balance bias outputs. Consistent gaps at scale → fine-tune (Domain 3)</td></tr>
+    <tr><td><b>Chain-of-thought (CoT)</b></td><td>Elicit intermediate reasoning before the answer ("think step by step", or few-shot with reasoning traces)</td><td class="good">Math, logic, multi-constraint decisions</td><td class="mid">Costs tokens + latency; reasoning models do this internally. CoT + strict output schema = put the reasoning field <b>first</b></td></tr>
+    <tr><td><b>Structured output</b></td><td>Force JSON / schema-conformant output</td><td class="good">Anything parsed by code</td><td class="mid">Three distinct mechanisms — the exam loves the difference (next section)</td></tr>
+    <tr><td><b>Prompt templates</b></td><td>Parameterized prompt with placeholders (<code>{order_id}</code>), filled at runtime</td><td class="good">Any prompt used more than once</td><td class="bad">Injection risk: user data in templates should be delimited/escaped, never concatenated into instructions</td></tr>
+    <tr><td><b>Prompt versioning</b></td><td>Prompts stored in a registry (git, Langfuse, etc.) with versions + labels (<code>production</code>, <code>staging</code>), deployed independently of code</td><td class="good">Production — enables rollback, A/B of prompt versions, audit</td><td class="bad">Untracked prompt edits are the classic "it broke and nothing was deployed" root cause; eval scores are meaningless without the prompt version pinned</td></tr>
+  </table></div>
+
+  <div class="callout"><b>Context engineering</b> is the 2025+ umbrella term: prompt engineering is just one slice of deciding <b>everything</b> that fills the window each step — instructions, few-shot, retrieved docs, tool outputs, history, memory. Treat the window as a finite <b>attention budget</b>: the smallest set of high-signal tokens that gets the next step right.</div>
+</section>
+
+<!-- ============ STRUCTURED OUTPUT ============ -->
+<section id="structured">
+  <h2>Structured output — three mechanisms, not one</h2>
+  <p class="lede">"Must always contain field X" is a different problem from "must be valid JSON". The exam tests whether you know which mechanism gives which guarantee.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Mechanism</th><th>How it works</th><th>Guarantee</th><th>API shape</th></tr>
+    <tr><td><b>Prompt-only</b> ("reply in JSON")</td><td>Model is asked nicely</td><td class="bad">None — ~90–95% at best; fails at scale</td><td>Just instructions</td></tr>
+    <tr><td><b>JSON mode</b></td><td>Decoder constrained to emit <b>syntactically valid JSON</b></td><td class="mid">Valid JSON, but <b>any</b> shape — fields can be missing/extra/renamed</td><td><code>response_format={"type": "json_object"}</code></td></tr>
+    <tr><td><b>Schema-constrained (guided) decoding</b></td><td>Inference engine masks logits each step so only schema-legal tokens can be sampled (xgrammar/Outlines-style backends)</td><td class="good">Output <b>must</b> conform to the schema — guaranteed parse</td><td>OpenAI: <code>response_format={"type": "json_schema", "json_schema": {"name", "strict", "schema"}}</code>. <b>NIM:</b> <code>extra_body={"nvext": {"guided_json": schema}}</code> — plus <code>guided_regex</code>, <code>guided_choice</code>, <code>guided_grammar</code> (xgrammar default backend)</td></tr>
+  </table></div>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🧬</span>The production pattern <span class="pill g">Pydantic at both ends</span></h4><p>On NIM, <code>guided_json</code> rides the <b><code>nvext</code></b> extension to the OpenAI schema; NVIDIA recommends it for reliability/perf (xgrammar is the fastest backend). The standard pipeline: <b>Pydantic model → <code>model_json_schema()</code> → guided decoding → <code>model_validate_json()</code></b> — schema in, validated object out, with Pydantic as the final gate (validators can check things grammars can't, like <code>end_date &gt; start_date</code>).</p></div>
+    <div class="card red"><h4><span class="icon">🧠</span>The reasoning-vs-structure trap</h4><p>Forcing an <b>answer-first schema suppresses chain-of-thought</b> — the model must commit to <code>"answer"</code> before reasoning. Fixes: put a <code>"reasoning"</code> field <b>before</b> the answer field in the schema, or generate free-form first and convert to JSON in a second cheap call. This is the heart of the "Let Me Speak Freely" vs dottxt debate (see Engineer Takes).</p></div>
+  </div>
+</section>
+
+<!-- ============ TOOLS & MCP ============ -->
+<section id="tools">
+  <h2>Tool / function calling — and MCP</h2>
+  <p class="lede">The OpenAI-compatible tool-calling spec is what NIM serves. The <b>description is prompt engineering</b> — the model picks tools by reading it.</p>
+
+  <h3>Anatomy of a tool definition <span class="tag">OpenAI-compatible, served by NIM</span></h3>
+  <pre class="code-block"><code>{"type": "function", "function": {
+  "name": "get_order", "description": "Fetch an order by ID. Use when the user references a specific order.",
+  "parameters": {"type": "object",
+    "properties": {"order_id": {"type": "string", "description": "e.g. ORD-1234"}},
+    "required": ["order_id"]}}}</code></pre>
+
+  <h3>The tool-calling loop</h3>
+  <div class="diagram">
+    <svg viewBox="0 0 960 110" font-family="inherit">
+      <defs><marker id="arrT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--blue)"/></marker></defs>
+      <g font-size="11.5">
+        <rect x="5" y="24" width="140" height="52" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="75" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">Send tools=[...]</text><text x="75" y="62" text-anchor="middle" style="fill:var(--muted)">+ messages</text>
+        <rect x="180" y="24" width="180" height="52" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="270" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">finish_reason="tool_calls"</text><text x="270" y="62" text-anchor="middle" style="fill:var(--muted)">tool_calls list: id + JSON-string args</text>
+        <rect x="395" y="24" width="135" height="52" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="462" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">YOU execute</text><text x="462" y="62" text-anchor="middle" style="fill:var(--muted)">validate args first</text>
+        <rect x="565" y="24" width="190" height="52" rx="9" style="fill:var(--panel);stroke:var(--blue)"/><text x="660" y="45" text-anchor="middle" style="fill:var(--text)" font-weight="700">role:"tool" message</text><text x="660" y="62" text-anchor="middle" style="fill:var(--muted)">one per tool_call_id</text>
+        <rect x="790" y="24" width="165" height="52" rx="9" style="fill:color-mix(in srgb, var(--green) 14%, var(--panel));stroke:var(--green)"/><text x="872" y="45" text-anchor="middle" style="fill:var(--green)" font-weight="700">Repeat until</text><text x="872" y="62" text-anchor="middle" style="fill:var(--muted)">model answers in text</text>
+      </g>
+      <line x1="145" y1="50" x2="180" y2="50" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrT)"/>
+      <line x1="360" y1="50" x2="395" y2="50" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrT)"/>
+      <line x1="530" y1="50" x2="565" y2="50" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrT)"/>
+      <line x1="755" y1="50" x2="790" y2="50" style="stroke:var(--blue)" stroke-width="2" marker-end="url(#arrT)"/>
+      <path d="M 872 76 C 872 104 270 104 270 80" fill="none" style="stroke:var(--blue)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#arrT)"/>
+    </svg>
+    <div class="caption"><code>tool_choice</code> controls the policy: <span class="pill b">"auto" (default)</span> <span class="pill b">"required"</span> <span class="pill b">"none"</span> <span class="pill b">named function (forced)</span></div>
+  </div>
+
+  <div class="grid c3">
+    <div class="card blue"><h4><span class="icon">⛓️</span>Parallel tool calls</h4><p><b>One assistant message</b> containing <b>multiple</b> entries in <code>tool_calls</code> — independent calls (e.g., weather in 3 cities) the runtime can execute concurrently. You must return a tool result for <b>every</b> <code>tool_call_id</code> before continuing. NIM enables parallel tool calling <b>per-model</b> (only a subset support it; the global <code>parallel_tool_calls</code> flag was deprecated in NIM 1.10); its docs cover basic, multiple-tool, named, and parallel variants.</p></div>
+    <div class="card red"><h4><span class="icon">💥</span>Tool errors</h4><p><b>Never crash the loop</b> — return the error <b>as the tool result</b> ("Error: order not found; valid IDs look like ORD-NNNN") so the model can self-correct, retry with fixed args, or apologize. 12-factor Factor 9: compact errors into the context window; after N consecutive failures, escalate instead of looping.</p></div>
+    <div class="card amber"><h4><span class="icon">👻</span>Hallucinated tools/args</h4><p>Validate the model's tool name + arguments against the schema <b>before</b> executing (Pydantic again); reject back as a tool-error message.</p></div>
+  </div>
+
+  <h3>MCP — Model Context Protocol <span class="tag">"USB-C for AI tools"</span></h3>
+  <p class="lede">The open standard (Anthropic, Nov 2024; donated to the Linux Foundation Dec 2025) that makes tools a <b>deployment</b> concern instead of an application one. The agent framework discovers tools at runtime (<code>tools/list</code>) instead of hard-coding them.</p>
+  <div class="grid c3">
+    <div class="card cyan"><h4><span class="icon">🔧</span>Tools <span class="pill c">model-controlled</span></h4><p>Model-invoked <b>actions</b> — the agent decides when to call them.</p></div>
+    <div class="card cyan"><h4><span class="icon">📂</span>Resources <span class="pill c">app-controlled</span></h4><p>App-controlled <b>data/context</b> the host application attaches.</p></div>
+    <div class="card cyan"><h4><span class="icon">📝</span>Prompts <span class="pill c">user-controlled</span></h4><p>User-selected <b>templates</b> exposed by the server.</p></div>
+    <div class="card blue"><h4><span class="icon">🔌</span>Transports</h4><p><b>stdio</b> (local subprocess) and <b>streamable HTTP</b> (remote).</p></div>
+    <div class="card green"><h4><span class="icon">🟩</span>NeMo Agent Toolkit</h4><p>Can act as MCP <b>client</b> (consume any server's tools in a workflow) <b>and</b> MCP <b>server</b> (publish workflow functions as tools).</p></div>
+    <div class="card red"><h4><span class="icon">⚠️</span>Costs to know</h4><p>Every connected server's tool descriptions <b>consume context</b> (tool bloat), and third-party servers are an <b>injection/supply-chain surface</b> — MCP standardizes the interface; it does not vet servers.</p></div>
+  </div>
+</section>
+
+<!-- ============ LANGGRAPH ============ -->
+<section id="langgraph">
+  <h2>Structured workflows — LangGraph, HITL, checkpoints</h2>
+  <p class="lede">A free-running ReAct loop ("call tools until done") is maximally flexible and minimally controllable. <b>LangGraph</b> (the exam's reference framework) makes control flow explicit.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Primitive</th><th>What</th><th>Detail</th></tr>
+    <tr><td><b>State</b></td><td>Shared, typed dict (TypedDict/Pydantic) flowing through the graph</td><td>Reducers (e.g., <code>add_messages</code>) define how node returns merge into state</td></tr>
+    <tr><td><b>Node</b></td><td>Function: <code>state → partial state update</code></td><td>An LLM call, a tool executor, plain Python</td></tr>
+    <tr><td><b>Edge</b></td><td>Fixed transition <code>A → B</code></td><td>Plus <code>START</code> / <code>END</code> sentinels</td></tr>
+    <tr><td><b>Conditional edge</b></td><td><code>add_conditional_edges(node, router_fn, mapping)</code> — router inspects state, returns the next node's key</td><td class="good"><b>This</b> is the agent's decision mechanism ("more tools or finish?") and the state-machine answer to "how does the graph branch?"</td></tr>
+    <tr><td><b>Checkpointer</b></td><td>Persistence plugged in at compile: <code>compile(checkpointer=...)</code> — <code>InMemorySaver</code> (dev), <code>SqliteSaver</code>/<code>PostgresSaver</code> (prod)</td><td>Saves state after every step ("super-step") per <b><code>thread_id</code></b> (passed in <code>config={"configurable": {"thread_id": ...}}</code>). Enables resume-after-crash, multi-turn memory, time travel</td></tr>
+    <tr><td><b>HITL interrupt</b></td><td><code>interrupt(payload)</code> inside a node pauses the graph <b>indefinitely</b>, surfacing the payload to the caller; resume with <code>graph.invoke(Command(resume=value), config)</code> — the value becomes <code>interrupt()</code>'s return</td><td class="bad"><b>Requires a checkpointer + thread_id</b> — state must be persisted to wait. Static variant: <code>interrupt_before=["node"]</code> at compile time</td></tr>
+  </table></div>
+
+  <h3>Canonical workflow patterns <span class="tag">Anthropic's "Building Effective Agents" taxonomy</span></h3>
+  <div class="grid c3">
+    <div class="card green"><h4><span class="icon">⛓️</span>Prompt chaining</h4><p>Fixed sequence — each step's output feeds the next.</p></div>
+    <div class="card green"><h4><span class="icon">🔀</span>Routing</h4><p>Classify → dispatch to the right handler.</p></div>
+    <div class="card green"><h4><span class="icon">🪢</span>Parallelization</h4><p>Fan-out / fan-in for independent subtasks.</p></div>
+    <div class="card blue"><h4><span class="icon">🧑‍🏭</span>Orchestrator-workers</h4><p>Dynamic subtask spawning when subtasks are unknown until runtime.</p></div>
+    <div class="card blue"><h4><span class="icon">🔁</span>Evaluator-optimizer</h4><p>Generate → critique loop until the quality bar is met.</p></div>
+    <div class="card purple"><h4><span class="icon">🤖</span>Full agents</h4><p>Model-driven loop — flexible, costly; bound iterations + HITL gates.</p></div>
+  </div>
+  <div class="callout"><b>Exam framing:</b> <b>workflows</b> = predefined code paths (predictable, debuggable); <b>agents</b> = LLM directs its own steps (flexible, costly) — use the <b>simplest pattern that works</b>.</div>
+</section>
+
+<!-- ============ MULTIMODAL ============ -->
+<section id="multimodal">
+  <h2>Multimodal agents</h2>
+  <p class="lede">Agent questions overwhelmingly mean <b>input</b> multimodality — images, documents, and speech in; text out (multimodal output exists in the catalog but is rarely the question).</p>
+
+  <div class="grid c2">
+    <div class="card blue"><h4><span class="icon">🖼️</span>Vision-language models (VLMs)</h4><p>Image + text in, text out. NIM VLM endpoints follow the OpenAI spec — a user message whose <code>content</code> is a <b>list of parts</b>: <code>{"type": "image_url", "image_url": {"url": ...}}</code> where the URL is either a web URL or a <b>base64 data URI</b> (<code>data:image/png;base64,...</code>; JPG/JPEG/PNG). NVIDIA guidance: <b>put the image part before the text part</b>. Hosted build.nvidia.com endpoints cap inline base64 payloads (~180 KB); larger files go through the assets upload API.</p>
+    <p style="margin-top:8px"><span class="pill b">meta/llama-3.2-90b-vision-instruct</span> <span class="pill b">Nemotron Nano VL (document intelligence)</span></p></div>
+    <div class="card cyan"><h4><span class="icon">📄</span>Document understanding — two routes</h4><p><b>(a) VLM reads page images directly</b> — layout-aware: tables, charts, scanned forms; Nemotron Nano VL's specialty, also the basis of OCR-free "visual retrieval". <b>(b) Extraction pipeline</b> — NeMo Retriever extraction NIMs parse PDFs into text/tables/images, then embed. VLM route preserves layout semantics; pipeline route scales cheaper for bulk text.</p></div>
+    <div class="card purple"><h4><span class="icon">🎙️</span>Audio I/O</h4><p>Speech agents wrap the text agent in <b>ASR → agent → TTS</b>. NVIDIA's pieces are <b>Riva NIMs</b> — <b>Parakeet/Canary</b> for ASR (speech-to-text), <b>Magpie/FastPitch</b> for TTS — all on build.nvidia.com. Latency budget matters: each stage streams, so the agent can start "thinking" on partial transcripts and start speaking on the first sentence.</p></div>
+    <div class="card amber"><h4><span class="icon">📦</span>VLM payload shape <span class="pill a">trap fuel</span></h4><p>Content is a <b>list of parts</b>; image as <code>image_url</code> (web URL or base64 <b>data URI</b>), image part <b>before</b> text; hosted catalog caps inline base64 (~180 KB) — bigger images via the assets API. Same client, same endpoint — multimodality is just a content-parts list instead of a string.</p></div>
+  </div>
+</section>
+
+<!-- ============ RELIABILITY ============ -->
+<section id="reliability">
+  <h2>Reliability engineering</h2>
+  <p class="lede">Each mechanism solves a <b>different failure class</b> — the exam's favorite move is offering the right mechanism for the wrong failure.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Mechanism</th><th>Solves</th><th>Key rules</th></tr>
+    <tr><td><b>Retry with exponential backoff + jitter</b></td><td>Transient failures: 429 rate limits, 5xx, network timeouts</td><td>Wait grows per attempt (1s→2s→4s…), <b>jitter</b> (randomness) prevents synchronized retry stampedes (thundering herd). <b>Never retry 400/401/403/422</b> — the request is wrong; retrying burns money to fail identically. Cap attempts (3–5)</td></tr>
+    <tr><td><b>Timeouts</b></td><td>Hung calls eating the latency budget</td><td>Set per LLM call <b>and</b> per tool call; a timeout is retryable. Without timeouts, retries never trigger</td></tr>
+    <tr><td><b>Fallback models</b></td><td>The <b>endpoint/model itself</b> is down or persistently erroring after retries are exhausted</td><td>Ordered chain: primary → cheaper/secondary → (optionally) canned response. Different failure class than retry: retry = "same thing again later", fallback = "different thing now"</td></tr>
+    <tr><td><b>Output validation</b></td><td>Model returned parseable-but-wrong, schema-violating, or policy-violating content</td><td>Pydantic / JSON-schema validation on every parsed output; on failure, re-prompt <b>with the validation error included</b> so the model can repair (the instructor-library pattern)</td></tr>
+    <tr><td><b>Guarded generation</b></td><td>Unsafe/off-topic/leaking outputs</td><td>Constrained decoding for <b>shape</b>; NeMo Guardrails for <b>content</b> — programmable input/dialog/output rails (topic control, jailbreak detection, fact-check rails) wrapping the LLM. Domain overlap: Guardrails is detailed in the safety domain; here, know it's the runtime guard layer</td></tr>
+    <tr><td><b>Circuit breaker / idempotency</b></td><td>Cascading failures; double-charged side effects</td><td>Stop calling a failing dependency for a cooldown; make tool side effects idempotent (retried <code>create_refund</code> must not refund twice — pass an idempotency key)</td></tr>
+  </table></div>
+
+  <h3>The reliability mantra <span class="tag">cheapest first</span></h3>
+  <div class="ladder">
+    <div class="rung" style="border-bottom:4px solid var(--cyan)"><span class="step-num">1</span><h5>✅ Validate</h5><p>Pydantic / JSON schema on every parsed output; re-prompt with the error</p><div class="cost" style="color:var(--cyan)">cheapest</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--green)"><span class="step-num">2</span><h5>🔁 Retry</h5><p>Exponential backoff + jitter; 429/5xx/timeout only</p><div class="cost" style="color:var(--green)">same target, later</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--amber)"><span class="step-num">3</span><h5>🔀 Fall back</h5><p>Ordered model chain when retries are exhausted</p><div class="cost" style="color:var(--amber)">different target, now</div></div>
+    <div class="arrow-up">➜</div>
+    <div class="rung" style="border-bottom:4px solid var(--red)"><span class="step-num">4</span><h5>🪂 Degrade gracefully</h5><p>Canned response, escalate to a human</p><div class="cost" style="color:var(--red)">last resort</div></div>
+  </div>
+  <div class="callout"><b>Mantra:</b> validate, then retry, then fall back, then degrade gracefully — <b>in that order, cheapest first</b> (rhymes with Domain 3's tuning ladder).</div>
+</section>
+
+<!-- ============ STREAMING ============ -->
+<section id="streaming">
+  <h2>Streaming and async execution</h2>
+  <p class="lede">Streaming does <b>not</b> reduce total generation time; it slashes <b>perceived</b> latency by optimizing <b>TTFT</b> (time to first token). Metrics: TTFT (snappiness), TPOT/inter-token latency (smoothness), total time.</p>
+
+  <div class="bars">
+    <div class="bar-row"><div class="label">No streaming</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--red),var(--amber))">blank spinner for the full 45 s run</div></div><div class="note">users abandon</div></div>
+    <div class="bar-row"><div class="label">Streaming</div><div class="track"><div class="fill" style="width:8%;background:linear-gradient(90deg,var(--green-dim),var(--green))">TTFT</div></div><div class="note">first token + progress events; total time unchanged — and that's fine</div></div>
+  </div>
+
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">⏱️</span>Token streaming</h4><p><code>stream=True</code> on chat completions returns SSE chunks; text arrives in <code>chunk.choices[0].delta.content</code>. <b>Tool-call arguments also stream incrementally as string fragments</b> — you must accumulate before parsing.</p></div>
+    <div class="card blue"><h4><span class="icon">📡</span>Event streaming</h4><p>Agents need more than tokens — "calling tool X", "node Y finished". LangGraph's <code>graph.stream(input, config, stream_mode=...)</code>: <b><code>"values"</code></b> (full state each step), <b><code>"updates"</code></b> (per-node deltas), <b><code>"messages"</code></b> (LLM tokens + metadata), <b><code>"custom"</code></b> (your own events); pass a list to multiplex several modes. This is how real agent UIs show progress instead of a 40-second spinner.</p></div>
+    <div class="card purple"><h4><span class="icon">🧵</span>Async / concurrent execution</h4><p>LLM calls are I/O-bound → <b><code>asyncio</code></b> is the right concurrency model. <code>await asyncio.gather(*[...])</code> fans out independent calls (parallel tool executions, multi-agent fan-out, batch scoring); <b>semaphores cap concurrency</b> to respect rate limits. LangGraph runs parallel branches concurrently within a super-step; <code>ainvoke</code>/<code>astream</code> are the async twins of every API.</p></div>
+    <div class="card cyan"><h4><span class="icon">🧩</span>Partial results</h4><p>Stream validated <b>fragments</b> (e.g., emit each completed item of a JSON array) rather than waiting for the full object — incremental/partial-JSON parsing is the standard trick.</p></div>
+  </div>
+</section>
+
+<!-- ============ PROTOTYPING + NVIDIA ============ -->
+<section id="prototyping">
+  <div class="kicker">Section 3 · The NVIDIA layer</div>
+  <h2>Rapid prototyping on NVIDIA's stack</h2>
+  <p class="lede">The intended flow: <b>build.nvidia.com (hosted, free dev credits) → same code → self-hosted NIM (prod)</b>. The API catalog exposes hundreds of models (LLM, VLM, embedding, reranking, ASR/TTS) behind one OpenAI-compatible endpoint (<code>https://integrate.api.nvidia.com/v1</code>) with one <code>NVIDIA_API_KEY</code>; a downloaded NIM container serves the <b>identical</b> API on <code>http://localhost:8000/v1</code>, so promotion to self-hosted is a <b>base-URL swap</b>. <b>NVIDIA AI Workbench</b> is the free desktop client that makes the local side reproducible: containerized projects (code + env + data) that run on a laptop GPU and migrate unchanged to workstation/datacenter/cloud, with example projects (e.g., hybrid RAG) that mix local compute with catalog endpoints.</p>
+
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>NVIDIA piece</th><th>Role in this domain</th><th>Key facts</th></tr>
+    <tr><td><b>build.nvidia.com / API catalog</b></td><td>Hosted endpoints for prototyping</td><td>Browser playground + OpenAI-compatible API; free credits for developer-program members (DGX Cloud-powered); LLM + VLM + retriever + speech models in one catalog</td></tr>
+    <tr><td><b>NIM (LLM)</b></td><td>The serving layer all snippets target</td><td>OpenAI-compatible REST (chat/completions); bundles TensorRT-LLM/vLLM/SGLang engines; <b>function calling</b> (basic/multiple/named/parallel via <code>tools</code>/<code>tool_choice</code>; parallel calling is per-model — the <code>parallel_tool_calls</code> flag was deprecated in NIM 1.10); <b>structured generation</b> via <code>nvext</code>: <code>guided_json</code> (recommended; xgrammar backend), <code>guided_regex</code>, <code>guided_choice</code>, <code>guided_grammar</code></td></tr>
+    <tr><td><b>NIM (VLM)</b></td><td>Multimodal agents</td><td>OpenAI content-parts spec; image as URL or base64 data URI; image-before-text; Llama 3.2 Vision, Nemotron Nano VL on the catalog</td></tr>
+    <tr><td><b>Riva NIMs</b></td><td>Audio I/O</td><td>Parakeet/Canary ASR, Magpie TTS — the speech bookends of a voice agent</td></tr>
+    <tr><td><b>NVIDIA AI Workbench</b></td><td>Rapid prototyping environment</td><td>Free client app; containerized, GPU-aware, reproducible projects; develop locally → migrate to any infra; hybrid pattern (local embedding + cloud NIM inference)</td></tr>
+    <tr><td><b>NeMo Agent Toolkit</b></td><td>Framework-agnostic agent layer</td><td>Workflows in YAML over LangGraph/CrewAI/etc.; <b>MCP client and server</b> support (consume external MCP tools; publish workflow functions as MCP tools); plus the profiling/eval from Domain 3</td></tr>
+    <tr><td><b>NeMo Guardrails</b></td><td>Guarded generation</td><td>Programmable rails (input/dialog/output/execution) around any LLM; pairs with, not replaces, schema-constrained decoding</td></tr>
+    <tr><td><b>LangChain NVIDIA integration</b></td><td>Glue</td><td><code>langchain-nvidia-ai-endpoints</code>: <code>ChatNVIDIA</code> (supports <code>bind_tools</code>, <code>with_structured_output</code>), <code>NVIDIAEmbeddings</code>, <code>NVIDIARerank</code> — drop NIM into LangGraph graphs</td></tr>
+  </table></div>
+
+  <div class="callout"><b>When NVIDIA vs generic:</b> the <b>mechanisms</b> (tool calling, guided decoding, streaming) are OpenAI-spec generic — NIM's value is serving them identically hosted and self-hosted (no code change, data sovereignty when local). NVIDIA-specific syntax worth memorizing: <code>nvext.guided_json</code>, <code>integrate.api.nvidia.com/v1</code>, and the Workbench/catalog prototyping story.</div>
+</section>
+
+<!-- ============ DECISION FRAMEWORKS ============ -->
+<section id="frameworks">
+  <div class="kicker">Section 4 · Symptom → mechanism</div>
+  <h2>Decision frameworks</h2>
+
+  <h3>Output-shaping selection <span class="tag">the big one</span></h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Need</th><th>Choose</th></tr>
+    <tr><td>Output read only by humans</td><td class="good">Plain prompting; skip the schema tax</td></tr>
+    <tr><td>"Just give me valid JSON, shape is flexible"</td><td class="good">JSON mode (<code>json_object</code>)</td></tr>
+    <tr><td>Code parses the output; shape must be exact</td><td class="good">Schema-constrained decoding (<code>nvext.guided_json</code> on NIM) + Pydantic validation</td></tr>
+    <tr><td>Classification into a fixed label set</td><td class="good"><code>guided_choice</code> (or an enum in the schema)</td></tr>
+    <tr><td>Output must match a pattern (date, ID format)</td><td class="good"><code>guided_regex</code></td></tr>
+    <tr><td>Complex reasoning <b>and</b> structured answer</td><td class="good">Reasoning field first in schema, or two-pass (reason free-form → format)</td></tr>
+    <tr><td>Cross-field/business-rule validity</td><td class="good">Pydantic validators after parse — grammars can't check semantics</td></tr>
+  </table></div>
+
+  <h3>Control-flow selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Situation</th><th>Pattern</th></tr>
+    <tr><td>Fixed known steps, each step's output feeds the next</td><td class="good">Prompt chaining (sequential nodes, no branching)</td></tr>
+    <tr><td>Input falls into distinct categories handled differently</td><td class="good">Routing (one conditional edge after a classifier node)</td></tr>
+    <tr><td>Independent subtasks, latency matters</td><td class="good">Parallelization (fan-out branches, <code>asyncio.gather</code> / parallel graph branches)</td></tr>
+    <tr><td>Subtasks unknown until runtime</td><td class="good">Orchestrator-workers</td></tr>
+    <tr><td>Quality bar needs iteration</td><td class="good">Evaluator-optimizer loop (conditional edge: "good enough?" → END or revise)</td></tr>
+    <tr><td>Open-ended task, steps can't be predefined</td><td class="good">Tool-loop agent — but bound iterations + HITL gates</td></tr>
+    <tr><td>Irreversible/costly action in the flow</td><td class="good"><code>interrupt()</code> before the action; checkpointer mandatory</td></tr>
+    <tr><td>Conversation must survive restarts / span sessions</td><td class="good">Checkpointer with durable backend (Postgres) + stable <code>thread_id</code></td></tr>
+  </table></div>
+
+  <h3>Reliability selection</h3>
+  <div class="tbl-scroll"><table class="tbl">
+    <tr><th>Failure</th><th>Mechanism</th></tr>
+    <tr><td>429 / 503 / timeout</td><td class="good">Retry, exponential backoff + jitter</td></tr>
+    <tr><td>400 / 422 schema error from your request</td><td class="bad">Fix the request — <b>never retry</b></td></tr>
+    <tr><td>Model returns invalid/unparseable output</td><td class="good">Validate → re-prompt with the error message</td></tr>
+    <tr><td>Endpoint persistently down after retries</td><td class="good">Fallback model chain</td></tr>
+    <tr><td>Tool raises mid-loop</td><td class="good">Feed error back as tool message; escalate after N failures</td></tr>
+    <tr><td>Dependency flapping, retries amplifying load</td><td class="good">Circuit breaker</td></tr>
+    <tr><td>Retried tool would duplicate a side effect</td><td class="good">Idempotency keys</td></tr>
+  </table></div>
+
+  <div class="callout"><b>Hosted vs self-hosted NIM:</b> prototype + spiky/low volume + no data constraints → <b>build.nvidia.com</b>; production + data sovereignty/compliance + steady volume + latency control → <b>self-hosted NIM container</b> (same code, new base URL).</div>
+</section>
+
+<!-- ============ EXAM TRAPS ============ -->
+<section id="traps">
+  <div class="kicker">Section 5 · Don't fall for these</div>
+  <h2>⚠ Exam traps &amp; gotchas</h2>
+  <div class="grid c2">
+    <div class="trap"><h4><span class="n">#1</span>JSON mode ≠ JSON schema enforcement</h4><p><code>json_object</code> guarantees only <b>syntactically valid JSON of any shape</b>; field guarantees require schema-constrained decoding (<code>guided_json</code> / <code>json_schema</code>). <span class="fix">"Must always contain field X" → constrained decoding, not JSON mode</span>.</p></div>
+    <div class="trap"><h4><span class="n">#2</span><code>guided_json</code> lives in <code>nvext</code></h4><p>On NIM it's <span class="fix"><code>extra_body={"nvext": {"guided_json": schema}}</code></span>, an NVIDIA extension to the OpenAI schema; siblings are <code>guided_regex</code>, <code>guided_choice</code>, <code>guided_grammar</code>.</p></div>
+    <div class="trap"><h4><span class="n">#3</span>Schema-first kills CoT</h4><p>An answer-first schema makes the model commit before reasoning; <span class="fix">fix with a reasoning field ordered first, or a two-pass generate-then-format</span>.</p></div>
+    <div class="trap"><h4><span class="n">#4</span>Parallel tool calls = one assistant message, many <code>tool_calls</code></h4><p>And you must append a separate <code>role:"tool"</code> message with the matching <code>tool_call_id</code> for <b>each</b> before the next model call. <span class="fix">Missing one → API error</span>.</p></div>
+    <div class="trap"><h4><span class="n">#5</span>Tool errors go back to the model, not up the stack</h4><p>Returning the error text as the tool result lets the model self-correct; raising kills the agent. <span class="fix">And compact repeated errors — don't let ten stack traces flood the window</span>.</p></div>
+    <div class="trap"><h4><span class="n">#6</span>Retry vs fallback are different failure classes</h4><p>Retry = transient, same target, with backoff; fallback = persistent, different target. <span class="fix">"After 3 retries the endpoint still 503s" → fallback model, not retry #4</span>.</p></div>
+    <div class="trap"><h4><span class="n">#7</span>Never retry 4xx client errors</h4><p>400/401/403/422 — the request itself is wrong; retrying is pure waste. <span class="fix">Retry 429 and 5xx/timeouts only</span>. And backoff without <b>jitter</b> synchronizes clients into retry stampedes.</p></div>
+    <div class="trap"><h4><span class="n">#8</span><code>interrupt()</code> requires a checkpointer + <code>thread_id</code></h4><p>The graph pauses <b>indefinitely</b> by persisting state; no persistence, no pause. <span class="fix">Resume is <code>graph.invoke(Command(resume=value), config)</code> — same thread_id, and the value becomes the <code>interrupt()</code> return inside the node</span>.</p></div>
+    <div class="trap"><h4><span class="n">#9</span>Conditional edge vs interrupt</h4><p>Conditional edge = <b>the graph</b> decides the route from state; interrupt = <b>a human</b> decides. <span class="fix">"Route based on classification" → conditional edge; "approval before executing" → interrupt</span>.</p></div>
+    <div class="trap"><h4><span class="n">#10</span>Checkpointer ≠ chat memory feature</h4><p>It persists <b>full graph state per thread</b> (enabling resume, time travel, HITL); <span class="fix">conversation memory is just one consequence</span>.</p></div>
+    <div class="trap"><h4><span class="n">#11</span>Streaming improves perceived latency only</h4><p>Total generation time is unchanged; <b>TTFT</b> is the metric it optimizes. <span class="fix">Also: streamed tool-call arguments arrive as string fragments — accumulate before <code>json.loads</code></span>.</p></div>
+    <div class="trap"><h4><span class="n">#12</span><code>temperature=0</code> ≠ fully deterministic</h4><p>Greedy decoding still varies across batching, hardware, and engine versions; <span class="fix">design validation, don't assume reproducibility</span>.</p></div>
+    <div class="trap"><h4><span class="n">#13</span>MCP primitives</h4><p><b>Tools</b> are model-controlled actions, <b>resources</b> are app-controlled context, <b>prompts</b> are user-controlled templates. Transports: stdio (local) and streamable HTTP (remote). <span class="fix">It standardizes the tool interface; it does not vet servers (security/tool-bloat costs are yours)</span>.</p></div>
+    <div class="trap"><h4><span class="n">#14</span>VLM payload shape</h4><p>Content is a <b>list of parts</b>; image as <code>image_url</code> (web URL or base64 <b>data URI</b>), image part <b>before</b> text; <span class="fix">hosted catalog caps inline base64 (~180 KB) — bigger images via the assets API</span>.</p></div>
+    <div class="trap"><h4><span class="n">#15</span>Few-shot vs fine-tune boundary</h4><p>A handful of examples fixing format/style → few-shot (free, instant); consistent skill gap surviving good examples at scale → Domain 3's fine-tuning. <span class="fix">Exam answers prefer the cheapest sufficient fix</span>.</p></div>
+  </div>
+</section>
+
+<!-- ============ DRILLS ============ -->
+<section id="drills">
+  <div class="kicker">Section 6 · Test yourself</div>
+  <h2>Scenario drills — click to reveal</h2>
+
+  <details class="drill"><summary><span class="qn">Q1</span><span>An extraction service must emit <code>{"name", "date", "amount"}</code> for 50k invoices/day. Prompt says "reply in JSON"; 3% of outputs have missing fields or prose preambles. Cheapest robust fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Schema-constrained decoding</b> — Pydantic model → <code>model_json_schema()</code> → <code>nvext.guided_json</code> on the NIM call, then <code>model_validate_json</code>.<span class="why">JSON mode alone still permits missing fields; fine-tuning is overkill for a decoding-layer problem.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q2</span><span>Your agent calls <code>search_flights</code> and the API throws a 500. The current code lets the exception propagate and the session dies. Better design?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Catch and return the error as the tool-result message</b> (with guidance, e.g. "transient server error — retry or try different dates"), wrap the call in bounded retry-with-backoff for 5xx, and escalate/fallback after N failures.<span class="why">The model can often route around a failed tool.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q3</span><span>A procurement agent must get manager approval before issuing POs over $10k, and the approval may take days. Which mechanism?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>LangGraph <code>interrupt()</code> in the PO node + durable checkpointer (Postgres) + per-request <code>thread_id</code></b> — state persists while paused indefinitely; manager's decision resumes via <code>Command(resume=...)</code>.<span class="why">A conditional edge can't wait; an in-memory saver dies with the process.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q4</span><span>Users abandon your research agent during its 45-second runs. Total compute can't shrink. What do you change?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Stream</b> — tokens (<code>stream=True</code> / <code>stream_mode="messages"</code>) plus progress events (<code>stream_mode="updates"</code>: "searching…", "reading source 3/5").<span class="why">TTFT and visible progress fix abandonment; total latency is unchanged and that's fine.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q5</span><span>Primary endpoint rate-limits hard during traffic spikes (429s). Current code retries instantly in a tight loop, making it worse. Fix?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Exponential backoff with jitter</b> on 429 (honor <code>Retry-After</code> if present), cap attempts, then <b>fall back</b> to a secondary model; add a client-side concurrency semaphore so you stop provoking the limiter.<span class="why">The tight loop is the textbook stampede anti-pattern.</span></div>
+  </details>
+  <details class="drill"><summary><span class="qn">Q6</span><span>Team hard-codes prompts in Python; a prompt tweak shipped in a hotfix regressed production and nobody can say what changed. What practice was missing?</span><span class="flip"><span class="show">Show answer ▾</span><span class="hide">Hide ▴</span></span></summary>
+    <div class="answer"><b>Prompt versioning/management</b> — prompts in a registry (git or Langfuse-style) with versions and <code>production</code>/<code>staging</code> labels, fetched at runtime, rolled back independently of code, and pinned to eval runs so every change is diffable and gated (Domain 3 CI gates).<span class="why">Untracked prompt edits are the classic "it broke and nothing was deployed" root cause.</span></div>
+  </details>
+
+  <h3>Builder's corner — habits that make this real</h3>
+  <div class="grid c2">
+    <div class="card green"><h4><span class="icon">🧬</span>Pydantic at every boundary</h4><p>Define one model per structured surface — tool args (validate <b>before</b> executing the model's call), tool results, final outputs — and feed <code>ValidationError</code> text back to the model for self-repair. The schema is simultaneously your prompt (via guided decoding), your parser, and your test oracle.</p></div>
+    <div class="card green"><h4><span class="icon">🗺️</span>Make the graph boring and the prompts smart</h4><p>Explicit nodes/conditional edges for everything you <b>know</b> about the process; reserve the free tool-loop for the genuinely open-ended middle. Every conditional edge is a place you can log, test, and gate — a ReAct loop is none of those.</p></div>
+    <div class="card green"><h4><span class="icon">🛡️</span>Wire reliability in on day one, in order</h4><p>Timeout on every call → tenacity retry (429/5xx only, jitter) → fallback chain → validation-with-repair. Retrofitting this after the demo is how agents stay demos.</p></div>
+    <div class="card green"><h4><span class="icon">📡</span>Stream events before you stream tokens</h4><p>Users forgive latency they can see; <code>stream_mode="updates"</code> costs nothing and turns a spinner into a narrative. Then add token streaming for the final answer.</p></div>
+    <div class="card green"><h4><span class="icon">🚀</span>Prototype on build.nvidia.com, ship the same file</h4><p>Keep <code>base_url</code> and model name in config; the hosted-to-local NIM swap should be a one-line env change. Workbench keeps the local env reproducible; the catalog keeps the iteration loop free.</p></div>
+    <div class="card green"><h4><span class="icon">📦</span>Treat MCP servers like dependencies, not magic</h4><p>Pin/audit them, count their token cost in your context budget, and never combine private-data access + untrusted content + external comms (the lethal trifecta) in one agent without isolation.</p></div>
+  </div>
+</section>
+
+<!-- ============ QUIZ ============ -->
+<section id="quiz">
+  <div class="kicker">Section 7 · Quick quiz</div>
+  <h2>Short quiz — pick an answer</h2>
+  <p class="lede">Eight rapid-fire checks on the highest-yield distinctions. Click an option to see the verdict.</p>
+
+  <div class="quiz-q"><div class="qt"><span class="qn">1.</span>What does JSON mode (<code>response_format={"type": "json_object"}</code>) actually guarantee?</div>
+    <button class="opt">The output conforms to your JSON schema</button>
+    <button class="opt" data-ok>Syntactically valid JSON — of any shape</button>
+    <button class="opt">Schema-valid JSON with all required fields</button>
+    <div class="expl"><b>JSON mode ≠ schema enforcement.</b> Fields can be missing/extra/renamed; field guarantees require schema-constrained decoding (<code>guided_json</code> / <code>json_schema</code>).</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">2.</span>On a NIM endpoint, where does <code>guided_json</code> go?</div>
+    <button class="opt"><code>response_format={"type": "guided_json"}</code></button>
+    <button class="opt"><code>tools=[{"guided_json": schema}]</code></button>
+    <button class="opt" data-ok><code>extra_body={"nvext": {"guided_json": schema}}</code></button>
+    <div class="expl"><b><code>nvext</code></b> is NVIDIA's extension to the OpenAI schema; siblings are <code>guided_regex</code>, <code>guided_choice</code>, <code>guided_grammar</code>.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">3.</span>After 3 backoff retries the endpoint still returns 503. Next move?</div>
+    <button class="opt">Retry #4 with a longer wait</button>
+    <button class="opt" data-ok>Fall back to a secondary model</button>
+    <button class="opt">Return the 503 to the user</button>
+    <div class="expl"><b>Retry = transient, same target; fallback = persistent, different target.</b> Retries exhausted on a persistent fault → change targets.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">4.</span>What does LangGraph's <code>interrupt()</code> require to pause indefinitely?</div>
+    <button class="opt">A conditional edge routing to END</button>
+    <button class="opt" data-ok>A checkpointer + <code>thread_id</code></button>
+    <button class="opt">An async event loop</button>
+    <div class="expl"><b>No persistence, no pause.</b> State is saved per <code>thread_id</code>; resume with <code>graph.invoke(Command(resume=value), config)</code> on the same thread.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">5.</span>Token streaming primarily improves…</div>
+    <button class="opt">Total generation time</button>
+    <button class="opt">Tokens-per-second throughput</button>
+    <button class="opt" data-ok>Perceived latency (TTFT)</button>
+    <div class="expl"><b>Total generation time is unchanged.</b> Streaming optimizes time to first token; TPOT covers smoothness; total time is its own metric.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">6.</span>Which MCP primitive is model-controlled?</div>
+    <button class="opt" data-ok>Tools</button>
+    <button class="opt">Resources</button>
+    <button class="opt">Prompts</button>
+    <div class="expl"><b>Tools</b> = model-invoked actions; <b>resources</b> = app-controlled data/context; <b>prompts</b> = user-selected templates.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">7.</span>In a NIM VLM request, NVIDIA's guidance for the content-parts list is…</div>
+    <button class="opt">Text part before the image part</button>
+    <button class="opt" data-ok>Image part before the text part</button>
+    <button class="opt">Order doesn't matter</button>
+    <div class="expl"><b>Image before text</b> — and the image is a web URL or base64 data URI; hosted catalog caps inline base64 (~180 KB), larger files via the assets API.</div>
+  </div>
+  <div class="quiz-q"><div class="qt"><span class="qn">8.</span>Which status codes should you never retry?</div>
+    <button class="opt">429 and 503</button>
+    <button class="opt" data-ok>400 / 401 / 403 / 422</button>
+    <button class="opt">Network timeouts</button>
+    <div class="expl"><b>4xx client errors mean the request itself is wrong</b> — retrying burns money to fail identically. Retry 429 and 5xx/timeouts only, with backoff + jitter.</div>
+  </div>
+</section>
+
+<!-- ============ CODE COMPANION ============ -->
+<section id="code-companion">
+  <div class="kicker">Section 8 · Hands-on</div>
+  <h2>Code Companion — the domain in runnable snippets</h2>
+  <p class="lede">Every core idea reduced to the smallest piece of code that exercises it: guided decoding, the tool loop with parallel calls and error feedback, HITL interrupts on a checkpointer, two kinds of streaming, retry-then-fallback, VLM payloads, and prompt registries.</p>
+
+  <div class="card green">
+    <h4><span class="icon">🧬</span>1 · Structured output <span class="pill g">Pydantic schema → nvext.guided_json → validated object</span></h4>
+    <pre class="code-block"><code>import os
+from openai import OpenAI
+from pydantic import BaseModel, Field
+
+class Invoice(BaseModel):
+    reasoning: str = Field(description="Brief extraction rationale")  # FIRST: preserves CoT
+    vendor: str
+    total_usd: float
+    line_item_count: int
+
+client = OpenAI(base_url="https://integrate.api.nvidia.com/v1",
+                api_key=os.environ["NVIDIA_API_KEY"])
+resp = client.chat.completions.create(
+    model="meta/llama-3.3-70b-instruct",
+    messages=[{"role": "user", "content": f"Extract the invoice fields:\n{invoice_text}"}],
+    extra_body={"nvext": {"guided_json": Invoice.model_json_schema()}},  # NVIDIA extension
+)
+invoice = Invoice.model_validate_json(resp.choices[0].message.content)  # guaranteed to parse</code></pre>
+    <p><b>What to notice:</b> the schema does triple duty — it constrains decoding (xgrammar masks illegal tokens, so the output <b>cannot</b> violate it), documents intent, and validates the parse. The <code>reasoning</code> field is deliberately first in the model definition (trap #3): the model reasons before committing to numbers.</p>
+  </div>
+
+  <div class="card blue">
+    <h4><span class="icon">🔧</span>2 · Tool definitions + parallel tool calls <span class="pill b">errors returned as tool messages</span></h4>
+    <pre class="code-block"><code>import json
+
+TOOLS = [{"type": "function", "function": {
+    "name": "get_weather", "description": "Current weather for a city.",
+    "parameters": {"type": "object", "properties": {"city": {"type": "string"}},
+                   "required": ["city"]}}}]
+
+def run_agent(messages):
+    while True:
+        r = client.chat.completions.create(model="meta/llama-3.3-70b-instruct",
+                                           messages=messages, tools=TOOLS, tool_choice="auto")
+        msg = r.choices[0].message
+        if not msg.tool_calls:
+            return msg.content                      # final text answer
+        messages.append(msg)                        # ONE assistant msg, possibly MANY tool_calls
+        for tc in msg.tool_calls:                   # parallel calls: execute each, answer each
+            try:
+                result = get_weather(**json.loads(tc.function.arguments))
+            except Exception as e:                  # error goes BACK TO THE MODEL, not up the stack
+                result = f"Error: {e}. Check the city name and try again."
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": str(result)})</code></pre>
+    <p><b>What to notice:</b> "What's the weather in Paris and Tokyo?" yields one assistant message with two <code>tool_calls</code>, and the loop appends one <code>role:"tool"</code> reply <b>per</b> <code>tool_call_id</code> (trap #4) — skip one and the next API call 400s. The except branch is trap #5 made concrete: the error string becomes context the model can act on.</p>
+  </div>
+
+  <div class="card purple">
+    <h4><span class="icon">🗺️</span>3 · LangGraph <span class="pill p">conditional edge + checkpointer + HITL interrupt</span></h4>
+    <pre class="code-block"><code>from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver   # prod: PostgresSaver
+from langgraph.types import interrupt, Command
+
+class State(TypedDict):
+    amount: float; status: str
+
+def review(state: State) -&gt; State:
+    decision = interrupt({"question": f"Approve PO for ${state['amount']}?"})  # pauses HERE
+    return {"status": "approved" if decision == "yes" else "rejected"}
+
+def route(state: State) -&gt; str:                      # conditional-edge router reads state
+    return "review" if state["amount"] &gt; 10_000 else "auto_ok"
+
+builder = StateGraph(State)
+builder.add_node("review", review)
+builder.add_node("auto_ok", lambda s: {"status": "approved"})
+builder.add_conditional_edges(START, route, {"review": "review", "auto_ok": "auto_ok"})
+builder.add_edge("review", END); builder.add_edge("auto_ok", END)
+graph = builder.compile(checkpointer=InMemorySaver())  # interrupt REQUIRES a checkpointer
+
+cfg = {"configurable": {"thread_id": "po-42"}}
+graph.invoke({"amount": 25_000, "status": "pending"}, cfg)        # pauses at interrupt
+graph.invoke(Command(resume="yes"), cfg)                          # days later: same thread_id</code></pre>
+    <p><b>What to notice:</b> the router function <b>is</b> the state machine's branching (small POs never see a human), and the second <code>invoke</code> with <code>Command(resume=...)</code> re-enters the paused node — the resume value becomes <code>interrupt()</code>'s return. Remove the checkpointer and this throws: persistence is what makes indefinite pausing possible (trap #8).</p>
+  </div>
+
+  <div class="card cyan">
+    <h4><span class="icon">📡</span>4 · Streaming tokens (raw client) and streaming events (LangGraph)</h4>
+    <pre class="code-block"><code># (a) Token streaming straight off the NIM endpoint — optimizes TTFT
+stream = client.chat.completions.create(model="meta/llama-3.3-70b-instruct",
+                                        messages=msgs, stream=True)
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+# (b) Event + token streaming from a compiled LangGraph agent
+for mode, payload in graph.stream({"messages": msgs}, cfg,
+                                  stream_mode=["updates", "messages"]):
+    if mode == "updates":              # per-node progress: {"review": {...}} → "running review…"
+        print(f"[{list(payload)[0]} done]")
+    else:                              # (token_chunk, metadata) — the LLM tokens themselves
+        token, meta = payload
+        print(token.content, end="", flush=True)</code></pre>
+    <p><b>What to notice:</b> (a) is SSE deltas — accumulate <code>delta</code> fragments (tool-call args stream the same way, as string pieces; trap #11). (b) multiplexes two stream modes in one pass: <code>updates</code> powers the "agent is doing X" UI, <code>messages</code> powers the typing effect — the token-vs-event streaming distinction in eight lines.</p>
+  </div>
+
+  <div class="card amber">
+    <h4><span class="icon">🔁</span>5 · Retry with backoff + jitter, then fallback model chain</h4>
+    <pre class="code-block"><code>from openai import APITimeoutError, InternalServerError, RateLimitError
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
+
+@retry(retry=retry_if_exception_type((RateLimitError, APITimeoutError, InternalServerError)),
+       wait=wait_exponential_jitter(initial=1, max=20),   # 1s, ~2s, ~4s… + jitter
+       stop=stop_after_attempt(4))
+def call(model: str, messages: list):
+    return client.chat.completions.create(model=model, messages=messages, timeout=30)
+
+def call_with_fallback(messages, chain=("meta/llama-3.3-70b-instruct",
+                                        "meta/llama-3.1-8b-instruct")):
+    for model in chain:
+        try:
+            return call(model, messages)        # retries exhaust → try next model
+        except Exception as e:
+            last = e
+    raise last</code></pre>
+    <p><b>What to notice:</b> the <code>retry_if_exception_type</code> whitelist encodes trap #7 — 429/5xx/timeout retry, while a 400 <code>BadRequestError</code> fails immediately (it would fail identically forever). Retry and fallback are layered, not merged (trap #6): backoff handles <b>transient</b> faults on the same model; the chain handles <b>persistent</b> ones by changing models. <code>timeout=30</code> is what makes hangs retryable at all.</p>
+  </div>
+
+  <div class="card blue">
+    <h4><span class="icon">🖼️</span>6 · Vision-language call with a local image on build.nvidia.com</h4>
+    <pre class="code-block"><code>import base64
+
+with open("invoice_scan.png", "rb") as f:
+    b64 = base64.b64encode(f.read()).decode()      # hosted catalog: keep inline b64 small (~&lt;180KB)
+
+resp = client.chat.completions.create(
+    model="meta/llama-3.2-90b-vision-instruct",
+    messages=[{"role": "user", "content": [
+        {"type": "image_url",                      # image part FIRST (NVIDIA guidance)
+         "image_url": {"url": f"data:image/png;base64,{b64}"}},
+        {"type": "text", "text": "What is the total amount due and the due date?"},
+    ]}],
+    max_tokens=256,
+)
+print(resp.choices[0].message.content)</code></pre>
+    <p><b>What to notice:</b> same client, same endpoint — multimodality is just a content-parts list instead of a string (trap #14): <code>image_url</code> accepts a web URL or a base64 <b>data URI</b>, and the image part precedes the text part. Swap the model name for a Nemotron Nano VL when the task is dense document layout.</p>
+  </div>
+
+  <div class="card green">
+    <h4><span class="icon">🗂️</span>7 · Prompt template versioning <span class="pill g">Langfuse + the 12-factor minimal registry</span></h4>
+    <pre class="code-block"><code># (a) Langfuse prompt management: versions + deploy labels, fetched at runtime
+from langfuse import Langfuse
+langfuse = Langfuse()  # reads LANGFUSE_* env keys
+
+prompt = langfuse.get_prompt("support-agent")            # version labeled "production"
+# prompt = langfuse.get_prompt("support-agent", label="staging")  # or pin: version=7
+system_text = prompt.compile(tone="concise", product="NIM")       # fills {{tone}}, {{product}}
+print(prompt.version, prompt.labels)                     # auditable: which version answered?
+
+# (b) Own-your-prompts minimal registry: versioned files in git, loaded explicitly
+from pathlib import Path
+PROMPTS = Path("prompts")                                # prompts/support-agent/v3.txt in git
+def get_prompt(name: str, version: str = "v3") -&gt; str:
+    return (PROMPTS / name / f"{version}.txt").read_text(encoding="utf-8")</code></pre>
+    <p><b>What to notice:</b> both implement the same contract — prompts live <b>outside</b> application code, addressed by name + version/label, so a prompt rollback never requires a code deploy and every trace/eval can record exactly which version ran (drill Q6). Langfuse adds UI editing, <code>production</code>/<code>staging</code> label promotion, and caching; the git registry is 12-factor Factor 2 ("own your prompts") with zero dependencies.</p>
+  </div>
+</section>
+
+<!-- ============ ENGINEER TAKES ============ -->
+<section id="voices">
+  <div class="kicker">Section 9 · Field notes</div>
+  <h2>What top engineers are saying (2025–26)</h2>
+  <p class="lede">The practitioners who shaped how agents are actually built — context budgets, owning your prompts, the structured-output fight, and why MCP won the protocol war but still costs you tokens and trust.</p>
+
+  <div class="grid c2">
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Tobi Lütke &amp; Andrej Karpathy <span class="pill g">the "context engineering" rename (June 2025)</span></h4>
+      <p>Lütke: context engineering is "the art of providing all the context for the task to be plausibly solvable by the LLM"; Karpathy endorsed days later: "the delicate art and science of filling the context window with just the right information for the next step." The framing demoted prompt engineering to a <b>subset</b> — in production agents the instruction text is a sliver next to history, tool outputs, and retrieved docs.</p>
+      <p><b>Why it matters:</b> every mechanism on this page (few-shot, tool schemas, MCP descriptions) is a context-budget line item.</p>
+      <p><a href="https://x.com/tobi/status/1935533422589399127" target="_blank" rel="noopener">x.com/tobi/status/1935533422589399127</a> · <a href="https://x.com/karpathy/status/1937902205765607626" target="_blank" rel="noopener">x.com/karpathy/status/1937902205765607626</a></p>
+    </div>
+    <div class="card blue">
+      <h4><span class="icon">🗣️</span>Anthropic Engineering <span class="pill b">"Effective Context Engineering for AI Agents" (Sept 2025)</span></h4>
+      <p>Codifies the <b>attention budget</b>: every token depletes it, so good context engineering finds "the smallest possible set of high-signal tokens that maximize the likelihood of the desired outcome." Concrete guidance: system prompts at the "right altitude" (not micro-scripted, not vague), few always-loaded tools with dynamic discovery beyond that, compaction and just-in-time retrieval over kitchen-sink stuffing.</p>
+      <p><b>Why it matters:</b> the strongest official statement that most production agent failures are <b>context failures, not model failures</b>.</p>
+      <p><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener">anthropic.com/engineering/effective-context-engineering-for-ai-agents</a></p>
+    </div>
+    <div class="card purple">
+      <h4><span class="icon">🗣️</span>Dex Horthy (HumanLayer) <span class="pill p">"12-Factor Agents"</span></h4>
+      <p>The manifesto for this whole domain: Factor 2 <b>own your prompts</b> (prompts are first-class, version-controlled code — never hidden inside a framework), Factor 3 <b>own your context window</b>, Factor 4 <b>tools are just structured outputs</b> (a tool call is JSON the model emits and <b>your</b> code executes — demystifying function calling), Factor 8 <b>own your control flow</b> and Factor 9 <b>compact errors into the context window</b> (the error-as-tool-result pattern in snippet 2).</p>
+      <p><b>Why it matters:</b> widely cited as the reason production teams write explicit graphs instead of trusting framework magic.</p>
+      <p><a href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener">github.com/humanlayer/12-factor-agents</a></p>
+    </div>
+    <div class="card amber">
+      <h4><span class="icon">🗣️</span>The structured-output reliability fight <span class="pill a">"Let Me Speak Freely?" vs dottxt's "Say What You Mean" (2024–25)</span></h4>
+      <p>The paper claimed format restrictions degrade reasoning; dottxt's rebuttal showed the comparison used different prompts per condition and conflated JSON mode with constrained decoding — with matched prompts, structured generation equaled or beat free-form. The durable takeaway (echoed by Dylan Castillo's independent runs): constrained decoding is safe <b>if you design the schema to let the model think first</b> — key order matters, which is exactly snippet 1's reasoning-first field.</p>
+      <p><a href="https://arxiv.org/abs/2408.02442" target="_blank" rel="noopener">arxiv.org/abs/2408.02442</a> · <a href="https://blog.dottxt.ai/say-what-you-mean.html" target="_blank" rel="noopener">blog.dottxt.ai/say-what-you-mean.html</a> · <a href="https://dylancastillo.co/posts/say-what-you-mean-sometimes.html" target="_blank" rel="noopener">dylancastillo.co</a></p>
+    </div>
+    <div class="card red">
+      <h4><span class="icon">🗣️</span>Simon Willison <span class="pill r">"The Lethal Trifecta" (June 2025)</span></h4>
+      <p>The most-quoted security take in agent development: an agent combining (1) access to private data, (2) exposure to untrusted content, and (3) external communication can be prompt-injected into exfiltrating data — and "MCP encourages users to mix and match tools" into exactly this combination (the GitHub MCP private-repo leak being exhibit A). His sober verdict: guardrails catching "95% of attacks" is a <b>failing grade</b> in security; the real fix is <b>not combining all three capabilities</b> in one agent.</p>
+      <p><b>Why it matters:</b> directly motivates the MCP-as-dependency discipline in Builder's corner.</p>
+      <p><a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/" target="_blank" rel="noopener">simonwillison.net/2025/Jun/16/the-lethal-trifecta/</a></p>
+    </div>
+    <div class="card cyan">
+      <h4><span class="icon">🗣️</span>MCP's institutionalization vs the skeptics <span class="pill c">Dec 2025 →</span></h4>
+      <p>MCP was donated to the Linux Foundation in December 2025 and hit ~97M monthly SDK downloads by early 2026, with every major provider on board — the "USB-C of tools" bet effectively won the protocol war. The counter-discourse hasn't quieted: tool-description bloat eating context budgets (Anthropic's own guidance: keep 3–5 tools loaded, discover the rest dynamically), unvetted-server supply-chain risk, and the argument that for code-capable agents, a script or CLI beats a tool catalog. The mature 2026 position: <b>MCP for integration breadth, curated native tools for the hot path</b>.</p>
+      <p><a href="https://www.linuxfoundation.org/press/model-context-protocol-joins-linux-foundation" target="_blank" rel="noopener">linuxfoundation.org/press/model-context-protocol-joins-linux-foundation</a> · <a href="https://www.thoughtworks.com/en-us/insights/blog/generative-ai/model-context-protocol-mcp-impact-2025" target="_blank" rel="noopener">thoughtworks.com</a></p>
+    </div>
+    <div class="card green">
+      <h4><span class="icon">🗣️</span>Streaming UX consensus <span class="pill g">TTFT is the metric users feel</span></h4>
+      <p>The practitioner literature converged on a three-number model: TTFT (perceived snappiness), TPOT/inter-token latency (smoothness), total time — and on the finding that users tolerate long total generation <b>if the first token lands fast and progress is visible</b>, which is why agent frameworks all grew event-stream APIs (LangGraph stream modes, SSE everywhere — both MCP and Google's A2A standardized on SSE-based transports). The design corollary engineers repeat: <b>stream what the agent is doing, not just what it's saying</b>.</p>
+      <p><a href="https://redis.io/blog/api-latency-llm-apps/" target="_blank" rel="noopener">redis.io/blog/api-latency-llm-apps/</a> · <a href="https://latitude.so/blog/real-time-llms-optimizing-latency-streaming" target="_blank" rel="noopener">latitude.so/blog/real-time-llms-optimizing-latency-streaming</a></p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer id="sources">
+  <h3>Sources</h3>
+  <ul>
+    <li>NIM structured generation (nvext, guided_json/regex/choice/grammar, xgrammar) — <a href="https://docs.nvidia.com/nim/large-language-models/latest/structured-generation.html">docs.nvidia.com/nim/…/structured-generation</a></li>
+    <li>NIM function calling (basic/multiple/named/parallel) — <a href="https://docs.nvidia.com/nim/large-language-models/latest/function-calling.html">docs.nvidia.com/nim/…/function-calling</a></li>
+    <li>NIM VLM image input spec — <a href="https://docs.nvidia.com/nim/vision-language-models/latest/index.html">docs.nvidia.com/nim/vision-language-models</a> · <a href="https://docs.api.nvidia.com/nim/reference/meta-llama-3_2-90b-vision-instruct">llama-3.2-90b-vision reference</a></li>
+    <li>build.nvidia.com API catalog &amp; NIM developer program — <a href="https://build.nvidia.com/">build.nvidia.com</a> · <a href="https://developer.nvidia.com/nim">developer.nvidia.com/nim</a></li>
+    <li>NVIDIA AI Workbench — <a href="https://www.nvidia.com/en-us/deep-learning-ai/solutions/data-science/workbench/">nvidia.com/…/workbench</a></li>
+    <li>LangGraph interrupts / HITL — <a href="https://docs.langchain.com/oss/python/langgraph/interrupts">docs.langchain.com/…/interrupts</a></li>
+    <li>LangGraph persistence (checkpointers, threads) — <a href="https://docs.langchain.com/oss/python/langgraph/persistence">docs.langchain.com/…/persistence</a></li>
+    <li>LangGraph streaming modes — <a href="https://docs.langchain.com/oss/python/langgraph/streaming">docs.langchain.com/…/streaming</a></li>
+    <li>MCP specification &amp; primitives — <a href="https://modelcontextprotocol.io/specification/2025-06-18">modelcontextprotocol.io/specification/2025-06-18</a> · <a href="https://www.linuxfoundation.org/press/model-context-protocol-joins-linux-foundation">Linux Foundation donation</a></li>
+    <li>Anthropic — Building Effective Agents — <a href="https://www.anthropic.com/research/building-effective-agents">anthropic.com/research/building-effective-agents</a></li>
+    <li>Anthropic — Effective Context Engineering for AI Agents — <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">anthropic.com/engineering/effective-context-engineering</a></li>
+    <li>12-Factor Agents (Dex Horthy / HumanLayer) — <a href="https://github.com/humanlayer/12-factor-agents">github.com/humanlayer/12-factor-agents</a></li>
+    <li>Structured-output debate — <a href="https://arxiv.org/abs/2408.02442">arxiv.org/abs/2408.02442</a> · <a href="https://blog.dottxt.ai/say-what-you-mean.html">blog.dottxt.ai/say-what-you-mean</a></li>
+    <li>Simon Willison — the lethal trifecta — <a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">simonwillison.net</a></li>
+    <li>Tenacity (retry/backoff/jitter) — <a href="https://tenacity.readthedocs.io/">tenacity.readthedocs.io</a></li>
+    <li>Langfuse prompt management — <a href="https://langfuse.com/docs/prompt-management/get-started">langfuse.com/docs/prompt-management</a></li>
+    <li>LangChain NVIDIA endpoints (ChatNVIDIA) — <a href="https://python.langchain.com/docs/integrations/chat/nvidia_ai_endpoints/">python.langchain.com/…/nvidia_ai_endpoints</a></li>
+    <li>NCP-AAI exam framing — <a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/">nvidia.com certification</a></li>
+  </ul>
+  <p class="fine">NCP-AAI study visual · Domain 2: Agent Development (15%) · Built from personal study notes. All facts sourced from the notes above.</p>
+</footer>
+
+<!-- ============ QUIZ LOGIC ============ -->
+<script>
+document.querySelectorAll('.quiz-q').forEach(function (q) {
+  q.querySelectorAll('.opt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (q.classList.contains('answered')) return;
+      q.classList.add('answered');
+      if (!btn.hasAttribute('data-ok')) btn.classList.add('wrong');
+      var ok = q.querySelector('.opt[data-ok]');
+      if (ok) ok.classList.add('correct');
+    });
+  });
+});
+</script>
+
+<!-- ============ THREE.JS SCENE ============ -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const wrap = document.getElementById('scene-wrap');
+const canvas = document.getElementById('scene-canvas');
+const tooltip = document.getElementById('scene-tooltip');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b12);
+scene.fog = new THREE.Fog(0x070b12, 60, 140);
+
+const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
+camera.position.set(0, 15, 36);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 3.5, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.minDistance = 10;
+controls.maxDistance = 95;
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
+const key = new THREE.DirectionalLight(0xdfe7f3, 1.4);
+key.position.set(12, 26, 14);
+scene.add(key);
+const greenFill = new THREE.PointLight(0x76b900, 60, 60);
+greenFill.position.set(-20, 10, 6);
+scene.add(greenFill);
+const blueFill = new THREE.PointLight(0x4da3ff, 55, 60);
+blueFill.position.set(6, 12, -6);
+scene.add(blueFill);
+const purpleFill = new THREE.PointLight(0xb07cff, 50, 60);
+purpleFill.position.set(20, 10, 5);
+scene.add(purpleFill);
+
+// ---------- ground ----------
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(220, 220),
+  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -2.0;
+scene.add(ground);
+const grid = new THREE.GridHelper(220, 110, 0x1b2840, 0x121a2a);
+grid.position.y = -1.98;
+scene.add(grid);
+
+// ---------- text sprite helper ----------
+function makeLabel(text, opts = {}) {
+  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const pad = 28;
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  const w = Math.ceil(ctx.measureText(text).width) + pad * 2;
+  const h = size + pad * 1.6;
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.fillStyle = bg;
+  g.strokeStyle = border;
+  g.lineWidth = 4;
+  const r = 18;
+  g.beginPath();
+  g.roundRect(3, 3, w - 6, h - 6, r);
+  g.fill(); g.stroke();
+  g.font = `700 ${size}px Segoe UI, Arial, sans-serif`;
+  g.fillStyle = color;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  const k = 0.012 * scale;
+  sp.scale.set(w * k, h * k, 1);
+  return sp;
+}
+
+// ---------- conveyor ----------
+const CONV_Y = 0.0, CONV_X0 = -32, CONV_X1 = 20;
+const belt = new THREE.Mesh(
+  new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.5, 4),
+  new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.7, metalness: 0.4 })
+);
+belt.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.3, 0);
+scene.add(belt);
+for (const dz of [-2.05, 2.05]) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.12, 0.12),
+    new THREE.MeshBasicMaterial({ color: 0x2c4a78 })
+  );
+  strip.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.05, dz);
+  scene.add(strip);
+}
+// moving chevrons (motion cue)
+const chevrons = [];
+const chevMat = new THREE.MeshBasicMaterial({ color: 0x24364f });
+for (let i = 0; i < 19; i++) {
+  const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 3.4), chevMat);
+  ch.position.set(CONV_X0 + i * 2.8, CONV_Y - 0.02, 0);
+  scene.add(ch);
+  chevrons.push(ch);
+}
+
+const lineTitle = makeLabel('THE AGENT ASSEMBLY LINE — prompt → validate → tools → stream', { border: '#76b900', color: '#a4e040', scale: 1.2 });
+lineTitle.position.set(-6, 12.6, 0);
+scene.add(lineTitle);
+
+// ---------- stations (gantries over the belt) ----------
+const PROMPT_X = -22, VALID_X = -10, TOOL_X = 3, EXIT_X = 15;
+const stations = [];
+const stationDefs = [
+  { x: PROMPT_X, name: 'PROMPT ASSEMBLY', color: 0x76b900,
+    desc: 'System prompt + few-shot examples + template from the versioned registry are attached to each request. Stable instructions live here; per-request data never gets buried in the system prompt.' },
+  { x: VALID_X, name: 'STRUCTURED OUTPUT', color: 0x3fd2c7,
+    desc: 'Schema-constrained (guided) decoding — nvext.guided_json on NIM. Logits are masked so only schema-legal tokens can be sampled; orbs leave as neat schema-true cubes. Malformed output (prompt-only JSON) flashes red and is bounced back to re-decode.' },
+  { x: TOOL_X, name: 'TOOL-CALL STATION', color: 0x4da3ff,
+    desc: 'One assistant message can carry MANY tool_calls — parallel arms execute independent calls concurrently. Every tool_call_id must get a role:"tool" reply. Errors return to the model as tool results; transient faults retry with exponential backoff + jitter (amber glow).' },
+  { x: EXIT_X, name: 'STREAMING EXIT', color: 0xb07cff,
+    desc: 'stream=True — the finished response dissolves into SSE token chunks flowing to the user. Total generation time is unchanged; TTFT (time to first token) is what improves. Event streams ("updates") narrate progress alongside tokens.' },
+];
+for (const def of stationDefs) {
+  const g = new THREE.Group();
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x223149, roughness: 0.5, metalness: 0.6 });
+  for (const dz of [-2.6, 2.6]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.5), postMat);
+    post.position.set(0, 2.4, dz);
+    g.add(post);
+  }
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 5.7), new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.35, roughness: 0.4 }));
+  bar.position.set(0, 5.1, 0);
+  g.add(bar);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), new THREE.MeshBasicMaterial({ color: 0x44587a }));
+  lamp.position.set(0, 6.05, 0);
+  g.add(lamp);
+  const lbl = makeLabel(def.name, { border: '#' + def.color.toString(16).padStart(6, '0'), scale: 0.95 });
+  lbl.position.set(0, 7.5, 0);
+  g.add(lbl);
+  g.position.set(def.x, 0, 0);
+  scene.add(g);
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(3.4, 7.8, 6), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.set(def.x, 3.6, 0);
+  hit.userData = { title: def.name + ' station', desc: def.desc };
+  scene.add(hit);
+  stations.push({ ...def, group: g, lamp, lampT: -1, hit });
+}
+
+// prompt-station stamp head (drops a few-shot ring onto each orb)
+const promptStamp = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.55, 0.75, 1.1, 16),
+  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.5 })
+);
+promptStamp.position.set(PROMPT_X, 3.6, 0);
+scene.add(promptStamp);
+let promptStampT = -1;
+
+// validator scanning frame (a glowing square the orbs pass through)
+const scanFrame = new THREE.Mesh(
+  new THREE.TorusGeometry(1.7, 0.12, 10, 4),
+  new THREE.MeshStandardMaterial({ color: 0x3fd2c7, emissive: 0x3fd2c7, emissiveIntensity: 0.7 })
+);
+scanFrame.rotation.y = Math.PI / 2;
+scanFrame.rotation.z = Math.PI / 4;
+scanFrame.position.set(VALID_X, 1.1, 0);
+scene.add(scanFrame);
+
+// ---------- tool pods + robotic arms ----------
+const podDefs = [
+  { z: -5.2, name: 'get_weather', color: 0x4da3ff, err: false,
+    desc: 'Tool pod — an OpenAI-spec function. The description IS prompt engineering: the model picks tools by reading it. Arguments are validated against the JSON schema BEFORE execution.' },
+  { z: -7.8, name: 'search_db', color: 0x4da3ff, err: true,
+    desc: 'A flaky tool. Its 5xx error is returned AS the tool result so the model can self-correct; the runtime retries with exponential backoff + jitter (watch the amber pulses spread apart: 1s → 2s → 4s), then succeeds green. Never retry 400/422.' },
+  { z: -10.4, name: 'create_refund', color: 0x4da3ff, err: false,
+    desc: 'A side-effecting tool — retried calls must be idempotent (pass an idempotency key so a retried refund never refunds twice). Risky calls sit behind a HITL interrupt.' },
+];
+const pods = [];
+for (const pd of podDefs) {
+  const pod = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.9, 0.9, 1.5, 18),
+    new THREE.MeshStandardMaterial({ color: 0x16213a, emissive: pd.color, emissiveIntensity: 0.4, roughness: 0.35, metalness: 0.3 })
+  );
+  pod.position.set(TOOL_X, 2.6, pd.z);
+  pod.userData = { title: 'Tool pod: ' + pd.name, desc: pd.desc };
+  scene.add(pod);
+  const lbl = makeLabel(pd.name, { border: '#4da3ff', color: '#9cc6ff', scale: 0.7 });
+  lbl.position.set(TOOL_X, 4.1, pd.z);
+  scene.add(lbl);
+  // pedestal
+  const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 3.6, 12),
+    new THREE.MeshStandardMaterial({ color: 0x1a2438, roughness: 0.6, metalness: 0.5 }));
+  ped.position.set(TOOL_X, 0, pd.z);
+  scene.add(ped);
+  // backoff glow ring (for the flaky pod)
+  let ring = null;
+  if (pd.err) {
+    ring = new THREE.Mesh(
+      new THREE.TorusGeometry(1.3, 0.09, 10, 32),
+      new THREE.MeshBasicMaterial({ color: 0xe8a33d, transparent: true, opacity: 0 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.copy(pod.position);
+    scene.add(ring);
+  }
+  pods.push({ ...pd, mesh: pod, ring });
+}
+
+// robotic arms: pivot at the tool-station crossbar, reaching toward the pods
+const arms = [];
+for (let i = 0; i < podDefs.length; i++) {
+  const pivot = new THREE.Group();
+  pivot.position.set(TOOL_X, 4.9, -1.6);
+  const seg = new THREE.Mesh(
+    new THREE.BoxGeometry(0.32, 0.32, 4.2),
+    new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x4da3ff, emissiveIntensity: 0.35, metalness: 0.5, roughness: 0.4 })
+  );
+  seg.position.z = -2.1;
+  pivot.add(seg);
+  const claw = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0x9cc6ff, emissive: 0x4da3ff, emissiveIntensity: 0.6 })
+  );
+  claw.position.z = -4.3;
+  pivot.add(claw);
+  scene.add(pivot);
+  arms.push({ pivot, phase: i * 2.1, claw });
+}
+
+// flaky-pod retry timeline (seconds within a repeating cycle)
+const ERR_CYCLE = 16;
+const ERR_AT = 6.0;                 // error flash
+const RETRIES = [7.0, 9.0, 13.0];   // backoff: gaps of 1s, 2s, 4s
+const OK_AT = 13.6;                 // success flash
+
+// ---------- streaming exit → user ----------
+const userGroup = new THREE.Group();
+const monitor = new THREE.Mesh(
+  new THREE.BoxGeometry(3.4, 2.3, 0.3),
+  new THREE.MeshStandardMaterial({ color: 0x101828, emissive: 0xb07cff, emissiveIntensity: 0.35, roughness: 0.4 })
+);
+monitor.position.set(0, 3.4, 0);
+userGroup.add(monitor);
+const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 2.4, 10),
+  new THREE.MeshStandardMaterial({ color: 0x1a2438, metalness: 0.5, roughness: 0.6 }));
+stand.position.set(0, 1.0, 0);
+userGroup.add(stand);
+const userLbl = makeLabel('USER', { border: '#b07cff', color: '#d3b8ff', scale: 0.95 });
+userLbl.position.set(0, 5.4, 0);
+userGroup.add(userLbl);
+userGroup.position.set(28, 0, 0);
+userGroup.rotation.y = -Math.PI / 14;
+scene.add(userGroup);
+monitor.userData = { title: 'The user', desc: 'Sees tokens the moment they exist (TTFT) plus progress events ("calling search_db…", "node finished") — users forgive latency they can SEE. Stream what the agent is doing, not just what it is saying.' };
+
+// token particle stream: exit → user monitor
+const streamCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(EXIT_X, 1.2, 0),
+  new THREE.Vector3(EXIT_X + 5, 3.4, 0.6),
+  new THREE.Vector3(EXIT_X + 10, 4.0, 0.3),
+  new THREE.Vector3(27.6, 3.4, 0.2),
+]);
+const N_S = 110;
+const sGeo = new THREE.BufferGeometry();
+const sPos = new Float32Array(N_S * 3);
+const sT = new Float32Array(N_S);
+for (let i = 0; i < N_S; i++) sT[i] = Math.random();
+sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+const streamPts = new THREE.Points(sGeo, new THREE.PointsMaterial({ color: 0xd3b8ff, size: 0.26, transparent: true, opacity: 0.9 }));
+scene.add(streamPts);
+
+// reject return path marker (where malformed orbs land back)
+const rejectLbl = makeLabel('malformed → bounced back to re-decode', { border: '#e0455a', color: '#ff8fa0', scale: 0.72 });
+rejectLbl.position.set(VALID_X - 5, 4.6, 3.4);
+scene.add(rejectLbl);
+
+// ambient star dust
+{
+  const n = 400, g = new THREE.BufferGeometry(), a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    a[i * 3] = (Math.random() - 0.5) * 160;
+    a[i * 3 + 1] = Math.random() * 45;
+    a[i * 3 + 2] = (Math.random() - 0.5) * 160;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+}
+
+// ---------- request objects (orb → cube) ----------
+const requests = [];
+const orbGeo = new THREE.SphereGeometry(0.62, 20, 20);
+const cubeGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
+function spawnRequest() {
+  const willMalform = Math.random() < 0.28;
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0xdfe7f3, emissive: 0x8fa0b8, emissiveIntensity: 0.35, roughness: 0.35 });
+  const orb = new THREE.Mesh(orbGeo, mat);
+  const cube = new THREE.Mesh(cubeGeo, mat.clone());
+  cube.visible = false;
+  group.add(orb); group.add(cube);
+  // few-shot ring, attached at the prompt station
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x76b900, transparent: true, opacity: 0 });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.07, 8, 28), ringMat);
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+  group.position.set(CONV_X0 + 0.5, CONV_Y + 0.85, 0);
+  scene.add(group);
+  requests.push({
+    group, orb, cube, ring, willMalform,
+    prompted: false, validated: false, bouncing: false, retried: false,
+    dwell: 0, tooled: false, dissolving: false, fade: 1, vx: 0, vy: 0,
+  });
+}
+
+// ---------- raycaster / hover ----------
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2(-2, -2);
+const hoverables = [...stations.map(s => s.hit), ...pods.map(p => p.mesh), monitor];
+let hovered = null;
+
+wrap.addEventListener('pointermove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  tooltip.style.left = (e.clientX - r.left + 16) + 'px';
+  tooltip.style.top = (e.clientY - r.top + 14) + 'px';
+});
+wrap.addEventListener('pointerleave', () => { mouse.set(-2, -2); tooltip.style.display = 'none'; });
+
+// ---------- animation ----------
+const clock = new THREE.Clock();
+let spawnTimer = 0;
+const SPEED = 3.6;
+
+function flashLamp(station, hex) {
+  station.lamp.material.color.setHex(hex);
+  station.lampT = 0;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // belt chevrons
+  for (const ch of chevrons) {
+    ch.position.x += SPEED * dt;
+    if (ch.position.x > CONV_X1) ch.position.x -= (CONV_X1 - CONV_X0);
+  }
+
+  // spawn requests
+  spawnTimer -= dt;
+  if (spawnTimer <= 0 && requests.length < 12) { spawnRequest(); spawnTimer = 2.1; }
+
+  // move requests
+  for (let i = requests.length - 1; i >= 0; i--) {
+    const rq = requests[i];
+    const g = rq.group;
+
+    if (rq.dissolving) {
+      rq.fade -= dt * 1.4;
+      g.scale.setScalar(Math.max(rq.fade, 0.001));
+      g.position.y += dt * 1.1;
+      g.rotation.y += dt * 4;
+      if (rq.fade <= 0) {
+        scene.remove(g);
+        rq.orb.material.dispose(); rq.cube.material.dispose(); rq.ring.material.dispose();
+        requests.splice(i, 1);
+      }
+      continue;
+    }
+
+    if (rq.bouncing) {
+      // knocked back toward re-decode with a little arc
+      rq.vx += 6.5 * dt;                 // decelerate backward velocity
+      rq.vy -= 14 * dt;
+      g.position.x += rq.vx * dt;
+      g.position.y += rq.vy * dt;
+      g.rotation.z += dt * 6;
+      if (g.position.y <= CONV_Y + 0.85) {
+        g.position.y = CONV_Y + 0.85;
+        rq.bouncing = false;
+        rq.retried = true;
+        rq.willMalform = false;          // second decode is schema-constrained → passes
+        rq.orb.material.color.setHex(0xdfe7f3);
+        rq.orb.material.emissive.setHex(0x8fa0b8);
+        g.rotation.z = 0;
+      }
+      continue;
+    }
+
+    if (rq.dwell > 0) {
+      // paused at the tool-call station while arms work
+      rq.dwell -= dt;
+      g.rotation.y += dt * 1.6;
+      continue;
+    }
+
+    g.position.x += SPEED * dt;
+    g.rotation.y += dt * 0.8;
+
+    // station 1: prompt assembly — attach few-shot ring
+    if (!rq.prompted && g.position.x >= PROMPT_X) {
+      rq.prompted = true;
+      rq.ring.material.opacity = 0.95;
+      rq.orb.material.emissive.setHex(0x76b900);
+      rq.orb.material.emissiveIntensity = 0.45;
+      promptStampT = 0;
+      flashLamp(stations[0], 0x76b900);
+    }
+
+    // station 2: structured-output validator
+    if (!rq.validated && g.position.x >= VALID_X) {
+      if (rq.willMalform) {
+        // malformed: flash red, bounce back to re-decode
+        rq.orb.material.color.setHex(0xe0455a);
+        rq.orb.material.emissive.setHex(0xe0455a);
+        rq.orb.material.emissiveIntensity = 0.9;
+        rq.bouncing = true;
+        rq.vx = -7.5;
+        rq.vy = 4.2;
+        flashLamp(stations[1], 0xe0455a);
+        continue;
+      }
+      rq.validated = true;
+      rq.orb.visible = false;
+      rq.cube.visible = true;
+      rq.cube.material.color.setHex(0x3fd2c7);
+      rq.cube.material.emissive.setHex(0x3fd2c7);
+      rq.cube.material.emissiveIntensity = 0.55;
+      flashLamp(stations[1], rq.retried ? 0xe8a33d : 0x76b900);
+    }
+
+    // station 3: tool calls — dwell while arms work
+    if (rq.validated && !rq.tooled && g.position.x >= TOOL_X) {
+      rq.tooled = true;
+      rq.dwell = 1.5;
+      rq.cube.material.emissive.setHex(0x4da3ff);
+      rq.cube.material.color.setHex(0x4da3ff);
+      flashLamp(stations[2], 0x4da3ff);
+    }
+
+    // station 4: streaming exit — dissolve into the token stream
+    if (!rq.dissolving && g.position.x >= EXIT_X) {
+      rq.dissolving = true;
+      rq.cube.material.emissive.setHex(0xb07cff);
+      rq.cube.material.color.setHex(0xb07cff);
+      flashLamp(stations[3], 0xb07cff);
+    }
+  }
+
+  // prompt stamp dip
+  if (promptStampT >= 0) {
+    promptStampT += dt * 5;
+    const p = Math.min(promptStampT, 1);
+    promptStamp.position.y = 3.6 - Math.sin(p * Math.PI) * 1.5;
+    if (promptStampT > 1.4) { promptStampT = -1; promptStamp.position.y = 3.6; }
+  }
+
+  // lamp decay
+  for (const s of stations) {
+    if (s.lampT >= 0) {
+      s.lampT += dt;
+      if (s.lampT > 1.1) { s.lampT = -1; s.lamp.material.color.setHex(0x44587a); }
+    }
+  }
+
+  // validator frame spin + pulse
+  scanFrame.rotation.x += dt * 0.9;
+  scanFrame.material.emissiveIntensity = 0.55 + 0.3 * Math.sin(t * 3);
+
+  // robotic arms sweep between belt and pods
+  arms.forEach((a, i) => {
+    const sweep = Math.sin(t * 1.5 + a.phase);
+    a.pivot.rotation.x = -0.55 + sweep * 0.35;
+    a.pivot.rotation.y = Math.sin(t * 0.9 + a.phase) * 0.12;
+    a.claw.material.emissiveIntensity = 0.45 + 0.35 * Math.max(0, Math.sin(t * 3 + a.phase));
+  });
+
+  // flaky pod: error → backoff retries (amber, widening gaps) → success
+  {
+    const pod = pods[1];
+    const ct = t % ERR_CYCLE;
+    const m = pod.mesh.material;
+    if (ct < ERR_AT) {
+      m.emissive.setHex(0x4da3ff); m.emissiveIntensity = 0.4;
+      pod.ring.material.opacity = 0;
+    } else if (ct < ERR_AT + 0.6) {
+      m.emissive.setHex(0xe0455a); m.emissiveIntensity = 1.1;        // 5xx flash
+    } else if (ct < OK_AT) {
+      m.emissive.setHex(0xe8a33d);                                    // backoff window
+      let pulse = 0.25;
+      let ringP = 0;
+      for (const rt of RETRIES) {
+        const d = ct - rt;
+        if (d >= 0 && d < 0.9) { pulse = 1.2 - d; ringP = d / 0.9; }
+      }
+      m.emissiveIntensity = pulse;
+      if (ringP > 0) {
+        pod.ring.material.opacity = 0.85 * (1 - ringP);
+        pod.ring.scale.setScalar(1 + ringP * 1.6);
+      } else {
+        pod.ring.material.opacity = 0;
+        pod.ring.scale.setScalar(1);
+      }
+    } else if (ct < OK_AT + 0.8) {
+      m.emissive.setHex(0x76b900); m.emissiveIntensity = 1.0;         // success
+      pod.ring.material.opacity = 0;
+    } else {
+      m.emissive.setHex(0x4da3ff); m.emissiveIntensity = 0.4;
+    }
+  }
+  // healthy pods gentle pulse
+  pods[0].mesh.material.emissiveIntensity = 0.35 + 0.15 * Math.sin(t * 2.2);
+  pods[2].mesh.material.emissiveIntensity = 0.35 + 0.15 * Math.sin(t * 2.2 + 1.4);
+
+  // token stream particles
+  const pos = streamPts.geometry.attributes.position.array;
+  for (let i = 0; i < N_S; i++) {
+    sT[i] = (sT[i] + dt * 0.18) % 1;
+    const v = streamCurve.getPoint(sT[i]);
+    pos[i * 3] = v.x + (Math.random() - 0.5) * 0.12;
+    pos[i * 3 + 1] = v.y + (Math.random() - 0.5) * 0.12;
+    pos[i * 3 + 2] = v.z + (Math.random() - 0.5) * 0.12;
+  }
+  streamPts.geometry.attributes.position.needsUpdate = true;
+
+  // monitor glow breathes with the stream
+  monitor.material.emissiveIntensity = 0.3 + 0.18 * Math.sin(t * 2.4);
+
+  // hover
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(hoverables, false);
+  const top = hits.length ? hits[0].object : null;
+  if (top !== hovered) {
+    hovered = top;
+    if (hovered && hovered.userData.title) {
+      tooltip.innerHTML = '<b>' + hovered.userData.title + '</b><span>' + hovered.userData.desc + '</span>';
+      tooltip.style.display = 'block';
+      wrap.style.cursor = 'pointer';
+    } else {
+      tooltip.style.display = 'none';
+      wrap.style.cursor = 'default';
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// resize
+window.addEventListener('resize', () => {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+</script>
+</body>
+</html>

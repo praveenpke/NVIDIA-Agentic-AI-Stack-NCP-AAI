@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCP-AAI — Resources</title>
+<style>
+  :root{
+    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
+    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25); --on-accent:#0b0f17;
+    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
+    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  ::selection{background:var(--green);color:var(--on-accent)}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:0 12px;scrollbar-width:thin}
+  nav a{color:var(--muted);text-decoration:none;font-size:.8rem;font-weight:600;padding:12px 12px;white-space:nowrap;border-bottom:2px solid transparent;letter-spacing:.02em}
+  nav a:hover{color:var(--text)}
+  nav a.brand{color:var(--green);font-weight:800}
+  nav a:not(.brand):hover{border-bottom-color:var(--green)}
+
+  /* HERO */
+  header.hero{position:relative;overflow:hidden;padding:72px 24px 56px;text-align:center;background:
+    radial-gradient(ellipse 70% 60% at 50% -10%,var(--green-glow),transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%,color-mix(in srgb, var(--blue) 7%, transparent),transparent 60%),var(--bg)}
+  header.hero::before{content:"";position:absolute;inset:-40% -20%;background:
+    radial-gradient(ellipse 30% 35% at 30% 40%,color-mix(in srgb, var(--green) 10%, transparent),transparent 70%),
+    radial-gradient(ellipse 25% 30% at 70% 60%,color-mix(in srgb, var(--cyan) 7%, transparent),transparent 70%);
+    animation:heroGlow 14s ease-in-out infinite alternate;pointer-events:none}
+  @keyframes heroGlow{
+    0%{transform:translate3d(-3%,2%,0) scale(1);opacity:.7}
+    50%{transform:translate3d(3%,-2%,0) scale(1.06);opacity:1}
+    100%{transform:translate3d(-2%,-3%,0) scale(1.02);opacity:.8}
+  }
+  .hero-inner{position:relative;z-index:1}
+  .hero .domain-chip{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--green);color:var(--green);border-radius:999px;padding:6px 18px;font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
+  .hero h1 .accent{color:var(--green)}
+  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook b{color:var(--text)}
+
+  /* LAYOUT */
+  main{max-width:1180px;margin:0 auto;padding:0 24px}
+  section{padding:56px 0 18px}
+  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  .lede b{color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+
+  /* CARDS */
+  .grid{display:grid;gap:16px}
+  .grid.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .grid.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+  .card:hover{border-color:var(--green-dim)}
+  .card h4{font-size:.98rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card p{font-size:.86rem;color:var(--muted)}
+  .card p b{color:var(--text)}
+  .card .icon{font-size:1.15rem}
+  .card.green{border-top:3px solid var(--green)}
+  .card.blue{border-top:3px solid var(--blue)}
+  .card.amber{border-top:3px solid var(--amber)}
+  .card.red{border-top:3px solid var(--red)}
+  .card.purple{border-top:3px solid var(--purple)}
+  .card.cyan{border-top:3px solid var(--cyan)}
+  .card a{color:var(--blue);text-decoration:none;overflow-wrap:anywhere}
+  .card a:hover{text-decoration:underline}
+  .card .handle{display:inline-block;font-family:var(--mono);font-size:.74rem;background:var(--bg3);border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin-left:2px}
+  .pill{display:inline-block;font-size:.68rem;font-weight:700;border-radius:999px;padding:2px 10px;letter-spacing:.04em;margin-bottom:8px}
+  .pill.g{background:var(--green-glow);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+  .pill.b{background:color-mix(in srgb, var(--blue) 13%, transparent);color:var(--blue);border:1px solid color-mix(in srgb, var(--blue) 35%, transparent)}
+  .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
+  .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+
+  /* LINK LIST (compact rows for blog posts) */
+  .link-list{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:14px 0}
+  .link-list h4{color:var(--green);font-size:.95rem;margin-bottom:10px}
+  .link-list ul{list-style:none}
+  .link-list li{margin:9px 0;font-size:.86rem;color:var(--muted);padding-left:18px;position:relative}
+  .link-list li::before{content:"→";position:absolute;left:0;color:var(--green-dim)}
+  .link-list a{color:var(--blue);text-decoration:none;font-weight:600;overflow-wrap:anywhere}
+  .link-list a:hover{text-decoration:underline}
+  .link-list li b{color:var(--text)}
+
+  /* CALLOUT */
+  .callout{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%),var(--panel);border:1px solid color-mix(in srgb, var(--amber) 45%, transparent);border-left:4px solid var(--amber);border-radius:12px;padding:14px 18px;margin:18px 0;font-size:.9rem;color:var(--muted)}
+  .callout b{color:var(--amber)}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding:36px 24px 48px;background:var(--bg2);text-align:center}
+  footer .fine{color:var(--muted);font-size:.78rem}
+  footer a{color:var(--blue);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  @media(max-width:420px){
+    main{padding:0 16px}
+    header.hero{padding:56px 16px 44px}
+    .card{padding:15px 16px}
+  }
+</style>
+<link rel="stylesheet" href="theme.css">
+<script src="theme.js"></script>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="index.html">← Hub</a>
+  <a href="#official">Official NVIDIA</a>
+  <a href="#docs">Docs &amp; GitHub</a>
+  <a href="#frameworks">Frameworks</a>
+  <a href="#people">People &amp; Feeds</a>
+  <a href="#practice">Practice Exams</a>
+  <a href="#site">From This Site</a>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <div class="domain-chip">Study Library</div>
+    <h1>Resources<span class="accent">.</span></h1>
+    <p class="hook">Everything worth reading, watching, and following to prepare for the <b>NCP-AAI</b> exam — official NVIDIA material first, then the docs, frameworks, practitioners, and practice tests that fill in the rest. <b>Every link verified.</b></p>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ 1 · OFFICIAL NVIDIA ============ -->
+<section id="official">
+  <div class="kicker">Section 1 · Start here</div>
+  <h2>Official NVIDIA</h2>
+  <p class="lede">The certification page defines the exam; the DLI courses below are the four NVIDIA names as direct preparation. <b>Read the blueprint before anything else</b> — it tells you exactly what is weighted and what is not.</p>
+
+  <div class="grid c2">
+    <div class="card green"><span class="pill g">The source of truth</span>
+      <h4><span class="icon">🎓</span><a href="https://www.nvidia.com/en-us/learn/certification/agentic-ai-professional/" target="_blank" rel="noopener">NCP-AAI Certification Page</a></h4>
+      <p>The official exam page: format (60–70 questions, 120 min, remote-proctored), domains and weights, registration, and the downloadable <b>exam blueprint / study guide</b> — linked from this page, so bookmark it rather than a stale PDF copy.</p></div>
+    <div class="card green"><span class="pill g">Free playground</span>
+      <h4><span class="icon">🧪</span><a href="https://build.nvidia.com/" target="_blank" rel="noopener">build.nvidia.com</a></h4>
+      <p>NVIDIA's hosted API catalog — try NIM endpoints, Nemotron models, and embedding/reranking microservices for free; the fastest way to get hands-on with the exact stack the exam assumes.</p></div>
+  </div>
+
+  <h3>DLI courses NVIDIA recommends for this exam</h3>
+  <div class="grid c2">
+    <div class="card blue">
+      <h4><span class="icon">📚</span><a href="https://learn.nvidia.com/courses/course-detail?course_id=course-v1%3ADLI+S-FX-15+V1" target="_blank" rel="noopener">Building RAG Agents with LLMs</a></h4>
+      <p>Free self-paced course (S-FX-15): LangChain, NVIDIA AI endpoints, FAISS, LangServe — covers the retrieval + agent composition skills behind the Knowledge Integration domain.</p></div>
+    <div class="card blue">
+      <h4><span class="icon">🤖</span><a href="https://learn.nvidia.com/courses/course-detail?course_id=course-v1%3ADLI+C-FX-25+V1" target="_blank" rel="noopener">Building Agentic AI Applications with LLMs</a></h4>
+      <p>The flagship prep course (C-FX-25): structured outputs, tool calling, knowledge graphs, LangGraph multi-agent orchestration, and scaling — the closest match to the exam's core domains.</p></div>
+    <div class="card blue">
+      <h4><span class="icon">📏</span><a href="https://learn.nvidia.com/courses/course-detail?course_id=course-v1%3ADLI+S-FX-32+V1" target="_blank" rel="noopener">Evaluating RAG and Semantic Search Systems</a></h4>
+      <p>(S-FX-32) Retrieval metrics, golden datasets, LLM-as-judge — directly feeds the Evaluation &amp; Tuning domain (one of the heaviest-weighted).</p></div>
+    <div class="card blue">
+      <h4><span class="icon">🚀</span><a href="https://learn.nvidia.com/courses/course-detail?course_id=course-v1%3ADLI+C-FX-18+V1" target="_blank" rel="noopener">Deploying RAG Pipelines for Production at Scale</a></h4>
+      <p>(C-FX-18) NIM-based deployment, Kubernetes/Helm, autoscaling, monitoring — maps onto the Deployment &amp; Scaling and Run/Monitor/Maintain domains.</p></div>
+  </div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card cyan">
+      <h4><span class="icon">🏫</span><a href="https://learn.nvidia.com/" target="_blank" rel="noopener">NVIDIA Deep Learning Institute (DLI)</a></h4>
+      <p>The full course catalog — search "agent" or "RAG" for newer additions; DLI keeps adding agentic titles, so check it again close to your exam date.</p></div>
+    <div class="card cyan">
+      <h4><span class="icon">🗺️</span><a href="https://www.nvidia.com/en-us/training/" target="_blank" rel="noopener">NVIDIA Training &amp; Certification Hub</a></h4>
+      <p>Landing page for all NVIDIA certifications and learning paths — useful for seeing where NCP-AAI sits relative to NCA/NCP siblings.</p></div>
+  </div>
+</section>
+
+<!-- ============ 2 · DOCS & GITHUB ============ -->
+<section id="docs">
+  <div class="kicker">Section 2 · The platform itself</div>
+  <h2>NVIDIA docs &amp; GitHub</h2>
+  <p class="lede">The NVIDIA Platform Implementation domain is answered straight out of these docs and repos. If you only skim, skim <b>NIM, NeMo Agent Toolkit, and Guardrails</b> — they recur across scenario questions.</p>
+
+  <div class="grid c3">
+    <div class="card green">
+      <h4><span class="icon">⚡</span><a href="https://docs.nvidia.com/nim/" target="_blank" rel="noopener">NIM Documentation</a></h4>
+      <p>Inference microservices: containers, OpenAI-compatible APIs, GPU profiles, autoscaling — the deployment substrate the whole exam assumes.</p></div>
+    <div class="card green">
+      <h4><span class="icon">🧰</span><a href="https://github.com/NVIDIA/NeMo-Agent-Toolkit" target="_blank" rel="noopener">NeMo Agent Toolkit</a></h4>
+      <p>Framework-agnostic library for connecting, profiling, and optimizing teams of agents (works over LangChain, CrewAI, etc.). Docs at <a href="https://docs.nvidia.com/nemo/agent-toolkit/latest/quick-start/installing.html" target="_blank" rel="noopener">docs.nvidia.com/nemo/agent-toolkit</a>.</p></div>
+    <div class="card green">
+      <h4><span class="icon">🛡️</span><a href="https://github.com/NVIDIA/NeMo-Guardrails" target="_blank" rel="noopener">NeMo Guardrails</a></h4>
+      <p>Programmable rails (Colang) for input/output/dialog/retrieval safety — the canonical answer to most Safety &amp; Compliance questions.</p></div>
+    <div class="card green">
+      <h4><span class="icon">📄</span><a href="https://github.com/NVIDIA/nv-ingest" target="_blank" rel="noopener">NeMo Retriever / NV-Ingest</a></h4>
+      <p>Scalable document extraction (text, tables, charts, images) built on NIM microservices — the ingestion half of NVIDIA's enterprise RAG story.</p></div>
+    <div class="card green">
+      <h4><span class="icon">🔓</span><a href="https://github.com/NVIDIA/garak" target="_blank" rel="noopener">garak</a></h4>
+      <p>NVIDIA's open-source LLM red-teaming scanner ("nmap for LLMs") — probes for prompt injection, jailbreaks, leakage; know its name for safety questions.</p></div>
+    <div class="card green">
+      <h4><span class="icon">💡</span><a href="https://github.com/NVIDIA/GenerativeAIExamples" target="_blank" rel="noopener">GenerativeAIExamples</a></h4>
+      <p>Official reference implementations of RAG and agent pipelines on the NVIDIA stack — read the architectures even if you never run them.</p></div>
+    <div class="card green">
+      <h4><span class="icon">📐</span><a href="https://build.nvidia.com/blueprints" target="_blank" rel="noopener">NVIDIA AI Blueprints</a></h4>
+      <p>Reference workflows (Enterprise RAG, AI-Q research agent, virtual assistant...) with Helm charts and code — source repos at <a href="https://github.com/NVIDIA-AI-Blueprints" target="_blank" rel="noopener">github.com/NVIDIA-AI-Blueprints</a>.</p></div>
+    <div class="card green">
+      <h4><span class="icon">📰</span><a href="https://developer.nvidia.com/blog/" target="_blank" rel="noopener">NVIDIA Technical Blog</a></h4>
+      <p>Where NVIDIA explains its own positions; the agentic-AI tag is effectively a running exam-prep feed.</p></div>
+  </div>
+
+  <div class="link-list">
+    <h4>Landmark blog posts worth reading in full</h4>
+    <ul>
+      <li><a href="https://developer.nvidia.com/blog/how-small-language-models-are-key-to-scalable-agentic-ai/" target="_blank" rel="noopener">How Small Language Models Are Key to Scalable Agentic AI</a> — the blog form of NVIDIA's SLM-agents thesis; expect exam sympathy for "right-size the model".</li>
+      <li><a href="https://developer.nvidia.com/blog/how-to-build-custom-ai-agents-with-nvidia-nemo-agent-toolkit-open-source-library/" target="_blank" rel="noopener">How to Build Custom AI Agents with NeMo Agent Toolkit</a> — the canonical getting-started walkthrough (workflow scaffold, config.yaml, tool registration).</li>
+      <li><a href="https://developer.nvidia.com/blog/improve-ai-code-generation-using-nvidia-nemo-agent-toolkit/" target="_blank" rel="noopener">Improve AI Code Generation Using NeMo Agent Toolkit</a> — a test-driven coding agent on LangGraph + reasoning models, end to end.</li>
+      <li><a href="https://developer.nvidia.com/blog/build-efficient-ai-agents-through-model-distillation-with-nvidias-data-flywheel-blueprint/" target="_blank" rel="noopener">Build Efficient AI Agents Through Model Distillation (Data Flywheel Blueprint)</a> — the LLM→SLM distillation flywheel applied to tool calling.</li>
+      <li><a href="https://developer.nvidia.com/blog/rag-101-demystifying-retrieval-augmented-generation-pipelines/" target="_blank" rel="noopener">RAG 101: Demystifying Retrieval-Augmented Generation Pipelines</a> — the foundational NVIDIA framing of RAG components and where GPUs accelerate them.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 3 · FRAMEWORKS ============ -->
+<section id="frameworks">
+  <div class="kicker">Section 3 · Get your hands dirty</div>
+  <h2>Frameworks to practice with</h2>
+  <p class="lede">The exam is vendor-flavored but framework-literate: questions assume you recognize <b>graph orchestration, multi-agent conversation, crew/role patterns, and the two open protocols</b>. An afternoon with each pays off.</p>
+
+  <div class="grid c3">
+    <div class="card purple">
+      <h4><span class="icon">🕸️</span><a href="https://docs.langchain.com/oss/python/langgraph/overview" target="_blank" rel="noopener">LangGraph</a></h4>
+      <p>Graph-based agent orchestration with explicit state, checkpoints, and human-in-the-loop interrupts — the framework NVIDIA's own courses and toolkit examples use most.</p></div>
+    <div class="card purple">
+      <h4><span class="icon">💬</span><a href="https://github.com/microsoft/autogen" target="_blank" rel="noopener">AutoGen</a> / <a href="https://github.com/ag2ai/ag2" target="_blank" rel="noopener">AG2</a></h4>
+      <p>Multi-agent conversation patterns (group chat, nested agents). AG2 is the community fork of the original AutoGen — know both names; "conversable agents" terminology shows up in questions.</p></div>
+    <div class="card purple">
+      <h4><span class="icon">👥</span><a href="https://docs.crewai.com/" target="_blank" rel="noopener">CrewAI</a></h4>
+      <p>Role/task/crew abstraction for quick multi-agent prototypes — the cleanest illustration of role-based delegation, a recurring architecture-question pattern.</p></div>
+    <div class="card purple">
+      <h4><span class="icon">🔌</span><a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol (MCP)</a></h4>
+      <p>The open standard for agent ↔ tools/data connections. Know the client/server/host roles and the prompt-injection risks of untrusted servers — both are exam fodder.</p></div>
+    <div class="card purple">
+      <h4><span class="icon">🤝</span><a href="https://a2a-protocol.org/latest/" target="_blank" rel="noopener">Agent2Agent Protocol (A2A)</a></h4>
+      <p>Linux Foundation standard for agent ↔ agent communication (Agent Cards, JSON-RPC, SSE). The one-liner to memorize: <b>MCP connects agents to tools; A2A connects agents to agents.</b></p></div>
+  </div>
+</section>
+
+<!-- ============ 4 · PEOPLE & FEEDS ============ -->
+<section id="people">
+  <div class="kicker">Section 4 · The live conversation</div>
+  <h2>People &amp; feeds worth following</h2>
+  <p class="lede">The exam tests current practice, and current practice is argued out in public. These are the voices behind the debates in <a href="domain-00-builders-pulse.html" style="color:var(--blue);text-decoration:none">Builder's Pulse</a> — following them keeps your mental model from going stale.</p>
+
+  <div class="grid c3">
+    <div class="card amber">
+      <h4><span class="icon">📝</span><a href="https://simonwillison.net/" target="_blank" rel="noopener">Simon Willison</a> <a class="handle" href="https://x.com/simonw" target="_blank" rel="noopener">@simonw</a></h4>
+      <p>The field's most reliable daily chronicler; named the "lethal trifecta" and tracks every prompt-injection and MCP-security development first.</p></div>
+    <div class="card amber">
+      <h4><span class="icon">📊</span><a href="https://hamel.dev/" target="_blank" rel="noopener">Hamel Husain</a> <a class="handle" href="https://x.com/HamelHusain" target="_blank" rel="noopener">@HamelHusain</a></h4>
+      <p>Co-author of the dominant evals methodology ("Your AI Product Needs Evals", the Evals FAQ) — read him before touching the Evaluation &amp; Tuning domain.</p></div>
+    <div class="card amber">
+      <h4><span class="icon">🔬</span><a href="https://www.sh-reya.com/" target="_blank" rel="noopener">Shreya Shankar</a> <a class="handle" href="https://x.com/sh_reya" target="_blank" rel="noopener">@sh_reya</a></h4>
+      <p>The research backbone of LLM evaluation ("Who Validates the Validators?", criteria drift, "In Defense of AI Evals").</p></div>
+    <div class="card amber">
+      <h4><span class="icon">✍️</span><a href="https://eugeneyan.com/" target="_blank" rel="noopener">Eugene Yan</a> <a class="handle" href="https://x.com/eugeneyan" target="_blank" rel="noopener">@eugeneyan</a></h4>
+      <p>Long-form essays on LLM evaluators, judge reliability, and production patterns — the best bridge between papers and practice.</p></div>
+    <div class="card amber">
+      <h4><span class="icon">🎙️</span><a href="https://www.latent.space/" target="_blank" rel="noopener">swyx / Latent.Space</a> <a class="handle" href="https://x.com/swyx" target="_blank" rel="noopener">@swyx</a></h4>
+      <p>The AI-engineering newsletter and podcast of record; coined "AI Engineer" and surfaces every important agent-architecture debate early.</p></div>
+    <div class="card amber">
+      <h4><span class="icon">🦜</span><a href="https://blog.langchain.com/" target="_blank" rel="noopener">LangChain Blog</a></h4>
+      <p>Where LangGraph patterns (deep agents, ambient agents, memory) are announced and argued — directly relevant given how much NVIDIA material builds on LangGraph.</p></div>
+    <div class="card amber">
+      <h4><span class="icon">🧠</span><a href="https://www.anthropic.com/engineering" target="_blank" rel="noopener">Anthropic Engineering Blog</a></h4>
+      <p>"Building Effective Agents", context engineering, the multi-agent research system — the most-cited agent design canon in the industry (and in this site's notes).</p></div>
+    <div class="card amber">
+      <h4><span class="icon">🏭</span><a href="https://www.humanlayer.dev/12-factor-agents" target="_blank" rel="noopener">Dex Horthy / 12-Factor Agents</a> <a class="handle" href="https://x.com/dexhorthy" target="_blank" rel="noopener">@dexhorthy</a></h4>
+      <p>The production-agent checklist (own your prompts, context, control flow) — repo at <a href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener">humanlayer/12-factor-agents</a>.</p></div>
+  </div>
+</section>
+
+<!-- ============ 5 · PRACTICE EXAMS ============ -->
+<section id="practice">
+  <div class="kicker">Section 5 · Pressure-test yourself</div>
+  <h2>Practice &amp; mock exams</h2>
+  <div class="callout"><b>Honest caveat:</b> NVIDIA publishes <b>no official practice exam</b> for NCP-AAI. Everything below is community-built from the public blueprint — quality varies, question wording will not match the real exam, and none of these are endorsed by NVIDIA. Use them to find weak domains, not to memorize answers (and avoid anything marketed as "real exam dumps").</div>
+
+  <div class="grid c2">
+    <div class="card red">
+      <h4><span class="icon">⚡</span><a href="https://flashgenius.net/certification/ncp-aai" target="_blank" rel="noopener">FlashGenius — NCP-AAI Practice</a></h4>
+      <p>500+ questions organized by the ten blueprint domains, with a free 10-questions/day tier — good for domain-by-domain drilling.</p></div>
+    <div class="card red">
+      <h4><span class="icon">🧪</span><a href="https://www.whizlabs.com/nvidia-certified-professional-agentic-ai-ncp-aai/" target="_blank" rel="noopener">Whizlabs — NCP-AAI Course</a></h4>
+      <p>Scenario-based practice tests from an established cert-prep vendor; their free <a href="https://www.whizlabs.com/blog/ncp-aai-guide/" target="_blank" rel="noopener">NCP-AAI guide</a> is a decent blueprint summary.</p></div>
+    <div class="card red">
+      <h4><span class="icon">🛠️</span><a href="https://preporato.com/certificates/agentic-ai-professional" target="_blank" rel="noopener">Preporato — Practice Tests + Labs</a></h4>
+      <p>Practice tests paired with hands-on labs — the lab angle is the differentiator, since the real exam rewards having actually built things.</p></div>
+    <div class="card red">
+      <h4><span class="icon">🎓</span>Udemy mock bundles</h4>
+      <p>Several full-length mock sets exist, e.g. <a href="https://www.udemy.com/course/nvidia-agentic-ai-ncp-aai-2026-6-practice-exams/" target="_blank" rel="noopener">6 Practice Exams (364 Qs)</a> and <a href="https://www.udemy.com/course/practice-exams-nvidia-certified-professional-agentic-ai/" target="_blank" rel="noopener">Practice Exams: Agentic AI</a> — cheap on sale; check recent reviews before buying, as quality is uneven.</p></div>
+  </div>
+</section>
+
+<!-- ============ 6 · FROM THIS SITE ============ -->
+<section id="site">
+  <div class="kicker">Section 6 · Your own materials</div>
+  <h2>From this site</h2>
+  <p class="lede">Built alongside this page — same exam, same blueprint, deeper dives.</p>
+
+  <div class="grid c3">
+    <div class="card cyan">
+      <h4><span class="icon">📖</span><a href="study-guide.html">Study Guide</a></h4>
+      <p>The condensed all-domains study guide — weights, mental models, and the one-page revision pass for exam week.</p></div>
+    <div class="card cyan">
+      <h4><span class="icon">🫀</span><a href="domain-00-builders-pulse.html">Builder's Pulse</a></h4>
+      <p>The ten live practitioner debates (context engineering, evals, multi-agent, MCP/A2A...) mapped onto the exam domains — the "why" behind every concept.</p></div>
+    <div class="card cyan">
+      <h4><span class="icon">🗂️</span><a href="https://github.com/praveenpke/ncp-aai-study-hub/tree/main/notes" target="_blank" rel="noopener">Full notes on GitHub</a></h4>
+      <p>One detailed markdown file per domain — decision tables, exam traps, and scenario drills; the source material these visual pages are built from.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p class="fine">NCP-AAI study hub · Resources · all external links verified June 2026 · <a href="index.html">back to hub</a> · <a href="#top">back to top ↑</a></p>
+</footer>
+
+</body>
+</html>
