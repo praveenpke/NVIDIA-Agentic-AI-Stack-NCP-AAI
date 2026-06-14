@@ -1,78 +1,79 @@
 /* ============================================================
-   Shared OFFICIAL theme — monochrome + cream, dark & light.
+   Shared OFFICIAL theme — black & white (neutral), dark & light.
    Loaded AFTER each page's inline <style>, so the variable
    values here override the page palettes. Pages keep their
    original variable NAMES (--green = primary accent slot, now
-   a warm cream/espresso accent — no longer NVIDIA green).
-   Palette: ink · charcoal · stone · grey · parchment · cream.
-   The semantic data-viz hues (--red/amber/blue/purple/cyan)
-   are kept as deliberate pops of color for charts & 3D scenes.
+   a near-white / near-black accent — no longer NVIDIA green).
+   Palette: black · charcoal · grey · silver · white (a hair
+   of warmth in light mode for "paper", otherwise neutral).
+   Semantic slots (--red/amber/blue/purple/cyan) are desaturated
+   to distinct grey tones; --red keeps a muted hue for warnings.
    ============================================================ */
 
-/* ---------- INK DARK (default) ---------- */
+/* ---------- BLACK DARK (default) ---------- */
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* surfaces — warm near-black ink / charcoal */
-  --bg:      #131210;
-  --bg2:     #181613;
-  --bg3:     #201d18;
-  --card:    #1a1814;
-  --panel:   #1a1814;
-  --panel2:  #221f19;
+  /* surfaces — neutral near-black / charcoal */
+  --bg:      #0e0e0f;
+  --bg2:     #151517;
+  --bg3:     #1c1c1f;
+  --card:    #151517;
+  --panel:   #151517;
+  --panel2:  #202023;
 
-  /* primary accent (the old NVIDIA-green slot) — warm parchment cream */
-  --green:      #e6d9bd;
-  --green-dim:  #b3a888;
-  --green-glow: rgba(230, 217, 189, .12);
-  --on-accent:  #1a160f;   /* ink text placed on top of the cream accent */
+  /* primary accent (the old NVIDIA-green slot) — near-white */
+  --green:      #f4f4f3;
+  --green-dim:  #8f8f90;
+  --green-glow: rgba(244, 244, 243, .08);
+  --on-accent:  #111112;   /* near-black text placed on the white accent */
 
   /* text */
-  --text:  #ece7da;
-  --muted: #9c9685;
+  --text:  #eaeaea;
+  --muted: #9a9a9d;
 
   /* lines */
-  --border: #322d24;
-  --line:   #322d24;
+  --border: #2a2a2d;
+  --line:   #2a2a2d;
 
-  /* secondary semantic colors — kept as restrained pops for data viz */
-  --red:    #d8695a;
-  --amber:  #d8b563;
-  --blue:   #7ba6c9;
-  --purple: #b196dd;
-  --cyan:   #6abfae;
+  /* semantic slots — desaturated to grey tones (red keeps a muted hue) */
+  --red:    #cf6b5e;
+  --amber:  #cfcfcb;
+  --blue:   #a6a6a9;
+  --purple: #bcb9c0;
+  --cyan:   #848489;
 
   --mono: ui-monospace, SFMono-Regular, Consolas, 'Cascadia Mono', Menlo, monospace;
 }
 
-/* ---------- CREAM LIGHT ---------- */
+/* ---------- WHITE LIGHT ---------- */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg:      #f6f2e9;
-  --bg2:     #efe9db;
-  --bg3:     #e7dfcd;
-  --card:    #fffefa;
-  --panel:   #fffefa;
-  --panel2:  #f4eee1;
+  --bg:      #f5f5f3;
+  --bg2:     #ededeb;
+  --bg3:     #e4e4e1;
+  --card:    #ffffff;
+  --panel:   #ffffff;
+  --panel2:  #f1f1ef;
 
-  --green:      #463c2c;   /* deep warm espresso — the accent in light mode */
-  --green-dim:  #6c6150;
-  --green-glow: rgba(70, 60, 44, .10);
-  --on-accent:  #faf7f0;   /* cream text on the espresso accent */
+  --green:      #18181b;   /* near-black — the accent in light mode */
+  --green-dim:  #56565a;
+  --green-glow: rgba(20, 20, 24, .07);
+  --on-accent:  #ffffff;   /* white text on the near-black accent */
 
-  --text:  #211e18;
-  --muted: #6e6757;
+  --text:  #161618;
+  --muted: #66666a;
 
-  --border: #e4dcca;
-  --line:   #e4dcca;
+  --border: #e3e3e0;
+  --line:   #e3e3e0;
 
-  --red:    #b3493a;
-  --amber:  #946f1d;
-  --blue:   #356c93;
-  --purple: #6c4cae;
-  --cyan:   #1f7d6f;
+  --red:    #b14536;
+  --amber:  #5f5f5c;
+  --blue:   #7a7a7e;
+  --purple: #524f59;
+  --cyan:   #8a8a8d;
 }
 
 /* ---------- shared refinements (polish) ---------- */
@@ -100,11 +101,14 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
-/* floating control cluster (menu + theme toggle) — injected on every page */
+/* floating control cluster (menu + theme toggle) — injected on every page.
+   Pinned BOTTOM-right so it never overlaps the sticky section-nav / header bar
+   that each page renders across the top. */
 .site-controls {
   position: fixed;
-  top: 8px;
-  right: 12px;
+  bottom: 16px;
+  right: 16px;
+  top: auto;
   z-index: 900;
   display: flex;
   gap: 8px;
