@@ -100,6 +100,64 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
 
     syncIcon();
+    buildTOC();
+  }
+
+  /* ---- Notion-style right-rail "on this page" outline ----
+     Reuses each page's existing top section-nav links; on wide viewports
+     theme.css hides the top bar and shows this rail with scroll-spy. */
+  function buildTOC() {
+    var pageNav = document.querySelector('nav:not(.site-menu)');
+    if (!pageNav) return;
+    var srcLinks = Array.prototype.slice.call(pageNav.querySelectorAll('a[href^="#"]'))
+      .filter(function (a) { return !a.classList.contains('brand') && a.getAttribute('href').length > 1; });
+    if (srcLinks.length < 3) return;
+
+    pageNav.classList.add('section-nav');
+    document.body.classList.add('has-toc');
+
+    var toc = document.createElement('nav');
+    toc.className = 'toc';
+    toc.setAttribute('aria-label', 'On this page');
+
+    var targets = [];
+    srcLinks.forEach(function (src) {
+      var id = src.getAttribute('href').slice(1);
+      var sec = document.getElementById(id);
+      if (!sec) return;
+      var a = document.createElement('a');
+      a.href = '#' + id;
+      a.setAttribute('data-target', id);
+      a.innerHTML = '<span class="lbl"></span><span class="ln"></span>';
+      a.querySelector('.lbl').textContent = src.textContent.trim();
+      a.title = src.textContent.trim();
+      toc.appendChild(a);
+      targets.push({ id: id, el: sec, link: a });
+    });
+    if (!targets.length) return;
+    document.body.appendChild(toc);
+
+    function setActive(id) {
+      for (var i = 0; i < targets.length; i++) {
+        targets[i].link.classList.toggle('active', targets[i].id === id);
+      }
+    }
+    var ticking = false;
+    function update() {
+      var current = targets[0].id;
+      for (var i = 0; i < targets.length; i++) {
+        if (targets[i].el.getBoundingClientRect().top <= 150) current = targets[i].id;
+        else break;
+      }
+      setActive(current);
+      ticking = false;
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
   }
 
   if (document.readyState === 'loading') {
