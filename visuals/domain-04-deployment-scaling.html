@@ -6,13 +6,14 @@
 <title>NCP-AAI Domain 4 — Deployment &amp; Scaling</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0f1521; --bg3:#131b2a; --panel:#121927; --panel2:#182236;
-    --card:#121927;
-    --line:#1f2a3d; --line2:#2a3a52;
-    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.25);
-    --on-accent:#06210b;
-    --text:#dbe4f0; --txt:#dbe4f0; --muted:#8fa0b8; --faint:#5d6c82;
-    --amber:#e8b339; --red:#e85d5d; --blue:#4da3ff; --purple:#b07cff; --cyan:#39d3c8;
+    /* page-local fallbacks; theme.css loads AFTER and overrides these to the shared B&W palette */
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --panel:#151517; --panel2:#202023;
+    --card:#151517;
+    --line:#2a2a2d; --line2:#2a2a2d;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08);
+    --on-accent:#111112;
+    --text:#eaeaea; --txt:#eaeaea; --muted:#9a9a9d; --faint:#6a6a6e;
+    --amber:#cfcfcb; --red:#cf6b5e; --blue:#a6a6a9; --purple:#bcb9c0; --cyan:#848489;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   /* bridge page-local var names to the shared theme slots (theme.css overrides the palette) */
@@ -26,10 +27,11 @@
   code{font-family:Consolas,"SF Mono",Menlo,monospace;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.86em;color:var(--green)}
   pre{background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:12px 0 10px;font-size:.78rem;line-height:1.55}
   pre code{display:block;background:none;border:none;padding:0;font-size:inherit;color:var(--green);white-space:pre}
-  h2{font-size:1.7rem;margin-bottom:.4rem}
-  h3{font-size:1.15rem;margin:1.4rem 0 .6rem;color:var(--txt)}
-  section{max-width:1180px;margin:0 auto;padding:64px 24px 24px}
-  .sub{color:var(--muted);max-width:880px;margin-bottom:1.6rem}
+  h2{font-size:clamp(1.45rem,3.4vw,1.8rem);margin-bottom:.4rem;letter-spacing:-.01em;line-height:1.2}
+  h3{font-size:clamp(1.08rem,2.4vw,1.2rem);margin:1.8rem 0 .7rem;color:var(--txt);line-height:1.3}
+  p{line-height:1.6}
+  section{max-width:1180px;margin:0 auto;padding:64px 24px 28px}
+  .sub{color:var(--muted);max-width:70ch;margin-bottom:1.7rem;line-height:1.6}
   .kicker{color:var(--green);font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:.4rem}
 
   /* nav */
@@ -53,24 +55,24 @@
   .hero .weightbar i{display:block;height:100%;width:13%;background:linear-gradient(90deg,var(--green-dim),var(--green));border-radius:6px}
 
   /* 3D scene */
-  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0e0e0f}
   #scene-canvas{width:100%;height:100%;display:block}
-  .overlay{position:absolute;font-size:.78rem;color:#8fa0b8;background:rgba(10,14,22,.82);border:1px solid #3a4a66;border-radius:10px;backdrop-filter:blur(6px)}
+  .overlay{position:absolute;font-size:.78rem;color:#c9c9c7;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:10px;backdrop-filter:blur(6px)}
   #legend{left:14px;bottom:14px;padding:12px 14px;max-width:300px}
-  #legend h4{color:#fff;font-size:.8rem;margin-bottom:7px;letter-spacing:.05em}
+  #legend h4{color:#f4f4f3;font-size:.8rem;margin-bottom:7px;letter-spacing:.05em}
   #legend .row{display:flex;gap:8px;align-items:center;margin:4px 0}
   #legend .dot{width:11px;height:11px;border-radius:3px;flex:none}
   #meters{right:14px;top:14px;padding:13px 16px;width:218px}
-  #meters h4{color:#fff;font-size:.8rem;margin-bottom:9px;letter-spacing:.05em}
+  #meters h4{color:#f4f4f3;font-size:.8rem;margin-bottom:9px;letter-spacing:.05em}
   .meter{margin-bottom:10px}
   .meter .lab{display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:3px}
-  .meter .lab b{color:#fff;font-weight:600}
-  .meter .bar{height:7px;background:#0a101c;border:1px solid #3a4a66;border-radius:5px;overflow:hidden}
+  .meter .lab b{color:#f4f4f3;font-weight:600}
+  .meter .bar{height:7px;background:#1c1c1f;border:1px solid #3a3a3e;border-radius:5px;overflow:hidden}
   .meter .bar i{display:block;height:100%;width:30%;border-radius:5px;transition:width .25s linear}
-  #m-ttft i{background:#e8b339} #m-tps i{background:#76b900} #m-gpu i{background:#4da3ff} #m-kv i{background:#b07cff}
+  #m-ttft i{background:#c9c9c7} #m-tps i{background:#f4f4f3} #m-gpu i{background:#9a9a9d} #m-kv i{background:#6a6a6e}
   #scene-hint{left:50%;transform:translateX(-50%);top:14px;padding:7px 16px;font-size:.74rem}
-  #tooltip{display:none;position:absolute;pointer-events:none;padding:8px 12px;max-width:260px;font-size:.75rem;color:#dfe7f3;z-index:5}
-  #tooltip b{color:#76b900}
+  #tooltip{display:none;position:absolute;pointer-events:none;padding:8px 12px;max-width:260px;font-size:.75rem;color:#eaeaea;z-index:5}
+  #tooltip b{color:#f4f4f3}
 
   /* cards & grids */
   .grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
@@ -120,14 +122,15 @@
   .hbar .lab b{color:var(--txt)}
   .hbar .track{height:18px;background:var(--bg3);border:1px solid var(--line);border-radius:6px;overflow:hidden}
   .hbar .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--green-dim),var(--green));display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:.7rem;color:var(--on-accent);font-weight:800;min-width:34px}
-  .hbar .fill.amber{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 60%, black),var(--amber))}
-  .hbar .fill.blue{background:linear-gradient(90deg,color-mix(in srgb, var(--blue) 60%, black),var(--blue))}
+  /* value-coded bars: distinguish by grey LIGHTNESS, not hue (low→dark, high→light) */
+  .hbar .fill.amber{background:linear-gradient(90deg,#3a3a3e,#6a6a6e)}   /* low value — darker */
+  .hbar .fill.blue{background:linear-gradient(90deg,#6a6a6e,#9a9a9d)}    /* mid value */
 
-  /* traps */
-  .trap{background:linear-gradient(180deg,var(--panel2),var(--bg2));border:1px solid color-mix(in srgb, var(--amber) 45%, transparent);border-left:4px solid var(--amber);border-radius:12px;padding:14px 18px}
-  .trap h4{color:var(--amber);font-size:.92rem;margin-bottom:5px}
+  /* traps — genuine "exam trap" warnings → the single muted red accent */
+  .trap{background:linear-gradient(180deg,var(--panel2),var(--bg2));border:1px solid color-mix(in srgb, var(--red) 45%, transparent);border-left:4px solid var(--red);border-radius:12px;padding:14px 18px}
+  .trap h4{color:var(--red);font-size:.92rem;margin-bottom:5px}
   .trap p{font-size:.84rem;color:var(--muted)}
-  .trap p b{color:var(--amber)}
+  .trap p b{color:var(--red)}
 
   /* drills */
   details.drill{background:var(--bg2);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
@@ -152,34 +155,75 @@
   @media(max-width:860px){.twocol{grid-template-columns:1fr}}
   .divider{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:48px 0 0}
 
-  /* theme-aware overrides for SVG presentation attributes (attributes can't use var()) */
+  /* ---- SVG presentation-attribute remap → GREYSCALE (attributes can't use var()).
+     Categories stay distinct via grey lightness steps + border weight, never hue.
+     The single muted red (--red) is kept only for genuine danger/fail. ---- */
+  /* surfaces / panels */
   svg [fill="#0f1722"]{fill:var(--panel)}
   svg [fill="#13202e"],svg [fill="#101723"]{fill:var(--panel2)}
   svg [fill="#1b2535"],svg [fill="#2a3548"]{fill:var(--bg3)}
-  svg [fill="#16243a"]{fill:color-mix(in srgb, var(--blue) 15%, transparent)}
-  svg [fill="#3b2a5e"]{fill:color-mix(in srgb, var(--purple) 18%, transparent)}
-  svg [fill="#3a1518"]{fill:color-mix(in srgb, var(--red) 15%, transparent)}
-  svg [fill="#2c4a00"]{fill:var(--green-glow)}
-  svg [fill="#3a5c00"]{fill:color-mix(in srgb, var(--green) 40%, transparent)}
-  svg [fill="#4e7a00"]{fill:color-mix(in srgb, var(--green) 65%, transparent)}
+  /* tinted category blocks → neutral grey tints (distinct lightness) */
+  svg [fill="#16243a"]{fill:#2c2c30}            /* (was blue tint) */
+  svg [fill="#3b2a5e"]{fill:#33333a}            /* (was purple tint) */
+  svg [fill="#3a1518"]{fill:color-mix(in srgb, var(--red) 15%, transparent)}  /* danger tint — keep red */
+  svg [fill="#2c4a00"]{fill:#3a3a3e}            /* (was green glow) */
+  svg [fill="#3a5c00"]{fill:#6a6a6e}
+  svg [fill="#4e7a00"]{fill:#9a9a9d}
+  /* primary accent / "success" greens → near-white accent */
   svg [fill="#76b900"],svg [fill="#3f6a00"],svg [fill="#a4e22f"],svg [fill="#cdf38a"],svg [fill="#a8e063"]{fill:var(--green)}
   svg [fill="#06210b"],svg [fill="#d9ff7a"],svg [fill="#cfe6ff"]{fill:var(--on-accent)}
-  svg [fill="#4da3ff"],svg [fill="#1d4f86"],svg [fill="#9cc8f5"],svg [fill="#5d8ab8"]{fill:var(--blue)}
-  svg [fill="#b07cff"],svg [fill="#d8c2ff"]{fill:var(--purple)}
-  svg [fill="#39d3c8"]{fill:var(--cyan)}
-  svg [fill="#e8b339"]{fill:var(--amber)}
+  /* former blue category → light grey step */
+  svg [fill="#4da3ff"],svg [fill="#1d4f86"],svg [fill="#9cc8f5"],svg [fill="#5d8ab8"]{fill:#c9c9c7}
+  /* former purple category → mid grey step */
+  svg [fill="#b07cff"],svg [fill="#d8c2ff"]{fill:#9a9a9d}
+  /* former cyan category → mid-dark grey step */
+  svg [fill="#39d3c8"]{fill:#848489}
+  /* former amber category → light-silver step */
+  svg [fill="#e8b339"]{fill:#cfcfcb}
+  /* genuine fail/error → muted red (only color allowed) */
   svg [fill="#e85d5d"],svg [fill="#f0a0a0"]{fill:var(--red)}
   svg [fill="#5d6c82"]{fill:var(--muted)}
+  /* strokes */
   svg [stroke="#2a3a52"],svg [stroke="#3a4a62"]{stroke:var(--line)}
   svg [stroke="#3a5c00"]{stroke:var(--green-dim)}
   svg [stroke="#76b900"]{stroke:var(--green)}
-  svg [stroke="#4da3ff"]{stroke:var(--blue)}
-  svg [stroke="#b07cff"],svg [stroke="#5b3f8f"]{stroke:var(--purple)}
-  svg [stroke="#1d6f68"]{stroke:var(--cyan)}
-  svg [stroke="#e8b339"]{stroke:var(--amber)}
+  svg [stroke="#4da3ff"]{stroke:#c9c9c7}
+  svg [stroke="#b07cff"],svg [stroke="#5b3f8f"]{stroke:#9a9a9d}
+  svg [stroke="#1d6f68"]{stroke:#848489}
+  svg [stroke="#e8b339"]{stroke:#cfcfcb}
   svg [stroke="#e85d5d"]{stroke:var(--red)}
   svg [stroke="#5d6c82"]{stroke:var(--muted)}
   svg [stroke="#0b0f17"]{stroke:var(--bg)}
+
+  /* ---------- responsive / mobile polish ---------- */
+  @media(max-width:900px){
+    .twocol{grid-template-columns:1fr}
+  }
+  @media(max-width:640px){
+    body{line-height:1.6}
+    section{padding:44px 16px 22px}
+    h2{font-size:clamp(1.3rem,6vw,1.6rem)}
+    /* single-column grids on small screens */
+    .g2,.g3,.g4{grid-template-columns:1fr}
+    .grid{gap:14px}
+    /* sticky section-nav scrolls horizontally without breaking layout */
+    nav .wrap{padding:10px 16px;gap:2px;-webkit-overflow-scrolling:touch}
+    nav a{font-size:.8rem;padding:6px 9px}
+    /* shrink the 3D scene + keep overlays from covering content */
+    #scene-wrap{height:52vh;min-height:360px}
+    #legend{max-width:62vw;font-size:.7rem;padding:9px 11px}
+    #meters{width:170px;padding:10px 12px}
+    #scene-hint{font-size:.66rem;padding:6px 10px;max-width:88vw;text-align:center}
+    /* tables + code never force horizontal page overflow */
+    .tablewrap{overflow-x:auto}
+    pre{font-size:.72rem}
+    .hero{padding:64px 16px 44px}
+    .drill summary{padding:14px 14px}
+    details.drill .ans{padding:0 16px 16px 16px}
+  }
+  @media(max-width:380px){
+    #meters{display:none}   /* avoid covering the canvas on very small phones */
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -222,11 +266,11 @@
   <div class="overlay" id="scene-hint">Drag to orbit · scroll to zoom · hover objects for info · click a pod to highlight its requests</div>
   <div class="overlay" id="legend">
     <h4>LEGEND — GPU DATACENTER</h4>
-    <div class="row"><span class="dot" style="background:#4da3ff"></span>Client orbs → request particles</div>
-    <div class="row"><span class="dot" style="background:#76b900"></span>Load balancer pyramid (fans out)</div>
-    <div class="row"><span class="dot" style="background:rgba(118,185,0,.4);border:1px solid #76b900"></span>K8s pods (translucent) + glowing GPU</div>
-    <div class="row"><span class="dot" style="background:#b07cff"></span>Zoomed pod: in-flight batching lanes — slots free &amp; refill per token iteration</div>
-    <div class="row"><span class="dot" style="background:#e8b339"></span>Traffic sine wave → HPA spawns / despawns pods</div>
+    <div class="row"><span class="dot" style="background:#c9c9c7"></span>Client orbs → request particles</div>
+    <div class="row"><span class="dot" style="background:#f4f4f3"></span>Load balancer pyramid (fans out)</div>
+    <div class="row"><span class="dot" style="background:rgba(244,244,243,.35);border:1px solid #f4f4f3"></span>K8s pods (translucent) + glowing GPU</div>
+    <div class="row"><span class="dot" style="background:#8a8a8d"></span>Zoomed pod: in-flight batching lanes — slots free &amp; refill per token iteration</div>
+    <div class="row"><span class="dot" style="background:#6a6a6e"></span>Traffic sine wave → HPA spawns / despawns pods</div>
   </div>
   <div class="overlay" id="meters">
     <h4>LIVE METERS</h4>
@@ -234,7 +278,7 @@
     <div class="meter" id="m-tps"><div class="lab"><b>Tokens / sec</b><span id="v-tps">—</span></div><div class="bar"><i></i></div></div>
     <div class="meter" id="m-gpu"><div class="lab"><b>GPU utilization</b><span id="v-gpu">—</span></div><div class="bar"><i></i></div></div>
     <div class="meter" id="m-kv"><div class="lab"><b>gpu_cache_usage_perc</b><span id="v-kv">—</span></div><div class="bar"><i></i></div></div>
-    <div style="font-size:.68rem;color:#8fa0b8;margin-top:6px">HPA scales pods on KV-cache % — <b style="color:#e85d5d">never CPU</b>. Pods: <span id="v-pods" style="color:#76b900;font-weight:700">3</span></div>
+    <div style="font-size:.68rem;color:#c9c9c7;margin-top:6px">HPA scales pods on KV-cache % — <b style="color:#cf6b5e">never CPU</b>. Pods: <span id="v-pods" style="color:#f4f4f3;font-weight:700">3</span></div>
   </div>
   <div class="overlay" id="tooltip"></div>
 </div>
@@ -256,8 +300,8 @@ const canvas = document.getElementById('scene-canvas');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 60, 140);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 60, 140);
 
 const camera = new THREE.PerspectiveCamera(50, 2, .1, 400);
 camera.position.set(0, 16, 38);
@@ -266,23 +310,23 @@ controls.target.set(0, 4, 0);
 controls.enableDamping = true; controls.dampingFactor = .06;
 controls.maxDistance = 90; controls.minDistance = 10;
 
-scene.add(new THREE.AmbientLight(0x6f7f9a, .55));
+scene.add(new THREE.AmbientLight(0x8a8a8d, .55));
 const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(10, 24, 14); scene.add(key);
-const grn = new THREE.PointLight(0x76b900, 60, 60); grn.position.set(0, 10, 0); scene.add(grn);
+const grn = new THREE.PointLight(0xf4f4f3, 60, 60); grn.position.set(0, 10, 0); scene.add(grn);
 
 // floor grid
-const grid = new THREE.GridHelper(120, 48, 0x1d2a3e, 0x121a28);
+const grid = new THREE.GridHelper(120, 48, 0x3a3a3e, 0x222226);
 grid.position.y = -0.01; scene.add(grid);
 
 // ---------- label sprites (canvas textures) ----------
-function makeLabel(text, color='#dbe4f0', size=46, bg=true){
+function makeLabel(text, color='#eaeaea', size=46, bg=true){
   const pad=18, c=document.createElement('canvas'), ctx=c.getContext('2d');
   ctx.font = `600 ${size}px -apple-system, Segoe UI, Roboto, sans-serif`;
   const w = ctx.measureText(text).width;
   c.width = Math.ceil(w+pad*2); c.height = size+pad*1.4;
   const x = c.getContext('2d');
-  if(bg){ x.fillStyle='rgba(10,15,24,0.78)'; x.beginPath(); x.roundRect(0,0,c.width,c.height,14); x.fill();
-    x.strokeStyle='rgba(118,185,0,0.35)'; x.lineWidth=2; x.stroke(); }
+  if(bg){ x.fillStyle='rgba(14,14,15,0.92)'; x.beginPath(); x.roundRect(0,0,c.width,c.height,14); x.fill();
+    x.strokeStyle='rgba(244,244,243,0.30)'; x.lineWidth=2; x.stroke(); }
   x.font = `600 ${size}px -apple-system, Segoe UI, Roboto, sans-serif`;
   x.fillStyle = color; x.textBaseline='middle';
   x.fillText(text, pad, c.height/2+2);
@@ -298,23 +342,23 @@ function hoverable(mesh, title, desc){ mesh.userData.hover={title,desc}; hoverab
 
 // ---------- clients (orbs, left side) ----------
 const CLIENTS=[];
-const clientMat = new THREE.MeshStandardMaterial({color:0x4da3ff, emissive:0x1c4f8f, emissiveIntensity:1.2, roughness:.35});
+const clientMat = new THREE.MeshStandardMaterial({color:0xc9c9c7, emissive:0x6a6a6e, emissiveIntensity:1.2, roughness:.35});
 for(let i=0;i<4;i++){
   const m = new THREE.Mesh(new THREE.SphereGeometry(.85, 24, 18), clientMat.clone());
   m.position.set(-26, 3.2 + i*2.6, -6 + i*4.2);
   scene.add(m); CLIENTS.push(m);
   hoverable(m, 'Client / Agent', 'Agents fire many LLM calls per user task (planning, tool selection, reflection) — cost and latency multiply.');
 }
-const clLab = makeLabel('Clients (agent LLM calls)', '#9cc8f5'); clLab.position.set(-26, 13.5, 0); scene.add(clLab);
+const clLab = makeLabel('Clients (agent LLM calls)', '#c9c9c7'); clLab.position.set(-26, 13.5, 0); scene.add(clLab);
 
 // ---------- load balancer pyramid ----------
 const lb = new THREE.Mesh(
   new THREE.ConeGeometry(2.6, 4.2, 4),
-  new THREE.MeshStandardMaterial({color:0x76b900, emissive:0x3a5c00, emissiveIntensity:.9, roughness:.3, metalness:.2})
+  new THREE.MeshStandardMaterial({color:0xf4f4f3, emissive:0x6a6a6e, emissiveIntensity:.9, roughness:.3, metalness:.2})
 );
 lb.position.set(-10, 4.4, 0); lb.rotation.y = Math.PI/4; scene.add(lb);
 hoverable(lb, 'Load Balancer / Ingress', 'Fans requests across replicas. Round-robin is naive for LLMs (request costs vary) — prefer least-outstanding-requests or KV-cache/prefix-aware routing.');
-const lbLab = makeLabel('Load Balancer', '#a4e22f'); lbLab.position.set(-10, 8.6, 0); scene.add(lbLab);
+const lbLab = makeLabel('Load Balancer', '#f4f4f3'); lbLab.position.set(-10, 8.6, 0); scene.add(lbLab);
 
 // ---------- pods ----------
 const POD_SLOTS = [ [4,-9],[4,-3],[4,3],[4,9],[11,-6],[11,0],[11,6] ]; // x,z — up to 7 pods (min 2)
@@ -323,12 +367,12 @@ const podGeo = new THREE.BoxGeometry(4.4, 5, 4.4);
 function spawnPod(i){
   const g = new THREE.Group();
   const box = new THREE.Mesh(podGeo, new THREE.MeshStandardMaterial({
-    color:0x76b900, transparent:true, opacity:.16, roughness:.2, metalness:.1,
-    emissive:0x2c4a00, emissiveIntensity:.35, depthWrite:false}));
+    color:0xc9c9c7, transparent:true, opacity:.16, roughness:.2, metalness:.1,
+    emissive:0x4a4a4e, emissiveIntensity:.35, depthWrite:false}));
   const edge = new THREE.LineSegments(new THREE.EdgesGeometry(podGeo),
-    new THREE.LineBasicMaterial({color:0x76b900, transparent:true, opacity:.65}));
+    new THREE.LineBasicMaterial({color:0xf4f4f3, transparent:true, opacity:.65}));
   const gpu = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1, 1.7),
-    new THREE.MeshStandardMaterial({color:0x0c1320, emissive:0x76b900, emissiveIntensity:1.6, roughness:.35}));
+    new THREE.MeshStandardMaterial({color:0x1c1c1f, emissive:0xf4f4f3, emissiveIntensity:1.6, roughness:.35}));
   gpu.position.y = -0.6;
   g.add(box, edge, gpu);
   g.position.set(POD_SLOTS[i][0], 2.8, POD_SLOTS[i][1]);
@@ -338,21 +382,21 @@ function spawnPod(i){
   const pod = {group:g, box, gpu, alive:true, scale:.01, slot:i, edge};
   pods.push(pod); return pod;
 }
-const podLab = makeLabel('K8s pods · NIM :8000', '#a4e22f'); podLab.position.set(7.5, 9.4, 0); scene.add(podLab);
-const hpaLab = makeLabel('HPA: scales on gpu_cache_usage_perc / TTFT p90', '#e8b339', 38); hpaLab.position.set(7.5, 11.6, 0); scene.add(hpaLab);
+const podLab = makeLabel('K8s pods · NIM :8000', '#f4f4f3'); podLab.position.set(7.5, 9.4, 0); scene.add(podLab);
+const hpaLab = makeLabel('HPA: scales on gpu_cache_usage_perc / TTFT p90', '#c9c9c7', 38); hpaLab.position.set(7.5, 11.6, 0); scene.add(hpaLab);
 for(let i=0;i<3;i++) spawnPod(i);
 
 // ---------- zoomed pod (in-flight batching) ----------
 const zoom = new THREE.Group(); zoom.position.set(24, 6, -10); scene.add(zoom);
 const zoomShellGeo = new THREE.BoxGeometry(10.5, 8.4, 1.6);
 const zoomShell = new THREE.Mesh(zoomShellGeo, new THREE.MeshStandardMaterial({
-  color:0xb07cff, transparent:true, opacity:.07, depthWrite:false}));
+  color:0x8a8a8d, transparent:true, opacity:.07, depthWrite:false}));
 const zoomEdge = new THREE.LineSegments(new THREE.EdgesGeometry(zoomShellGeo),
-  new THREE.LineBasicMaterial({color:0xb07cff, transparent:true, opacity:.7}));
+  new THREE.LineBasicMaterial({color:0x8a8a8d, transparent:true, opacity:.7}));
 zoom.add(zoomShell, zoomEdge);
 hoverable(zoomShell, 'Zoomed pod — in-flight batching', 'Iteration-level batching: when a sequence finishes, it is evicted and a new request injected immediately — no waiting for the whole batch. Prefill + decode interleave.');
-const zoomLab = makeLabel('In-flight (continuous) batching', '#cdaaff', 42); zoomLab.position.set(0, 5.6, 0); zoom.add(zoomLab);
-const zoomLab2 = makeLabel('finished seq evicted → new request injected same iteration', '#8fa0b8', 30, true); zoomLab2.position.set(0, -5.4, 0); zoom.add(zoomLab2);
+const zoomLab = makeLabel('In-flight (continuous) batching', '#c9c9c7', 42); zoomLab.position.set(0, 5.6, 0); zoom.add(zoomLab);
+const zoomLab2 = makeLabel('finished seq evicted → new request injected same iteration', '#9a9a9d', 30, true); zoomLab2.position.set(0, -5.4, 0); zoom.add(zoomLab2);
 
 // lanes: 6 lanes x 14 token slots (instanced cubes)
 const LANES=6, SLOTS=14;
@@ -360,7 +404,7 @@ const slotGeo = new THREE.BoxGeometry(.52,.52,.52);
 const slotMesh = new THREE.InstancedMesh(slotGeo, new THREE.MeshStandardMaterial({roughness:.4}), LANES*SLOTS);
 slotMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 zoom.add(slotMesh);
-const cFilled = new THREE.Color(0x76b900), cEmpty = new THREE.Color(0x182232), cHead = new THREE.Color(0xd9ff7a), cPrefill = new THREE.Color(0x4da3ff);
+const cFilled = new THREE.Color(0xc9c9c7), cEmpty = new THREE.Color(0x242428), cHead = new THREE.Color(0xf4f4f3), cPrefill = new THREE.Color(0x8a8a8d);
 const lanes = []; // {len(target output len), prog, state:'gen'|'free', freeT}
 for(let l=0;l<LANES;l++) lanes.push({len: 5+Math.floor(Math.random()*9), prog: Math.random()*5, state:'gen'});
 const tmpM = new THREE.Matrix4(), tmpC = new THREE.Color();
@@ -379,10 +423,10 @@ const WAVE_N = 120;
 const wavePos = new Float32Array(WAVE_N*3);
 const waveGeo = new THREE.BufferGeometry();
 waveGeo.setAttribute('position', new THREE.BufferAttribute(wavePos,3));
-const waveLine = new THREE.Line(waveGeo, new THREE.LineBasicMaterial({color:0xe8b339, transparent:true, opacity:.85}));
+const waveLine = new THREE.Line(waveGeo, new THREE.LineBasicMaterial({color:0xc9c9c7, transparent:true, opacity:.85}));
 waveLine.position.set(-8, 14.5, -20); scene.add(waveLine);
-const waveLab = makeLabel('Traffic wave → HPA target', '#e8b339', 38); waveLab.position.set(-8, 19.6, -20); scene.add(waveLab);
-const waveDot = new THREE.Mesh(new THREE.SphereGeometry(.45,16,12), new THREE.MeshBasicMaterial({color:0xe8b339}));
+const waveLab = makeLabel('Traffic wave → HPA target', '#c9c9c7', 38); waveLab.position.set(-8, 19.6, -20); scene.add(waveLab);
+const waveDot = new THREE.Mesh(new THREE.SphereGeometry(.45,16,12), new THREE.MeshBasicMaterial({color:0xf4f4f3}));
 waveLine.add(waveDot);
 hoverable(waveDot, 'Current load', 'NIM/Triton expose Prometheus metrics → prometheus-adapter → custom metrics API → HPA. Watch downscale stabilization (default 5 min) and slow GPU cold starts.');
 
@@ -397,7 +441,7 @@ const points = new THREE.Points(pGeo, pMat); points.frustumCulled=false; scene.a
 const parts = []; // {t, speed, from:Vector3, pod, active, batchPhase}
 for(let i=0;i<MAXP;i++) parts.push({active:false, t:0, speed:1, from:new THREE.Vector3(), pod:0});
 const LBPOS = new THREE.Vector3(-10, 4.4, 0);
-const colBlue = new THREE.Color(0x4da3ff), colGreen = new THREE.Color(0xa4e22f);
+const colBlue = new THREE.Color(0x8a8a8d), colGreen = new THREE.Color(0xf4f4f3);
 
 let selectedPod = -1; // click highlight
 
@@ -491,7 +535,7 @@ function animate(){
     p.group.visible = p.scale > .03;
     p.gpu.material.emissiveIntensity = 1.1 + .8*Math.sin(t*5 + p.slot)* (p.alive?1:.2) + traffic;
     const sel = (selectedPod===p.slot);
-    p.edge.material.color.setHex(sel ? 0xd9ff7a : 0x76b900);
+    p.edge.material.color.setHex(sel ? 0xffffff : 0xc9c9c7);
     p.box.material.opacity = sel ? .3 : .16;
   }
 

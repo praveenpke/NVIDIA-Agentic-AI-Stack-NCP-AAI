@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NCP-AAI Domain 7 — NVIDIA Platform Implementation</title>
 <style>
+  /* Fallback B&W palette — theme.css (loaded after) overrides these with the
+     official neutral light/dark tokens. Kept greyscale so the page stays
+     black & white even if theme.css fails to load. The ONLY hue is --red. */
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#131b2b; --card2:#182337;
-    --panel:#141d2e; --panel2:#18233a;
-    --text:#e8edf5; --muted:#9aa7bd; --on-accent:#0b0f17;
-    --ink:#e8edf5; --ink-dim:#9aa7bd; --ink-faint:#6b7890;
-    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.18);
-    --amber:#ffb347; --red:#ff6b6b; --blue:#4fc3f7; --purple:#b388ff; --teal:#2dd4bf; --cyan:#2dd4bf;
-    --line:#223049; --border:#223049; --radius:14px;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --card:#151517; --card2:#202023;
+    --panel:#151517; --panel2:#202023;
+    --text:#eaeaea; --muted:#9a9a9d; --on-accent:#111112;
+    --ink:#eaeaea; --ink-dim:#9a9a9d; --ink-faint:#6b6b6e;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08);
+    --amber:#cfcfcb; --red:#cf6b5e; --blue:#a6a6a9; --purple:#bcb9c0; --teal:#848489; --cyan:#848489;
+    --line:#2a2a2d; --border:#2a2a2d; --radius:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -66,17 +69,17 @@
   nav a{flex:none;color:var(--muted);font-size:.82rem;font-weight:600;padding:13px 13px;border-bottom:2px solid transparent;white-space:nowrap}
   nav a:hover{color:var(--green);text-decoration:none;border-bottom-color:var(--green-dim)}
   /* 3D */
-  #scene-wrap{position:relative;width:100%;height:70vh;min-height:480px;background:#070b12;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  #scene-wrap{position:relative;width:100%;height:70vh;min-height:480px;background:#0e0e0f;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   #scene-canvas{width:100%;height:100%;display:block}
   #scene-hud{position:absolute;left:18px;top:16px;max-width:330px;pointer-events:none}
-  #scene-hud h3{margin:0 0 4px;font-size:1rem;color:#76b900}
-  #scene-hud p{font-size:.8rem;color:#8fa0b8}
-  #layer-info{position:absolute;right:18px;top:16px;width:300px;background:rgba(13,19,31,.92);border:1px solid #4e7a00;border-radius:12px;padding:14px 16px;opacity:0;transition:opacity .25s;pointer-events:none}
+  #scene-hud h3{margin:0 0 4px;font-size:1rem;color:#f4f4f3}
+  #scene-hud p{font-size:.8rem;color:#c9c9c7}
+  #layer-info{position:absolute;right:18px;top:16px;width:300px;background:rgba(14,14,15,.92);border:1px solid #4a4a4e;border-radius:12px;padding:14px 16px;opacity:0;transition:opacity .25s;pointer-events:none}
   #layer-info.show{opacity:1}
-  #layer-info .li-name{font-weight:800;color:#76b900;font-size:1rem;margin-bottom:3px}
-  #layer-info .li-role{font-size:.83rem;color:#8fa0b8}
-  #scene-legend{position:absolute;left:18px;bottom:14px;background:rgba(13,19,31,.9);border:1px solid #3a4a66;border-radius:12px;padding:11px 15px;font-size:.74rem;color:#8fa0b8;max-width:430px}
-  #scene-legend b{color:#dfe7f3}
+  #layer-info .li-name{font-weight:800;color:#f4f4f3;font-size:1rem;margin-bottom:3px}
+  #layer-info .li-role{font-size:.83rem;color:#c9c9c7}
+  #scene-legend{position:absolute;left:18px;bottom:14px;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:12px;padding:11px 15px;font-size:.74rem;color:#c9c9c7;max-width:430px}
+  #scene-legend b{color:#f4f4f3}
   #scene-legend .lg{display:flex;align-items:center;gap:8px;margin-top:3px}
   .sw{width:11px;height:11px;border-radius:3px;flex:none;display:inline-block}
   /* svg diagrams */
@@ -143,6 +146,41 @@
   footer li{margin-bottom:8px;break-inside:avoid;color:var(--muted)}
   @media(max-width:760px){footer ul{columns:1}.bar-row{grid-template-columns:120px 1fr 70px}.rung .nm{min-width:140px;font-size:.9rem}}
   .kicker{font-size:.74rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--green);margin-bottom:8px}
+  /* prose readability: cap line length on intro paragraphs */
+  .sub{max-width:72ch}
+  .hero .hook{max-width:68ch}
+  /* ---------- responsive polish (<=640px) ---------- */
+  @media(max-width:640px){
+    html,body{overflow-x:hidden}
+    section{padding:48px 16px 8px}
+    h2{font-size:clamp(1.35rem,5.6vw,1.7rem)}
+    h3{font-size:1.05rem}
+    .hero{padding:64px 16px 40px}
+    .hero h1{font-size:clamp(1.7rem,7vw,2.4rem)}
+    .hero .hook{font-size:.97rem}
+    nav .wrap{padding:0 16px}
+    /* one-column grids on small screens */
+    .grid.g2,.grid.g3,.grid.g4{grid-template-columns:1fr}
+    .rails,.verbs{grid-template-columns:1fr}
+    /* bars: tighter label column */
+    .bar-row{grid-template-columns:92px 1fr 58px;gap:8px;font-size:.8rem}
+    .bar-val{display:none}
+    /* ladder rungs stack their text */
+    .rung{flex-wrap:wrap;gap:6px 12px}
+    .rung .nm{min-width:0;flex:1 1 auto}
+    .rung .rl{flex:1 1 100%}
+    /* smaller, drag-friendly scene */
+    #scene-wrap{height:52vh;min-height:360px}
+    #scene-hud{max-width:62vw}
+    #scene-hud p{font-size:.72rem}
+    #layer-info{width:200px;right:10px;top:10px;padding:11px 12px}
+    #scene-legend{left:10px;right:10px;bottom:10px;max-width:none;font-size:.68rem}
+    /* keep code + tables scrollable, never overflow the page */
+    pre{font-size:.78rem}
+    details.drill summary{padding-right:84px;font-size:.9rem}
+    /* don't let the fixed controls cover content */
+    section:last-of-type,footer{padding-bottom:84px}
+  }
   .flowchip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-weight:700;font-size:.85rem;margin:3px 2px}
   .flowchip.hl{border-color:var(--green-dim);color:var(--green);background:var(--green-glow)}
   .farrow{color:var(--muted);margin:0 4px;font-weight:700}
@@ -199,11 +237,11 @@
   </div>
   <div id="scene-legend">
     <b>Legend</b>
-    <div class="lg"><span class="sw" style="background:#3a4a63"></span> Stacked slabs = the 6 layers, bottom (CUDA) → top (Blueprints)</div>
-    <div class="lg"><span class="sw" style="background:#76b900"></span> Rising particles = requests; they <b>group into batches</b> at Triton</div>
-    <div class="lg"><span class="sw" style="background:#b388ff"></span> Orbiting satellites = NeMo microservices circling the NIM layer</div>
-    <div class="lg"><span class="sw" style="background:#ffb347"></span> Amber ring = NVIDIA AI Enterprise wrapping the whole stack</div>
-    <div class="lg"><span class="sw" style="background:#ff6b6b"></span> Red flashes at Guardrails = unsafe pulses being blocked</div>
+    <div class="lg"><span class="sw" style="background:#6a6a6e"></span> Stacked slabs = the 6 layers, bottom (CUDA) → top (Blueprints)</div>
+    <div class="lg"><span class="sw" style="background:#f4f4f3"></span> Rising particles = requests; they <b>group into batches</b> at Triton</div>
+    <div class="lg"><span class="sw" style="background:#c9c9c7;border:1px solid #6a6a6e"></span> Orbiting satellites = NeMo microservices circling the NIM layer</div>
+    <div class="lg"><span class="sw" style="background:#8a8a8d"></span> Ring = NVIDIA AI Enterprise wrapping the whole stack</div>
+    <div class="lg"><span class="sw" style="background:#cf6b5e"></span> Red flashes at Guardrails = unsafe pulses being blocked</div>
   </div>
 </div>
 
@@ -228,8 +266,8 @@ const liRole = document.getElementById('li-role');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 30, 70);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 30, 70);
 
 const camera = new THREE.PerspectiveCamera(45, 2, 0.1, 200);
 camera.position.set(15, 11, 19);
@@ -238,12 +276,12 @@ controls.target.set(0, 5.4, 0);
 controls.enableDamping = true; controls.dampingFactor = .06;
 controls.minDistance = 9; controls.maxDistance = 45;
 
-scene.add(new THREE.AmbientLight(0x8899bb, .55));
+scene.add(new THREE.AmbientLight(0xb0b0b2, .55));
 const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(8,16,10); scene.add(key);
-const grn = new THREE.PointLight(0x76b900, 30, 30); grn.position.set(-6,7,6); scene.add(grn);
+const grn = new THREE.PointLight(0xf4f4f3, 30, 30); grn.position.set(-6,7,6); scene.add(grn);
 
 // ground grid
-const grid = new THREE.GridHelper(46, 30, 0x1a2840, 0x121b2c);
+const grid = new THREE.GridHelper(46, 30, 0x3a3a3e, 0x222225);
 grid.position.y = -0.6; scene.add(grid);
 
 // ---------- label sprites (canvas textures) ----------
@@ -251,13 +289,13 @@ function makeLabel(text, sub, opts={}){
   const c = document.createElement('canvas');
   const W = 520, H = sub ? 150 : 100; c.width = W; c.height = H;
   const x = c.getContext('2d');
-  x.fillStyle = 'rgba(10,15,25,0.82)';
+  x.fillStyle = 'rgba(14,14,15,0.88)';
   const r = 22; x.beginPath(); x.roundRect(4,4,W-8,H-8,r); x.fill();
-  x.strokeStyle = opts.border || '#76b900'; x.lineWidth = 4; x.stroke();
-  x.fillStyle = opts.color || '#e8edf5';
+  x.strokeStyle = opts.border || '#f4f4f3'; x.lineWidth = 4; x.stroke();
+  x.fillStyle = opts.color || '#f4f4f3';
   x.font = '700 44px system-ui, sans-serif'; x.textAlign='center';
   x.fillText(text, W/2, sub ? 62 : 64);
-  if(sub){ x.fillStyle = '#9aa7bd'; x.font = '400 28px system-ui, sans-serif'; x.fillText(sub, W/2, 110); }
+  if(sub){ x.fillStyle = '#c9c9c7'; x.font = '400 28px system-ui, sans-serif'; x.fillText(sub, W/2, 110); }
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
   const m = new THREE.SpriteMaterial({map:t, transparent:true, depthTest:false});
   const s = new THREE.Sprite(m);
@@ -268,12 +306,12 @@ function makeLabel(text, sub, opts={}){
 
 // ---------- layer slabs ----------
 const LAYERS = [
-  {name:'CUDA',           role:'GPU programming / runtime foundation everything compiles against.', color:0x2e3d57, w:11.5, d:8.5,  h:0.9, label:'CUDA · GPUs'},
-  {name:'TensorRT-LLM',   role:'Compiles models into optimized inference engines: kernel fusion, quantization, in-flight batching, paged KV cache.', color:0x35506e, w:10.4, d:7.7, h:0.9, label:'TensorRT-LLM'},
-  {name:'Triton',         role:'Open-source serving layer: multi-framework, multi-model, dynamic batching, ensembles (now Dynamo-Triton).', color:0x3c6282, w:9.3, d:6.9, h:0.9, label:'Triton Server'},
-  {name:'NIM',            role:'One container = weights + auto-selected engine (TRT-LLM, vLLM fallback) + OpenAI-compatible API on port 8000.', color:0x4a7d12, w:8.2, d:6.1, h:1.15, label:'NIM containers'},
-  {name:'NeMo services',  role:'Lifecycle around the model: Curator, Customizer, Evaluator, Guardrails, Retriever — plus the Agent Toolkit profiler.', color:0x6b4fa0, w:7.1, d:5.3, h:0.9, label:'NeMo services'},
-  {name:'Blueprints',     role:'Forkable reference agentic workflows assembled from NIMs + NeMo services (RAG, virtual assistant, data flywheel…).', color:0x76b900, w:6.0, d:4.5, h:0.9, label:'Blueprints / Apps'},
+  {name:'CUDA',           role:'GPU programming / runtime foundation everything compiles against.', color:0x4a4a4e, w:11.5, d:8.5,  h:0.9, label:'CUDA · GPUs'},
+  {name:'TensorRT-LLM',   role:'Compiles models into optimized inference engines: kernel fusion, quantization, in-flight batching, paged KV cache.', color:0x5c5c60, w:10.4, d:7.7, h:0.9, label:'TensorRT-LLM'},
+  {name:'Triton',         role:'Open-source serving layer: multi-framework, multi-model, dynamic batching, ensembles (now Dynamo-Triton).', color:0x707074, w:9.3, d:6.9, h:0.9, label:'Triton Server'},
+  {name:'NIM',            role:'One container = weights + auto-selected engine (TRT-LLM, vLLM fallback) + OpenAI-compatible API on port 8000.', color:0xc9c9c7, w:8.2, d:6.1, h:1.15, label:'NIM containers'},
+  {name:'NeMo services',  role:'Lifecycle around the model: Curator, Customizer, Evaluator, Guardrails, Retriever — plus the Agent Toolkit profiler.', color:0x9a9a9d, w:7.1, d:5.3, h:0.9, label:'NeMo services'},
+  {name:'Blueprints',     role:'Forkable reference agentic workflows assembled from NIMs + NeMo services (RAG, virtual assistant, data flywheel…).', color:0xf4f4f3, w:6.0, d:4.5, h:0.9, label:'Blueprints / Apps'},
 ];
 const GAP = 1.05;
 const layerGroup = new THREE.Group(); scene.add(layerGroup);
@@ -287,10 +325,10 @@ LAYERS.forEach((L,i)=>{
   const box = new THREE.Mesh(geo, mat);
   // edge glow
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({color: i===5?0xa8e84a:0x5d769e, transparent:true, opacity:.7}));
+    new THREE.LineBasicMaterial({color: i===5?0xf4f4f3:0x8a8a8d, transparent:true, opacity:.7}));
   box.add(edges);
   g.add(box);
-  const lbl = makeLabel(L.label, null, {scale:.78, border: i===3||i===5 ? '#76b900' : '#41577d'});
+  const lbl = makeLabel(L.label, null, {scale:.78, border: i===3||i===5 ? '#f4f4f3' : '#8a8a8d'});
   lbl.position.set(0, L.h/2 + .52, 0);
   g.add(lbl);
   g.position.y = yCursor + L.h/2;
@@ -307,7 +345,7 @@ const stackTop = yCursor;
 const nimSlab = layerGroup.children[3];
 [[-2.6,0],[0,0.4],[2.6,-0.2]].forEach(([x,z],k)=>{
   const c = new THREE.Mesh(new THREE.BoxGeometry(1.5,.78,1.5),
-    new THREE.MeshStandardMaterial({color:0x76b900, roughness:.35, emissive:0x76b900, emissiveIntensity:.25}));
+    new THREE.MeshStandardMaterial({color:0xf4f4f3, roughness:.35, emissive:0xf4f4f3, emissiveIntensity:.25}));
   c.position.set(x, LAYERS[3].h/2 + .39, z);
   c.userData.spin = .3 + k*.12;
   nimSlab.add(c);
@@ -315,21 +353,21 @@ const nimSlab = layerGroup.children[3];
 
 // ---------- AI Enterprise wrapping ring ----------
 const ringGeo = new THREE.TorusGeometry(8.6, .09, 12, 120);
-const ringMat = new THREE.MeshStandardMaterial({color:0xffb347, emissive:0xffb347, emissiveIntensity:.5, roughness:.3});
+const ringMat = new THREE.MeshStandardMaterial({color:0x8a8a8d, emissive:0x8a8a8d, emissiveIntensity:.5, roughness:.3});
 const aieRing = new THREE.Mesh(ringGeo, ringMat);
 aieRing.rotation.x = Math.PI/2; aieRing.position.y = stackTop*0.45; aieRing.scale.y = 1;
 scene.add(aieRing);
-const aieLbl = makeLabel('NVIDIA AI Enterprise', 'support · CVE patching · release branches', {border:'#ffb347', color:'#ffd9a0', scale:.95});
+const aieLbl = makeLabel('NVIDIA AI Enterprise', 'support · CVE patching · release branches', {border:'#8a8a8d', color:'#c9c9c7', scale:.95});
 aieLbl.position.set(9.6, stackTop*0.45 + .9, 0); scene.add(aieLbl);
 
 // ---------- NeMo satellites orbiting NeMo layer ----------
 const SATS = [
-  {n:'Customizer',  s:'fine-tune: LoRA/SFT/DPO', c:0xb388ff},
-  {n:'Evaluator',   s:'benchmarks · LLM-as-judge', c:0x4fc3f7},
-  {n:'Guardrails',  s:'5 runtime rail types', c:0xff6b6b},
-  {n:'Retriever',   s:'embed · rerank · NV-Ingest', c:0x2dd4bf},
-  {n:'Curator',     s:'data prep for the flywheel', c:0xffd166},
-  {n:'Agent Toolkit', s:'framework-agnostic profiler · MCP/A2A', c:0x76b900},
+  {n:'Customizer',  s:'fine-tune: LoRA/SFT/DPO', c:0xbcb9c0},
+  {n:'Evaluator',   s:'benchmarks · LLM-as-judge', c:0xa6a6a9},
+  {n:'Guardrails',  s:'5 runtime rail types', c:0xcf6b5e},
+  {n:'Retriever',   s:'embed · rerank · NV-Ingest', c:0x848489},
+  {n:'Curator',     s:'data prep for the flywheel', c:0xcfcfcb},
+  {n:'Agent Toolkit', s:'framework-agnostic profiler · MCP/A2A', c:0xf4f4f3},
 ];
 const satGroup = new THREE.Group(); scene.add(satGroup);
 const satY = LAYERS[4].midY;
@@ -361,7 +399,7 @@ const pCol = new Float32Array(PCOUNT*3);
 pGeo.setAttribute('color', new THREE.BufferAttribute(pCol,3));
 const pMat = new THREE.PointsMaterial({size:.28, vertexColors:true, transparent:true, opacity:.95, sizeAttenuation:true});
 const points = new THREE.Points(pGeo, pMat); scene.add(points);
-const GREEN = new THREE.Color(0x9be832), RED = new THREE.Color(0xff5a5a), DIM = new THREE.Color(0x3f6a14);
+const GREEN = new THREE.Color(0xf4f4f3), RED = new THREE.Color(0xcf6b5e), DIM = new THREE.Color(0x5a5a5e);
 
 // y positions of layer boundaries for choreography
 const yCUDA = LAYERS[0].midY, yTriton = LAYERS[2].midY, yNIM = LAYERS[3].midY,

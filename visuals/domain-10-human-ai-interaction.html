@@ -5,24 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NCP-AAI Domain 10 — Human-AI Interaction and Oversight</title>
 <style>
+  /* Local fallbacks only — theme.css owns the real chrome palette (B&W).
+     These keep the page readable if theme.css fails to load and add the
+     page-specific surfaces (--panel2) + greyscale category steps the SVGs use. */
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a29; --panel:#141d2e; --panel2:#0f1727;
-    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,.25);
-    --amber:#e8a33d; --red:#e05252; --blue:#4da3ff; --purple:#b07aff; --cyan:#3fd0c9;
-    --text:#dde6f2; --muted:#8fa1b8; --line:#1f2c42;
+    --panel2:#101011;
+    /* greyscale category steps for infographics (never hue) */
+    --gs1:#f0f0ee; --gs2:#c9c9c7; --gs3:#9a9a9d; --gs4:#6a6a6e; --gs5:#3a3a3e;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Code',Menlo,monospace;
   }
+  :root[data-theme="light"]{ --panel2:#ffffff; }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6}
   a{color:var(--green);text-decoration:none}
   a:hover{text-decoration:underline}
-  h2{font-size:1.7rem;margin-bottom:.4rem}
-  h3{font-size:1.15rem;margin:1.4rem 0 .6rem;color:var(--green)}
+  h2{font-size:clamp(1.4rem,3.4vw,1.7rem);margin-bottom:.4rem;line-height:1.25}
+  h3{font-size:clamp(1.05rem,2.4vw,1.15rem);margin:1.6rem 0 .6rem;color:var(--green)}
   .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-  section{padding:64px 0;border-bottom:1px solid var(--line)}
+  section{padding:clamp(40px,7vw,64px) 0;border-bottom:1px solid var(--line)}
   .kicker{font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:.5rem}
-  .sub{color:var(--muted);max-width:880px;margin-bottom:1.6rem}
+  .sub{color:var(--muted);max-width:70ch;margin-bottom:1.6rem;line-height:1.6}
   code{font-family:var(--mono);font-size:.86em;background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:.1em .4em;color:var(--green)}
   pre{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.55;color:var(--text);margin:.8rem 0}
   pre .c{color:var(--muted)}.pre-k{color:var(--green)}
@@ -45,18 +48,18 @@
   .hero .meta div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 18px;font-size:.85rem}
   .hero .meta b{color:var(--green);display:block;font-size:1.15rem}
 
-  /* 3D */
-  #scene-wrap{position:relative;width:100%;height:70vh;min-height:520px;border-bottom:1px solid var(--line);background:#070b12}
+  /* 3D — canvas is always dark; overlay chrome is neutral greyscale */
+  #scene-wrap{position:relative;width:100%;height:70vh;min-height:520px;border-bottom:1px solid var(--line);background:#0e0e0f}
   #scene-canvas{width:100%;height:100%;display:block}
-  .overlay-card{position:absolute;background:rgba(10,15,24,.88);border:1px solid #3a4a66;border-radius:10px;padding:12px 14px;font-size:.74rem;color:#8fa0b8;backdrop-filter:blur(6px)}
+  .overlay-card{position:absolute;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:10px;padding:12px 14px;font-size:.74rem;color:#c9c9c7;backdrop-filter:blur(6px)}
   #legend{left:16px;bottom:16px;max-width:300px}
-  #legend h4{color:#dfe7f3;font-size:.8rem;margin-bottom:6px}
+  #legend h4{color:#f4f4f3;font-size:.8rem;margin-bottom:6px}
   #legend ul{list-style:none}
   #legend li{display:flex;gap:8px;align-items:center;margin:3px 0}
   .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;display:inline-block}
-  #scene-status{right:16px;top:16px;max-width:300px;color:#dfe7f3;font-size:.8rem;border-left:3px solid #76b900}
-  #scene-hint{left:16px;top:16px;color:#8fa0b8}
-  #scene-title{position:absolute;left:50%;transform:translateX(-50%);top:14px;text-align:center;color:#8fa0b8;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
+  #scene-status{right:16px;top:16px;max-width:300px;color:#f4f4f3;font-size:.8rem;border-left:3px solid #f4f4f3}
+  #scene-hint{left:16px;top:16px;color:#c9c9c7}
+  #scene-title{position:absolute;left:50%;transform:translateX(-50%);top:14px;text-align:center;color:#c9c9c7;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
 
   /* cards */
   .grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
@@ -99,7 +102,7 @@
   /* callouts */
   .trap{background:linear-gradient(180deg,color-mix(in srgb, var(--red) 7%, transparent),color-mix(in srgb, var(--red) 3%, transparent));border:1px solid color-mix(in srgb, var(--red) 35%, transparent);border-left:4px solid var(--red);border-radius:10px;padding:14px 16px;margin:10px 0}
   .trap h4{color:var(--red);font-size:.9rem;margin-bottom:4px}
-  .trap h4::before{content:"⚠ ";color:var(--amber)}
+  .trap h4::before{content:"⚠ ";color:var(--red)}
   .trap p{font-size:.83rem;color:var(--muted)}
   .note{background:color-mix(in srgb, var(--green) 6%, transparent);border:1px solid color-mix(in srgb, var(--green) 30%, transparent);border-left:4px solid var(--green);border-radius:10px;padding:14px 16px;margin:14px 0;font-size:.87rem;color:var(--text)}
 
@@ -124,12 +127,34 @@
   footer li{margin:5px 0;break-inside:avoid}
   @media (max-width:760px){
     footer ul{columns:1}
-    .bar-row{grid-template-columns:130px 1fr 56px}
-    table{display:block;overflow-x:auto}
+    .bar-row{grid-template-columns:120px 1fr 56px}
+    table{display:block;overflow-x:auto;white-space:nowrap}
     #scene-title{display:none}
     #scene-hint{display:none}
     #scene-status{left:16px;right:16px;max-width:none}
   }
+  @media (max-width:640px){
+    body{line-height:1.6}
+    .wrap{padding:0 16px}
+    /* single-column grids */
+    .g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}
+    /* sticky nav scrolls horizontally without breaking the page */
+    nav .wrap{padding:10px 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    nav .brand{margin-right:10px}
+    /* reduced, touch-friendly 3D scene */
+    #scene-wrap{height:52vh;min-height:360px}
+    #legend{max-width:min(78vw,260px);font-size:.68rem}
+    .overlay-card{padding:9px 11px}
+    /* code blocks + tables scroll, no page overflow */
+    pre{font-size:.74rem}
+    .svgbox{padding:12px 10px}
+    .hero .meta{gap:10px}
+    .hero .meta div{flex:1 1 140px}
+    /* keep bottom-right controls clear of content */
+    footer{padding-bottom:96px}
+  }
+  /* never allow horizontal page overflow */
+  html,body{max-width:100%;overflow-x:hidden}
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -180,17 +205,17 @@
 <div id="scene-wrap">
   <canvas id="scene-canvas"></canvas>
   <div id="scene-title">AGENT WORKFLOW · TASK TOKEN · HUMAN GATE · CONFIDENCE ESCALATION</div>
-  <div class="overlay-card" id="scene-hint">Drag to orbit · scroll to zoom.<br>When the token waits at the gate, <b style="color:#dde6f2">click APPROVE or REJECT</b> to choose the outcome.</div>
+  <div class="overlay-card" id="scene-hint">Drag to orbit · scroll to zoom.<br>When the token waits at the gate, <b style="color:#f4f4f3">click APPROVE or REJECT</b> to choose the outcome.</div>
   <div class="overlay-card" id="scene-status">Token spawning…</div>
   <div class="overlay-card" id="legend">
     <h4>Legend</h4>
     <ul>
-      <li><span class="sw" style="background:#76b900"></span>Task token (the agent's in-flight action)</li>
-      <li><span class="sw" style="background:#2c4a73"></span>Workflow nodes (plan → act → done)</li>
-      <li><span class="sw" style="background:#e05252"></span>High-risk node → HITL gate (desk + human)</li>
-      <li><span class="sw" style="background:#4da3ff"></span>Human lane above = escalation tier</li>
-      <li><span class="sw" style="background:#e8a33d"></span>Confidence meter on token; below τ ⇒ auto-escalate</li>
-      <li><span class="sw" style="background:#b07aff"></span>Purple loop = reject ⇒ revise &amp; re-plan</li>
+      <li><span class="sw" style="background:#f4f4f3"></span>Task token (the agent's in-flight action)</li>
+      <li><span class="sw" style="background:#8a8a8d"></span>Workflow nodes (plan → act → done)</li>
+      <li><span class="sw" style="background:#cf6b5e"></span>High-risk node → HITL gate (desk + human)</li>
+      <li><span class="sw" style="background:#c9c9c7"></span>Human lane above = escalation tier</li>
+      <li><span class="sw" style="background:#c9c9c7;border:1px solid #6a6a6e"></span>Confidence meter on token; below τ ⇒ auto-escalate</li>
+      <li><span class="sw" style="background:#6a6a6e"></span>Revise loop = reject ⇒ revise &amp; re-plan</li>
     </ul>
   </div>
 </div>
@@ -1185,8 +1210,8 @@ const statusEl = document.getElementById('scene-status');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 40, 95);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 40, 95);
 
 const camera = new THREE.PerspectiveCamera(50, 2, 0.1, 200);
 camera.position.set(0, 12, 26);
@@ -1198,17 +1223,17 @@ controls.maxDistance = 60; controls.minDistance = 8;
 controls.maxPolarAngle = Math.PI * 0.52;
 
 // ---------- lights ----------
-scene.add(new THREE.AmbientLight(0x445566, 0.9));
+scene.add(new THREE.AmbientLight(0x555558, 0.9));
 const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(8, 18, 10); scene.add(key);
-const greenFill = new THREE.PointLight(0x76b900, 30, 40); greenFill.position.set(0, 8, 4); scene.add(greenFill);
+const greenFill = new THREE.PointLight(0xf4f4f3, 26, 40); greenFill.position.set(0, 8, 4); scene.add(greenFill);
 
 // ---------- ground grid ----------
-const grid = new THREE.GridHelper(90, 45, 0x1c2c44, 0x121c2e);
+const grid = new THREE.GridHelper(90, 45, 0x3a3a3e, 0x232326);
 grid.position.y = -0.8; scene.add(grid);
 
 // ---------- label sprite helper (canvas texture) ----------
 function makeLabel(text, opts = {}) {
-  const { color = '#dde6f2', bg = 'rgba(10,15,24,0.85)', border = '#2c4a73', size = 46, pad = 26 } = opts;
+  const { color = '#f4f4f3', bg = 'rgba(14,14,15,0.88)', border = '#8a8a8d', size = 46, pad = 26 } = opts;
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
   ctx.font = `700 ${size}px -apple-system, Segoe UI, Roboto, sans-serif`;
@@ -1244,7 +1269,7 @@ const NODE = {
 };
 
 const nodeMeshes = [];
-function addNode(pos, label, color = 0x2c4a73, labelColor = '#dde6f2') {
+function addNode(pos, label, color = 0x8a8a8d, labelColor = '#f4f4f3') {
   const g = new THREE.Group();
   const box = new THREE.Mesh(
     new THREE.BoxGeometry(1.7, 1.1, 1.7),
@@ -1263,31 +1288,31 @@ function addNode(pos, label, color = 0x2c4a73, labelColor = '#dde6f2') {
 
 addNode(NODE.START, 'START\nuser request');
 addNode(NODE.PLAN, 'PLAN\nagent decides');
-addNode(NODE.CONF, 'CONFIDENCE CHECK\nbelow τ ⇒ escalate', 0xe8a33d, '#ecc185');
-const gateNode = addNode(NODE.GATE, 'HIGH-RISK ACTION\nHITL approval gate', 0xe05252, '#f0a0a0');
+addNode(NODE.CONF, 'CONFIDENCE CHECK\nbelow τ ⇒ escalate', 0xc9c9c7, '#f4f4f3');
+const gateNode = addNode(NODE.GATE, 'HIGH-RISK ACTION\nHITL approval gate', 0xcf6b5e, '#f0c4be');
 addNode(NODE.EXEC, 'EXECUTE\ntool call runs');
-addNode(NODE.DONE, 'DONE\ncite + log', 0x76b900, '#b8e07a');
+addNode(NODE.DONE, 'DONE\ncite + log', 0xf4f4f3, '#f4f4f3');
 
 // ---------- human lane platform ----------
 const lane = new THREE.Mesh(
   new THREE.BoxGeometry(7, 0.3, 4),
-  new THREE.MeshStandardMaterial({ color: 0x16335c, roughness: 0.5, emissive: 0x4da3ff, emissiveIntensity: 0.12 })
+  new THREE.MeshStandardMaterial({ color: 0x4a4a4e, roughness: 0.5, emissive: 0xc9c9c7, emissiveIntensity: 0.12 })
 );
 lane.position.set(NODE.HUMAN.x, NODE.HUMAN.y - 0.9, 0);
 scene.add(lane);
-const laneLabel = makeLabel('HUMAN LANE\nescalation tier', { color: '#9ec9f5', border: '#4da3ff' });
+const laneLabel = makeLabel('HUMAN LANE\nescalation tier', { color: '#c9c9c7', border: '#c9c9c7' });
 laneLabel.position.set(NODE.HUMAN.x, NODE.HUMAN.y + 2.4, 0);
 scene.add(laneLabel);
 
 // simple human avatar factory
-function makeHuman(color = 0x4da3ff) {
+function makeHuman(color = 0xc9c9c7) {
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, emissive: color, emissiveIntensity: 0.2 });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.45, 1.1, 12), mat); body.position.y = 0.55; g.add(body);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), mat); head.position.y = 1.45; g.add(head);
   return g;
 }
-const laneHuman = makeHuman(0x4da3ff);
+const laneHuman = makeHuman(0xc9c9c7);
 laneHuman.position.set(NODE.HUMAN.x, NODE.HUMAN.y - 0.75, 0);
 scene.add(laneHuman);
 
@@ -1296,17 +1321,17 @@ const gateGroup = new THREE.Group();
 gateGroup.position.set(NODE.GATE.x, 0, 3.4);
 const desk = new THREE.Mesh(
   new THREE.BoxGeometry(2.6, 0.16, 1.2),
-  new THREE.MeshStandardMaterial({ color: 0x3a2c1c, roughness: 0.6 })
+  new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.6 })
 );
 desk.position.y = 0.85; gateGroup.add(desk);
 [[-1.1, 0.4], [1.1, 0.4], [-1.1, -0.4], [1.1, -0.4]].forEach(([x, z]) => {
   const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.85, 0.12), desk.material);
   leg.position.set(x, 0.42, z); gateGroup.add(leg);
 });
-const reviewer = makeHuman(0xe8a33d);
+const reviewer = makeHuman(0xc9c9c7);
 reviewer.position.set(0, 0, 1.1); reviewer.rotation.y = Math.PI;
 gateGroup.add(reviewer);
-const deskLabel = makeLabel('HUMAN REVIEWER', { color: '#ecc185', border: '#e8a33d', size: 40 });
+const deskLabel = makeLabel('HUMAN REVIEWER', { color: '#f4f4f3', border: '#c9c9c7', size: 40 });
 deskLabel.position.set(0, 3.0, 0.8); gateGroup.add(deskLabel);
 scene.add(gateGroup);
 
@@ -1314,7 +1339,7 @@ scene.add(gateGroup);
 function makeButton(text, color) {
   const c = document.createElement('canvas'); c.width = 360; c.height = 132;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(8,12,20,0.55)';
+  ctx.fillStyle = 'rgba(14,14,15,0.55)';
   ctx.beginPath(); ctx.roundRect(4, 4, 352, 124, 22); ctx.fill();
   ctx.strokeStyle = color; ctx.lineWidth = 7; ctx.stroke();
   ctx.fillStyle = color; ctx.font = '800 58px -apple-system, Segoe UI, Roboto, sans-serif';
@@ -1326,8 +1351,8 @@ function makeButton(text, color) {
   );
   return mesh;
 }
-const btnApprove = makeButton('APPROVE', '#76b900');
-const btnReject = makeButton('REJECT', '#e05252');
+const btnApprove = makeButton('APPROVE', '#f4f4f3');
+const btnReject = makeButton('REJECT', '#cf6b5e');
 btnApprove.position.set(NODE.GATE.x - 1.45, 2.6, 2.0);
 btnReject.position.set(NODE.GATE.x + 1.45, 2.6, 2.0);
 btnApprove.userData = { kind: 'approve', baseY: 2.6 };
@@ -1335,7 +1360,7 @@ btnReject.userData = { kind: 'reject', baseY: 2.6 };
 scene.add(btnApprove, btnReject);
 
 // ---------- edges (glowing tubes) ----------
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0x2f4a6e, emissive: 0x76b900, emissiveIntensity: 0.35, roughness: 0.4 });
+const edgeMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4e, emissive: 0xc9c9c7, emissiveIntensity: 0.35, roughness: 0.4 });
 function straight(a, b) { return new THREE.CatmullRomCurve3([a.clone(), a.clone().lerp(b, 0.5), b.clone()]); }
 function addTube(curve, mat = edgeMat) {
   const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 0.07, 8, false), mat);
@@ -1357,16 +1382,16 @@ const escUp = new THREE.CatmullRomCurve3([
 const escDown = new THREE.CatmullRomCurve3([
   NODE.HUMAN.clone().add(new THREE.Vector3(0.6, -0.6, 0)), new THREE.Vector3(-1.4, 2.8, 0.6), NODE.CONF.clone()
 ]);
-const escMat = new THREE.MeshStandardMaterial({ color: 0x16335c, emissive: 0x4da3ff, emissiveIntensity: 0.5, roughness: 0.4 });
+const escMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4e, emissive: 0xc9c9c7, emissiveIntensity: 0.5, roughness: 0.4 });
 addTube(escUp, escMat); addTube(escDown, escMat);
 
 // revise loop (GATE -> PLAN), purple, swings out in +z
 const reviseCurve = new THREE.CatmullRomCurve3([
   NODE.GATE.clone(), new THREE.Vector3(2.0, 0.6, 5.6), new THREE.Vector3(-3.5, 0.6, 6.2), new THREE.Vector3(-8.2, 0.5, 4.0), NODE.PLAN.clone()
 ]);
-const reviseMat = new THREE.MeshStandardMaterial({ color: 0x3a2a55, emissive: 0xb07aff, emissiveIntensity: 0.5, roughness: 0.4 });
+const reviseMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, emissive: 0x8a8a8d, emissiveIntensity: 0.5, roughness: 0.4 });
 addTube(reviseCurve, reviseMat);
-const reviseLabel = makeLabel('REVISE LOOP\nreject ⇒ re-plan', { color: '#c9b3ee', border: '#b07aff', size: 40 });
+const reviseLabel = makeLabel('REVISE LOOP\nreject ⇒ re-plan', { color: '#c9c9c7', border: '#8a8a8d', size: 40 });
 reviseLabel.position.set(-3.5, 2.0, 6.2);
 scene.add(reviseLabel);
 
@@ -1382,33 +1407,33 @@ for (let i = 0; i < PCOUNT; i++) {
   pPos[i * 3] = v.x; pPos[i * 3 + 1] = v.y + (Math.random() - 0.5) * 0.5; pPos[i * 3 + 2] = v.z + (Math.random() - 0.5) * 0.5;
 }
 pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x76b900, size: 0.09, transparent: true, opacity: 0.5 }));
+const points = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xc9c9c7, size: 0.09, transparent: true, opacity: 0.5 }));
 scene.add(points);
 
 // ---------- task token + confidence meter ----------
 const token = new THREE.Group();
 const tokenCore = new THREE.Mesh(
   new THREE.SphereGeometry(0.42, 24, 18),
-  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.9, roughness: 0.3 })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 0.9, roughness: 0.3 })
 );
 token.add(tokenCore);
 const tokenHalo = new THREE.Mesh(
   new THREE.SphereGeometry(0.6, 24, 18),
-  new THREE.MeshBasicMaterial({ color: 0x76b900, transparent: true, opacity: 0.16 })
+  new THREE.MeshBasicMaterial({ color: 0xf4f4f3, transparent: true, opacity: 0.16 })
 );
 token.add(tokenHalo);
 
 // confidence meter: bg bar + fill + threshold tick
 const meter = new THREE.Group();
-const meterBg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.1), new THREE.MeshBasicMaterial({ color: 0x101a2c }));
-const meterFill = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.14, 0.12), new THREE.MeshBasicMaterial({ color: 0x76b900 }));
+const meterBg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.1), new THREE.MeshBasicMaterial({ color: 0x2a2a2d }));
+const meterFill = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.14, 0.12), new THREE.MeshBasicMaterial({ color: 0xf4f4f3 }));
 const tick = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.14), new THREE.MeshBasicMaterial({ color: 0xffffff }));
 const TAU = 0.65; // visual threshold position on meter
 tick.position.x = -0.75 + 1.5 * TAU;
 meter.add(meterBg, meterFill, tick);
 meter.position.y = 1.05;
 token.add(meter);
-const meterLabel = makeLabel('confidence vs τ', { color: '#ecc185', border: '#e8a33d', size: 34, bg: 'rgba(10,15,24,0.7)' });
+const meterLabel = makeLabel('confidence vs τ', { color: '#c9c9c7', border: '#8a8a8d', size: 34, bg: 'rgba(14,14,15,0.7)' });
 meterLabel.position.y = 1.6;
 token.add(meterLabel);
 scene.add(token);
@@ -1416,7 +1441,7 @@ scene.add(token);
 function setConfidence(v) { // 0..1
   meterFill.scale.x = Math.max(v, 0.02);
   meterFill.position.x = -0.75 + (1.5 * v) / 2;
-  meterFill.material.color.set(v >= TAU ? 0x76b900 : 0xe05252);
+  meterFill.material.color.set(v >= TAU ? 0xf4f4f3 : 0xcf6b5e);
 }
 function setTokenColor(hex) {
   tokenCore.material.color.set(hex); tokenCore.material.emissive.set(hex);
@@ -1436,9 +1461,9 @@ function buildScript(escalate, approveDefault) {
   s.push(seg(straight(NODE.PLAN, NODE.CONF), 1.6, { status: 'Agent plans the next action.', conf: escalate ? 0.85 : 0.92 }));
   if (escalate) {
     s.push(seg(null, 1.4, { hold: NODE.CONF, status: 'Confidence check… score is dropping ↓', confAnim: [0.85, 0.38] }));
-    s.push(seg(escUp, 1.8, { status: 'Below τ ⇒ AUTO-ESCALATION to the human lane (full context attached).', conf: 0.38, color: 0x4da3ff }));
+    s.push(seg(escUp, 1.8, { status: 'Below τ ⇒ AUTO-ESCALATION to the human lane (full context attached).', conf: 0.38, color: 0xc9c9c7 }));
     s.push(seg(null, 2.0, { hold: NODE.HUMAN, status: 'Human lane: reviewer resolves the uncertain case…', conf: 0.38 }));
-    s.push(seg(escDown, 1.8, { status: 'Resolved — confidence restored, token returns to the flow.', confAnim: [0.38, 0.95], color: 0x76b900 }));
+    s.push(seg(escDown, 1.8, { status: 'Resolved — confidence restored, token returns to the flow.', confAnim: [0.38, 0.95], color: 0xf4f4f3 }));
   } else {
     s.push(seg(null, 1.0, { hold: NODE.CONF, status: 'Confidence check: above τ — agent continues autonomously.', conf: 0.92 }));
   }
@@ -1459,13 +1484,13 @@ function gateOutcome(approved) {
   const tail = [];
   if (approved) {
     flashButton(btnApprove);
-    tail.push(seg(straight(NODE.GATE, NODE.EXEC), 1.6, { status: 'APPROVED — Command(resume=approve): action executes.', conf: 0.95, color: 0x76b900 }));
+    tail.push(seg(straight(NODE.GATE, NODE.EXEC), 1.6, { status: 'APPROVED — Command(resume=approve): action executes.', conf: 0.95, color: 0xf4f4f3 }));
     tail.push(seg(straight(NODE.EXEC, NODE.DONE), 1.6, { status: 'Done: result + citations + tool trace → audit log.', conf: 0.97 }));
     tail.push(seg(null, 1.6, { hold: NODE.DONE, status: 'Task complete. Every action logged (who approved, what args).', conf: 0.97 }));
   } else {
     flashButton(btnReject);
-    tail.push(seg(reviseCurve, 3.2, { status: 'REJECTED (with feedback) — token reroutes through the REVISE loop to re-plan.', conf: 0.5, color: 0xb07aff }));
-    tail.push(seg(null, 1.2, { hold: NODE.PLAN, status: 'Agent re-plans using the human feedback.', confAnim: [0.5, 0.9], color: 0x76b900 }));
+    tail.push(seg(reviseCurve, 3.2, { status: 'REJECTED (with feedback) — token reroutes through the REVISE loop to re-plan.', conf: 0.5, color: 0xcf6b5e }));
+    tail.push(seg(null, 1.2, { hold: NODE.PLAN, status: 'Agent re-plans using the human feedback.', confAnim: [0.5, 0.9], color: 0xf4f4f3 }));
   }
   script = script.slice(0, segIdx + 1).concat(tail);
   segIdx++; // advance past the gate segment immediately so it cannot re-fire
@@ -1478,7 +1503,7 @@ function nextCycle() {
   const approveDefault = cycle % 4 < 2; // alternate auto outcomes
   script = buildScript(escalate, approveDefault);
   segIdx = 0; segT = 0; userDecision = null;
-  setTokenColor(0x76b900);
+  setTokenColor(0xf4f4f3);
 }
 
 // button flash

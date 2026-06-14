@@ -7,16 +7,16 @@
 <style>
   :root{
     /* Canonical theme variables (overridden by theme.css; defined here so the page works standalone) */
-    --bg:#0b0f17; --bg2:#0e141f; --bg3:#121a28; --card:#141d2e; --panel:#141d2e; --panel2:#18233a;
-    --text:#e6edf3; --ink:#e6edf3; --muted:#9fb0c3; --dim:#6b7c91;
-    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,0.12); --on-accent:#0b0f17;
-    --red:#ff4d5e; --orange:#ff9f43; --purple:#b06cff; --blue:#4da3ff; --yellow:#ffd166; --amber:#ffd166; --cyan:#3fd8d2;
-    --border:#243349; --line:#22304a; --radius:14px;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --card:#151517; --panel:#151517; --panel2:#202023;
+    --text:#eaeaea; --ink:#eaeaea; --muted:#9a9a9d; --dim:#6a6a6e;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,0.08); --on-accent:#111112;
+    --red:#cf6b5e; --orange:#cfcfcb; --purple:#bcb9c0; --blue:#a6a6a9; --yellow:#cfcfcb; --amber:#cfcfcb; --cyan:#848489;
+    --border:#2a2a2d; --line:#2a2a2d; --radius:14px;
     --mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
   }
   /* page-local vars mapped onto the shared warm theme (theme.css) */
-  :root{--ink:var(--text,#e6edf3);--dim:var(--muted,#9fb0c3)}
-  :root[data-theme="light"]{--orange:#c2410c;--yellow:#a16207}
+  :root{--ink:var(--text,#eaeaea);--dim:var(--muted,#9a9a9d)}
+  :root[data-theme="light"]{--orange:#5f5f5c;--yellow:#5f5f5c}
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
   body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6}
@@ -41,28 +41,30 @@
   .hero .hook strong{color:var(--ink)}
 
   main{max-width:1200px;margin:0 auto;padding:0 22px 40px}
-  section{margin-top:72px;scroll-margin-top:64px}
-  h2.sec{font-size:1.55rem;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+  section{margin-top:clamp(48px,8vw,72px);scroll-margin-top:64px}
+  h2.sec{font-size:clamp(1.3rem,3.4vw,1.55rem);font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;line-height:1.25}
   h2.sec .chip{font-size:.7rem;font-weight:800;color:var(--on-accent);background:var(--green);border-radius:6px;padding:3px 9px;letter-spacing:.08em}
-  .lede{color:var(--muted);max-width:900px;margin-bottom:26px;font-size:.97rem}
+  .lede{color:var(--muted);max-width:70ch;margin-bottom:26px;font-size:.97rem;line-height:1.65}
   .lede b{color:var(--ink)}
-  h3.sub{font-size:1.05rem;font-weight:700;color:var(--green);margin:30px 0 12px;letter-spacing:.02em}
+  h3.sub{font-size:clamp(1rem,2.2vw,1.05rem);font-weight:700;color:var(--green);margin:30px 0 12px;letter-spacing:.02em}
+  .card p,.callout,.trap{max-width:74ch}
 
-  #scene-wrap{position:relative;width:100%;height:72vh;min-height:500px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:#080c13;overflow:hidden}
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:500px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:#0e0e0f;overflow:hidden}
   #scene-wrap canvas{display:block}
-  .overlay{position:absolute;font-size:.74rem;color:#8fa0b8;background:rgba(10,14,21,.84);border:1px solid #3a4a66;border-radius:10px;backdrop-filter:blur(6px)}
+  .overlay{position:absolute;font-size:.74rem;color:#c9c9c7;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:10px;backdrop-filter:blur(6px)}
   #legend{left:14px;bottom:14px;padding:12px 14px;max-width:300px}
-  #legend h4{color:#dfe7f3;font-size:.78rem;margin-bottom:7px;letter-spacing:.05em}
+  #legend h4{color:#f4f4f3;font-size:.78rem;margin-bottom:7px;letter-spacing:.05em}
   #legend .li{display:flex;align-items:center;gap:8px;margin:3px 0;line-height:1.35}
   #legend .sw{width:11px;height:11px;border-radius:3px;flex:none}
-  #scene-tip{display:none;position:absolute;pointer-events:none;padding:8px 12px;max-width:280px;z-index:5;font-size:.76rem;color:#dfe7f3}
-  #scene-tip b{color:var(--green)}
+  #legend .li b{color:#f4f4f3}
+  #scene-tip{display:none;position:absolute;pointer-events:none;padding:8px 12px;max-width:280px;z-index:5;font-size:.76rem;color:#f4f4f3}
+  #scene-tip b{color:#f4f4f3}
   #scene-hint{right:14px;top:14px;padding:8px 12px}
   #info-panel{right:14px;bottom:14px;padding:12px 14px;max-width:310px;display:none;font-size:.78rem}
-  #info-panel b{color:var(--green);display:block;margin-bottom:4px}
-  #blocked-count{left:14px;top:14px;padding:8px 14px;font-weight:700;color:#dfe7f3}
-  #blocked-count span{color:#ff4d5e}
-  #blocked-count i{color:var(--green);font-style:normal}
+  #info-panel b{color:#f4f4f3;display:block;margin-bottom:4px}
+  #blocked-count{left:14px;top:14px;padding:8px 14px;font-weight:700;color:#f4f4f3}
+  #blocked-count span{color:#cf6b5e}
+  #blocked-count i{color:#f4f4f3;font-style:normal}
   @media(max-width:760px){#legend{display:none}#scene-hint{display:none}}
 
   .grid{display:grid;gap:16px}
@@ -124,10 +126,10 @@
   .rung .body b{color:var(--ink)}
   @media(max-width:620px){.rung{grid-template-columns:1fr}}
 
-  .trap{background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid color-mix(in srgb, var(--orange) 35%, var(--bg));border-left:4px solid var(--orange);border-radius:12px;padding:14px 16px;font-size:.85rem;color:var(--muted)}
-  .trap b{color:var(--orange)}
+  .trap{background:linear-gradient(180deg,var(--bg3),var(--bg2));border:1px solid color-mix(in srgb, var(--red) 35%, var(--bg));border-left:4px solid var(--red);border-radius:12px;padding:14px 16px;font-size:.85rem;color:var(--muted)}
+  .trap b{color:var(--red)}
   .trap strong{color:var(--ink)}
-  .trap .tno{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--orange);color:var(--on-accent);font-weight:800;font-size:.72rem;margin-right:8px}
+  .trap .tno{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--red);color:var(--on-accent);font-weight:800;font-size:.72rem;margin-right:8px}
   .callout{border:1px solid var(--border);border-left:4px solid var(--green);background:var(--bg2);border-radius:12px;padding:14px 16px;font-size:.87rem;color:var(--muted);margin:18px 0}
   .callout b{color:var(--green)}
   .callout strong{color:var(--ink)}
@@ -164,6 +166,33 @@
   footer li{margin:7px 0;font-size:.82rem;color:var(--dim)}
   footer a{color:var(--muted);text-decoration:none;word-break:break-all}
   footer a:hover{color:var(--green)}
+
+  /* ---------- responsive / mobile polish ---------- */
+  @media(max-width:640px){
+    html,body{overflow-x:hidden}
+    .hero{padding:48px 18px 32px}
+    main{padding:0 16px 32px}
+    section{margin-top:48px}
+    .grid{gap:13px}
+    /* single-column grids on small screens */
+    .g2,.g3,.g4,.g5{grid-template-columns:1fr}
+    .lede{font-size:.94rem;margin-bottom:20px}
+    /* scene shrinks + stays touch-draggable */
+    #scene-wrap{height:52vh;min-height:360px;touch-action:none}
+    #blocked-count{font-size:.68rem;padding:6px 10px}
+    #info-panel{max-width:78vw}
+    /* code + tables never break the page */
+    pre{font-size:.72rem;padding:12px 13px}
+    .tblwrap{-webkit-overflow-scrolling:touch}
+    .svgbox{padding:10px}
+    .svgbox svg{max-width:100%;height:auto}
+    /* keep bottom-right theme/control buttons clear of content */
+    footer{padding-bottom:84px}
+  }
+  @media(max-width:760px){
+    nav{padding-right:84px}
+    .svgbox svg{max-width:100%;height:auto}
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -210,14 +239,14 @@
   <div class="overlay" id="scene-hint">Drag to orbit · scroll to zoom · hover &amp; click rings / core / obelisk</div>
   <div class="overlay" id="legend">
     <h4>LEGEND — THE GUARDRAILS FORTRESS</h4>
-    <div class="li"><span class="sw" style="background:#76b900;box-shadow:0 0 8px #76b900"></span>Glowing core = main LLM; green orbs = legit requests passing the gate</div>
-    <div class="li"><span class="sw" style="background:#3da9fc"></span>Outer ring = <b>&nbsp;Input Rails</b> (first to fire)</div>
-    <div class="li"><span class="sw" style="background:#ffd166"></span>Middle ring = <b>&nbsp;Dialog Rails</b> (Colang flows)</div>
-    <div class="li"><span class="sw" style="background:#b06cff"></span>Inner ring = <b>&nbsp;Output Rails</b> (last check before exit)</div>
-    <div class="li"><span class="sw" style="background:#ff4d5e"></span>Red spears = prompt injection → shatter on Input ring</div>
-    <div class="li"><span class="sw" style="background:#9b5cff"></span>Purple drills = jailbreaks → shatter on Input ring</div>
-    <div class="li"><span class="sw" style="background:#ff9f43"></span>Orange orbs = toxic output escaping core → shatter on Output ring</div>
-    <div class="li"><span class="sw" style="background:#cdd9e5"></span>Obelisk = compliance ledger logging every blocked event</div>
+    <div class="li"><span class="sw" style="background:#f4f4f3;box-shadow:0 0 8px #f4f4f3"></span>Glowing core = main LLM; white orbs = legit requests passing the gate (white = allowed/pass)</div>
+    <div class="li"><span class="sw" style="background:#c9c9c7"></span>Outer ring = <b>&nbsp;Input Rails</b> (first to fire)</div>
+    <div class="li"><span class="sw" style="background:#9a9a9d"></span>Middle ring = <b>&nbsp;Dialog Rails</b> (Colang flows)</div>
+    <div class="li"><span class="sw" style="background:#6a6a6e"></span>Inner ring = <b>&nbsp;Output Rails</b> (last check before exit)</div>
+    <div class="li"><span class="sw" style="background:#cf6b5e"></span>Red spears = prompt injection → shatter on Input ring</div>
+    <div class="li"><span class="sw" style="background:#cf6b5e;border-radius:50%"></span>Red drills = jailbreaks → shatter on Input ring</div>
+    <div class="li"><span class="sw" style="background:#cf6b5e;transform:rotate(45deg)"></span>Red orbs = toxic output escaping core → shatter on Output ring</div>
+    <div class="li"><span class="sw" style="background:#c9c9c7"></span>Obelisk = compliance ledger logging every blocked event</div>
   </div>
   <div class="overlay" id="info-panel"></div>
   <div class="overlay" id="scene-tip"></div>
@@ -237,8 +266,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const wrap = document.getElementById('scene-wrap');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080c13);
-scene.fog = new THREE.Fog(0x080c13, 55, 120);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 55, 120);
 
 const camera = new THREE.PerspectiveCamera(55, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
 camera.position.set(21, 16, 27);
@@ -254,27 +283,27 @@ controls.maxDistance = 85;
 controls.minDistance = 8;
 controls.target.set(0, 2, 0);
 
-scene.add(new THREE.AmbientLight(0x8899bb, 0.6));
+scene.add(new THREE.AmbientLight(0xaaaaaa, 0.6));
 const key = new THREE.DirectionalLight(0xffffff, 1.0);
 key.position.set(18, 30, 12);
 scene.add(key);
-const coreLight = new THREE.PointLight(0x76b900, 70, 45);
+const coreLight = new THREE.PointLight(0xf4f4f3, 70, 45);
 coreLight.position.set(0, 2.5, 0);
 scene.add(coreLight);
 
 /* ---------- ground ---------- */
 const ground = new THREE.Mesh(
   new THREE.CircleGeometry(36, 64),
-  new THREE.MeshStandardMaterial({ color: 0x0d1422, roughness: 0.92, metalness: 0.15 })
+  new THREE.MeshStandardMaterial({ color: 0x161617, roughness: 0.92, metalness: 0.15 })
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
-const polar = new THREE.PolarGridHelper(36, 16, 9, 64, 0x1c2a40, 0x152033);
+const polar = new THREE.PolarGridHelper(36, 16, 9, 64, 0x3a3a3e, 0x242427);
 polar.position.y = 0.02;
 scene.add(polar);
 
 /* ---------- text label sprites (canvas textures) ---------- */
-function makeLabel(text, color = '#e6edf3', fontPx = 46, bg = 'rgba(10,14,21,0.75)') {
+function makeLabel(text, color = '#f4f4f3', fontPx = 46, bg = 'rgba(14,14,15,0.80)') {
   const pad = 26;
   const cv = document.createElement('canvas');
   const ctx = cv.getContext('2d');
@@ -288,7 +317,7 @@ function makeLabel(text, color = '#e6edf3', fontPx = 46, bg = 'rgba(10,14,21,0.7
     c2.beginPath();
     c2.roundRect(0, 0, w, h, 18);
     c2.fill();
-    c2.strokeStyle = 'rgba(118,185,0,0.45)';
+    c2.strokeStyle = 'rgba(201,201,199,0.45)';
     c2.lineWidth = 3;
     c2.stroke();
   }
@@ -308,7 +337,7 @@ function makeLabel(text, color = '#e6edf3', fontPx = 46, bg = 'rgba(10,14,21,0.7
 /* ---------- LLM core ---------- */
 const core = new THREE.Mesh(
   new THREE.SphereGeometry(1.7, 48, 48),
-  new THREE.MeshStandardMaterial({ color: 0x9fdc2e, emissive: 0x76b900, emissiveIntensity: 1.4, roughness: 0.25 })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 1.4, roughness: 0.25 })
 );
 core.position.set(0, 2.5, 0);
 scene.add(core);
@@ -317,26 +346,26 @@ scene.add(core);
   const cv = document.createElement('canvas'); cv.width = cv.height = 256;
   const c = cv.getContext('2d');
   const g = c.createRadialGradient(128, 128, 8, 128, 128, 128);
-  g.addColorStop(0, 'rgba(150,220,40,0.85)');
-  g.addColorStop(0.4, 'rgba(118,185,0,0.30)');
-  g.addColorStop(1, 'rgba(118,185,0,0)');
+  g.addColorStop(0, 'rgba(244,244,243,0.85)');
+  g.addColorStop(0.4, 'rgba(201,201,199,0.30)');
+  g.addColorStop(1, 'rgba(201,201,199,0)');
   c.fillStyle = g; c.fillRect(0, 0, 256, 256);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
   sp.scale.set(9, 9, 1);
   sp.position.copy(core.position);
   scene.add(sp);
 })();
-const coreLabel = makeLabel('LLM CORE', '#b7e36a');
+const coreLabel = makeLabel('LLM CORE', '#f4f4f3');
 coreLabel.position.set(0, 6.1, 0);
 scene.add(coreLabel);
 
 /* ---------- shield rings ---------- */
 const ringDefs = [
-  { r: 13,  color: 0x3da9fc, name: 'INPUT RAILS',  labelAngle: -0.5,
+  { r: 13,  color: 0xc9c9c7, name: 'INPUT RAILS',  labelAngle: -0.5,
     info: '<b>Input Rails</b>Screen the user message before anything else: jailbreak detection, content safety, topic control, PII masking. Reject early — nothing downstream runs, saving cost and latency.' },
-  { r: 9.5, color: 0xffd166, name: 'DIALOG RAILS', labelAngle: 1.7,
+  { r: 9.5, color: 0x9a9a9d, name: 'DIALOG RAILS', labelAngle: 1.7,
     info: '<b>Dialog Rails</b>Colang flows operating on canonical forms decide the next step: scripted refusal, run an action, or let the LLM generate. They may trigger retrieval rails (RAG) and execution rails (tools).' },
-  { r: 6,   color: 0xb06cff, name: 'OUTPUT RAILS', labelAngle: 3.8,
+  { r: 6,   color: 0x7a7a7e, name: 'OUTPUT RAILS', labelAngle: 3.8,
     info: '<b>Output Rails</b>Check the generated response before the user sees it: self-check output, fact-checking / hallucination check, PII removal, content safety. Toxic output shatters here.' },
 ];
 const rings = [];
@@ -368,7 +397,7 @@ const gateMeshes = [];
 for (const d of ringDefs) {
   const gx = Math.cos(GATE_ANGLE) * d.r, gz = Math.sin(GATE_ANGLE) * d.r;
   const g = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.9 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xc9c9c7, emissiveIntensity: 0.9 });
   const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 3.6, 0.35), mat);
   const p2 = p1.clone();
   p1.position.set(0, 1.8, -1.0);
@@ -381,24 +410,24 @@ for (const d of ringDefs) {
   scene.add(g);
   gateMeshes.push(g);
 }
-const gateLabel = makeLabel('GATE — legit traffic', '#a3d65a', 38);
+const gateLabel = makeLabel('GATE — legit traffic', '#f4f4f3', 38);
 gateLabel.position.set(Math.cos(GATE_ANGLE) * 15.5, 4.4, Math.sin(GATE_ANGLE) * 15.5);
 scene.add(gateLabel);
 
 /* ---------- compliance ledger obelisk ---------- */
 const obelisk = new THREE.Group();
-const obMat = new THREE.MeshStandardMaterial({ color: 0x2a3a55, emissive: 0x101b2e, roughness: 0.4, metalness: 0.5 });
+const obMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4e, emissive: 0x202023, roughness: 0.4, metalness: 0.5 });
 const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.8, 3.2), obMat);
 base.position.y = 0.4;
 const shaft = new THREE.Mesh(new THREE.BoxGeometry(2.3, 6.4, 2.3), obMat);
 shaft.position.y = 4.0;
-const obTip = new THREE.Mesh(new THREE.ConeGeometry(1.65, 1.5, 4), new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.8 }));
+const obTip = new THREE.Mesh(new THREE.ConeGeometry(1.65, 1.5, 4), new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xc9c9c7, emissiveIntensity: 0.8 }));
 obTip.position.y = 7.95;
 obTip.rotation.y = Math.PI / 4;
 obelisk.add(base, shaft, obTip);
 obelisk.position.set(21, 0, 0);
 scene.add(obelisk);
-const obLabel = makeLabel('COMPLIANCE LEDGER', '#cdd9e5', 40);
+const obLabel = makeLabel('COMPLIANCE LEDGER', '#c9c9c7', 40);
 obLabel.position.set(21, 9.6, 0);
 scene.add(obLabel);
 
@@ -417,13 +446,13 @@ scene.add(auditPlane);
 const auditLines = [];
 let blockN = 0, passN = 0;
 function drawAudit() {
-  auditCtx.fillStyle = 'rgba(6,10,16,0.94)';
+  auditCtx.fillStyle = 'rgba(14,14,15,0.94)';
   auditCtx.fillRect(0, 0, 256, 640);
-  auditCtx.strokeStyle = '#76b900';
+  auditCtx.strokeStyle = '#c9c9c7';
   auditCtx.lineWidth = 4;
   auditCtx.strokeRect(2, 2, 252, 636);
   auditCtx.font = '700 22px Consolas, monospace';
-  auditCtx.fillStyle = '#76b900';
+  auditCtx.fillStyle = '#f4f4f3';
   auditCtx.fillText('AUDIT TRAIL', 14, 34);
   auditCtx.font = '15px Consolas, monospace';
   const max = 19;
@@ -441,7 +470,7 @@ function logEvent(text, color) {
   drawAudit();
 }
 drawAudit();
-logEvent('ledger online', '#9fb0c3');
+logEvent('ledger online', '#9a9a9d');
 
 /* ---------- attacks, legit traffic, sparks ---------- */
 const movers = [];   // {mesh, type, angle, radius, dir, speed, targetR, spin}
@@ -450,10 +479,10 @@ const sparks = [];   // {pts, vels, life}
 const geoSpear = new THREE.ConeGeometry(0.22, 1.15, 10);
 const geoDrill = new THREE.ConeGeometry(0.30, 0.95, 5);
 const geoOrb = new THREE.SphereGeometry(0.30, 14, 14);
-const matInj = new THREE.MeshStandardMaterial({ color: 0xff4d5e, emissive: 0xff4d5e, emissiveIntensity: 0.8 });
-const matJb  = new THREE.MeshStandardMaterial({ color: 0x9b5cff, emissive: 0x9b5cff, emissiveIntensity: 0.8 });
-const matTox = new THREE.MeshStandardMaterial({ color: 0xff9f43, emissive: 0xff9f43, emissiveIntensity: 0.8 });
-const matOk  = new THREE.MeshStandardMaterial({ color: 0x9fdc2e, emissive: 0x76b900, emissiveIntensity: 1.0 });
+const matInj = new THREE.MeshStandardMaterial({ color: 0xcf6b5e, emissive: 0xcf6b5e, emissiveIntensity: 0.8 });
+const matJb  = new THREE.MeshStandardMaterial({ color: 0xcf6b5e, emissive: 0xcf6b5e, emissiveIntensity: 0.8 });
+const matTox = new THREE.MeshStandardMaterial({ color: 0xcf6b5e, emissive: 0xcf6b5e, emissiveIntensity: 0.8 });
+const matOk  = new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 1.0 });
 
 function randAngleAvoidGate() {
   let a;
@@ -554,7 +583,7 @@ renderer.domElement.addEventListener('click', (e) => {
   const pick = raycastPick();
   if (pick) {
     infoPanel.style.display = 'block';
-    infoPanel.innerHTML = pick.body + '<div style="margin-top:6px;color:#6b7c91">(click empty space to dismiss)</div>';
+    infoPanel.innerHTML = pick.body + '<div style="margin-top:6px;color:#8a8a8d">(click empty space to dismiss)</div>';
   } else {
     infoPanel.style.display = 'none';
   }
@@ -602,21 +631,21 @@ function animate() {
     if (m.dir < 0 && m.radius <= m.targetR) {
       if (m.type === 'legit') {
         passN++; pcEl.textContent = passN;
-        logEvent('PASS  gate: request served', '#76b900');
+        logEvent('PASS  gate: request served', '#f4f4f3');
         spawn('response');
       } else {
         blockN++; bcEl.textContent = blockN;
-        shatter(m.mesh.position, m.type === 'injection' ? 0xff4d5e : 0x9b5cff);
+        shatter(m.mesh.position, 0xcf6b5e);
         rings[0].flash = 1;
-        logEvent(m.type === 'injection' ? 'BLOCK input: prompt inject' : 'BLOCK input: jailbreak', m.type === 'injection' ? '#ff4d5e' : '#b06cff');
+        logEvent(m.type === 'injection' ? 'BLOCK input: prompt inject' : 'BLOCK input: jailbreak', '#cf6b5e');
       }
       done = true;
     } else if (m.dir > 0 && m.radius >= m.targetR) {
       if (m.type === 'toxic') {
         blockN++; bcEl.textContent = blockN;
-        shatter(m.mesh.position, 0xff9f43);
+        shatter(m.mesh.position, 0xcf6b5e);
         rings[2].flash = 1;
-        logEvent('BLOCK output: unsafe text', '#ff9f43');
+        logEvent('BLOCK output: unsafe text', '#cf6b5e');
       }
       done = true; // responses just exit
     }
@@ -681,7 +710,7 @@ window.addEventListener('resize', () => {
     <rect x="330" y="175" width="140" height="80" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--yellow) 12%, var(--bg2));stroke:var(--yellow)"/><text x="400" y="202" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--yellow)">DIALOG RAILS</text><text x="400" y="222" font-size="10" text-anchor="middle" style="fill:var(--muted)">Colang flows /</text><text x="400" y="237" font-size="10" text-anchor="middle" style="fill:var(--muted)">canonical forms</text>
     <rect x="510" y="60" width="150" height="64" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="585" y="86" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--green)">RETRIEVAL RAILS</text><text x="585" y="106" font-size="10" text-anchor="middle" style="fill:var(--muted)">screen RAG chunks</text>
     <ellipse cx="585" cy="215" rx="72" ry="40" stroke-width="2.5" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="585" y="211" font-size="15" text-anchor="middle" font-weight="800" style="fill:var(--green)">Main LLM</text><text x="585" y="230" font-size="10" text-anchor="middle" style="fill:var(--muted)">generates</text>
-    <rect x="510" y="320" width="150" height="64" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="585" y="346" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--red)">EXECUTION RAILS</text><text x="585" y="366" font-size="10" text-anchor="middle" style="fill:var(--muted)">guard tool / action calls</text>
+    <rect x="510" y="320" width="150" height="64" rx="10" stroke-width="2" style="fill:color-mix(in srgb, #6a6a6e 16%, var(--bg2));stroke:#9a9a9d"/><text x="585" y="346" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">EXECUTION RAILS</text><text x="585" y="366" font-size="10" text-anchor="middle" style="fill:var(--muted)">guard tool / action calls</text>
     <rect x="730" y="330" width="110" height="48" rx="10" style="fill:var(--panel2);stroke:var(--muted)"/><text x="785" y="350" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">Tools / APIs</text><text x="785" y="367" font-size="9" text-anchor="middle" style="fill:var(--muted)">email · DB · web</text>
     <rect x="730" y="175" width="140" height="80" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--purple) 12%, var(--bg2));stroke:var(--purple)"/><text x="800" y="200" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--purple)">OUTPUT RAILS</text><text x="800" y="218" font-size="10" text-anchor="middle" style="fill:var(--muted)">self-check · fact-check</text><text x="800" y="233" font-size="10" text-anchor="middle" style="fill:var(--muted)">PII removal · content safety</text>
     <rect x="950" y="185" width="110" height="60" rx="10" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="1005" y="212" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--green)">Response</text><text x="1005" y="230" font-size="10" text-anchor="middle" style="fill:var(--muted)">to user</text>
@@ -771,18 +800,18 @@ completion = rails.generate(
   <div class="svgbox">
     <svg viewBox="0 0 1040 200" width="1040" height="200" font-family="Segoe UI, Arial, sans-serif">
       <defs><marker id="lcar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--green)"/></marker></defs>
-      <rect x="20" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="130" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--red)">1 · EVALUATE</text><text x="130" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">offline vuln scan + benchmarks</text>
-      <rect x="280" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--purple) 12%, var(--bg2));stroke:var(--purple)"/><text x="390" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--purple)">2 · POST-TRAIN</text><text x="390" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">safety SFT/DPO into the model</text>
-      <rect x="540" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 12%, var(--bg2));stroke:var(--blue)"/><text x="650" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--blue)">3 · DEPLOY</text><text x="650" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">trusted model via NIM</text>
-      <rect x="800" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="910" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--green)">4 · RUNTIME</text><text x="910" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">inference-time guardrails</text>
+      <rect x="20" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--muted) 14%, var(--bg2));stroke:var(--muted)"/><text x="130" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">1 · EVALUATE</text><text x="130" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">offline vuln scan + benchmarks</text>
+      <rect x="280" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--purple) 14%, var(--bg2));stroke:var(--purple)"/><text x="390" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">2 · POST-TRAIN</text><text x="390" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">safety SFT/DPO into the model</text>
+      <rect x="540" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 14%, var(--bg2));stroke:var(--blue)"/><text x="650" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">3 · DEPLOY</text><text x="650" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">trusted model via NIM</text>
+      <rect x="800" y="50" width="220" height="74" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 16%, var(--bg2));stroke:var(--green)"/><text x="910" y="78" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">4 · RUNTIME</text><text x="910" y="98" font-size="10" text-anchor="middle" style="fill:var(--muted)">inference-time guardrails</text>
       <line x1="240" y1="87" x2="278" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
       <line x1="500" y1="87" x2="538" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
       <line x1="760" y1="87" x2="798" y2="87" stroke-width="2" marker-end="url(#lcar)" style="stroke:var(--green)"/>
-      <text x="130" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--red)">NeMo Auditor</text>
-      <text x="390" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--purple)">Customizer + Safe Synthesizer</text>
-      <text x="650" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--blue)">NIM containers</text>
-      <text x="910" y="142" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--green)">NeMo Guardrails + Safety NIMs</text>
-      <text x="910" y="158" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--green)">+ NAT defense middleware</text>
+      <text x="130" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--text)">NeMo Auditor</text>
+      <text x="390" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--text)">Customizer + Safe Synthesizer</text>
+      <text x="650" y="148" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--text)">NIM containers</text>
+      <text x="910" y="142" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--text)">NeMo Guardrails + Safety NIMs</text>
+      <text x="910" y="158" font-size="11" text-anchor="middle" font-weight="700" style="fill:var(--text)">+ NAT defense middleware</text>
     </svg>
   </div>
 
@@ -891,10 +920,10 @@ completion = rails.generate(
 
   <h3 class="sub">Relative runtime cost (qualitative ladder, cheap → expensive)</h3>
   <div class="bars">
-    <div class="bar-row"><div class="lbl">Injection detection (YARA rules)</div><div class="bar-track"><div class="bar-fill" style="width:12%;background:var(--green)">rule-based</div></div><div class="note">very cheap</div></div>
-    <div class="bar-row"><div class="lbl">Jailbreak heuristics (perplexity)</div><div class="bar-track"><div class="bar-fill" style="width:30%;background:var(--green-dim)">small model server</div></div><div class="note">cheap</div></div>
-    <div class="bar-row"><div class="lbl">JailbreakDetect NIM (classifier)</div><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--yellow)">dedicated model</div></div><div class="note">low latency, production</div></div>
-    <div class="bar-row"><div class="lbl">self check input (LLM-as-judge)</div><div class="bar-track"><div class="bar-fill" style="width:90%;background:var(--orange)">one extra LLM call</div></div><div class="note">priciest; great for prototypes</div></div>
+    <div class="bar-row"><div class="lbl">Injection detection (YARA rules)</div><div class="bar-track"><div class="bar-fill" style="width:12%;background:#4a4a4e">rule-based</div></div><div class="note">very cheap</div></div>
+    <div class="bar-row"><div class="lbl">Jailbreak heuristics (perplexity)</div><div class="bar-track"><div class="bar-fill" style="width:30%;background:#6a6a6e">small model server</div></div><div class="note">cheap</div></div>
+    <div class="bar-row"><div class="lbl">JailbreakDetect NIM (classifier)</div><div class="bar-track"><div class="bar-fill" style="width:55%;background:#9a9a9d">dedicated model</div></div><div class="note">low latency, production</div></div>
+    <div class="bar-row"><div class="lbl">self check input (LLM-as-judge)</div><div class="bar-track"><div class="bar-fill" style="width:90%;background:#e4e4e1;color:#111112">one extra LLM call</div></div><div class="note">priciest; great for prototypes</div></div>
   </div>
 
   <h3 class="sub">Topic control — two mechanisms</h3>
@@ -929,8 +958,8 @@ completion = rails.generate(
 
   <h3 class="sub">Taxonomy breadth (real counts)</h3>
   <div class="bars">
-    <div class="bar-row"><div class="lbl">Llama Guard 3 categories</div><div class="bar-track"><div class="bar-fill" style="width:53%;background:var(--blue)">14 (S1–S14)</div></div><div class="note">MLCommons 13 + Code Interpreter Abuse</div></div>
-    <div class="bar-row"><div class="lbl">NemoGuard ContentSafety categories</div><div class="bar-track"><div class="bar-fill" style="width:88%;background:var(--green)">23 (S1–S23) + "Needs Caution"</div></div><div class="note">Aegis 2.0 taxonomy</div></div>
+    <div class="bar-row"><div class="lbl">Llama Guard 3 categories</div><div class="bar-track"><div class="bar-fill" style="width:53%;background:#7a7a7e">14 (S1–S14)</div></div><div class="note">MLCommons 13 + Code Interpreter Abuse</div></div>
+    <div class="bar-row"><div class="lbl">NemoGuard ContentSafety categories</div><div class="bar-track"><div class="bar-fill" style="width:88%;background:#e4e4e1;color:#111112">23 (S1–S23) + "Needs Caution"</div></div><div class="note">Aegis 2.0 taxonomy</div></div>
   </div>
 
   <div class="callout"><b>Aegis</b> is NVIDIA's content-safety program: the <strong>Aegis Content Safety Dataset</strong> (human-annotated, built on an extended Llama Guard-style taxonomy) + the resulting <strong>AegisGuard / NemoGuard ContentSafety</strong> models. Differentiators to remember: the <strong>"Needs Caution"</strong> ambiguity label, broader taxonomy (23 vs 14), and shipping as a <strong>NIM microservice</strong> that plugs into NeMo Guardrails as both an input and an output rail.</div>
@@ -1036,10 +1065,10 @@ completion = rails.generate(
   <div class="svgbox">
     <svg viewBox="0 0 720 360" width="720" height="360" font-family="Segoe UI, Arial, sans-serif">
       <polygon points="360,40 80,300 640,300" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 6%, transparent);stroke:var(--red)"/>
-      <circle cx="360" cy="40" r="9" style="fill:var(--red)"/><circle cx="80" cy="300" r="9" style="fill:var(--orange)"/><circle cx="640" cy="300" r="9" style="fill:var(--purple)"/>
-      <text x="360" y="20" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--red)">1 · Access to private data</text>
-      <text x="120" y="335" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--orange)">2 · Exposure to untrusted content</text>
-      <text x="600" y="335" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--purple)">3 · An exfiltration channel</text>
+      <circle cx="360" cy="40" r="9" style="fill:#e4e4e1"/><circle cx="80" cy="300" r="9" style="fill:#9a9a9d"/><circle cx="640" cy="300" r="9" style="fill:#6a6a6e"/>
+      <text x="360" y="20" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--text)">1 · Access to private data</text>
+      <text x="120" y="335" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--text)">2 · Exposure to untrusted content</text>
+      <text x="600" y="335" font-size="14" font-weight="700" text-anchor="middle" style="fill:var(--muted)">3 · An exfiltration channel</text>
       <text x="360" y="195" font-size="17" font-weight="800" text-anchor="middle" style="fill:var(--red)">ALL THREE = DATA LEAVES</text>
       <text x="360" y="218" font-size="11" text-anchor="middle" style="fill:var(--muted)">indirect injection + send_email / http_get / markdown image rendering</text>
       <text x="360" y="250" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--green)">Mitigate by breaking ANY ONE leg:</text>
@@ -1078,12 +1107,12 @@ completion = rails.generate(
     <svg viewBox="0 0 1040 250" width="1040" height="250" font-family="Segoe UI, Arial, sans-serif">
       <defs><marker id="gar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--green)"/></marker></defs>
       <rect x="20" y="80" width="150" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="95" y="108" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--red)">PROBES</text><text x="95" y="127" font-size="10" text-anchor="middle" style="fill:var(--muted)">100+ adversarial attack</text><text x="95" y="142" font-size="10" text-anchor="middle" style="fill:var(--muted)">payload modules</text>
-      <rect x="35" y="15" width="120" height="40" rx="9" style="fill:color-mix(in srgb, var(--purple) 12%, var(--bg2));stroke:var(--purple)"/><text x="95" y="40" font-size="12" text-anchor="middle" font-weight="700" style="fill:var(--purple)">BUFFS</text>
+      <rect x="35" y="15" width="120" height="40" rx="9" style="fill:color-mix(in srgb, var(--purple) 14%, var(--bg2));stroke:var(--purple)"/><text x="95" y="40" font-size="12" text-anchor="middle" font-weight="700" style="fill:var(--text)">BUFFS</text>
       <text x="180" y="35" font-size="10" style="fill:var(--muted)">transform/augment probes</text><text x="180" y="50" font-size="10" style="fill:var(--muted)">(e.g., paraphrase) for coverage</text>
       <line x1="95" y1="55" x2="95" y2="78" stroke-width="1.6" stroke-dasharray="4 3" style="stroke:var(--purple)"/>
-      <rect x="230" y="80" width="160" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 12%, var(--bg2));stroke:var(--blue)"/><text x="310" y="108" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--blue)">GENERATORS</text><text x="310" y="127" font-size="10" text-anchor="middle" style="fill:var(--muted)">wrap the target: HF, OpenAI,</text><text x="310" y="142" font-size="10" text-anchor="middle" style="fill:var(--muted)">NIM, REST, Bedrock, Replicate…</text>
-      <rect x="450" y="80" width="130" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="515" y="113" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--green)">Target LLM</text><text x="515" y="135" font-size="10" text-anchor="middle" style="fill:var(--muted)">responds to attacks</text>
-      <rect x="640" y="80" width="150" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--yellow) 12%, var(--bg2));stroke:var(--yellow)"/><text x="715" y="108" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--yellow)">DETECTORS</text><text x="715" y="127" font-size="10" text-anchor="middle" style="fill:var(--muted)">score each response</text><text x="715" y="142" font-size="10" text-anchor="middle" style="fill:var(--muted)">for the failure mode</text>
+      <rect x="230" y="80" width="160" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 14%, var(--bg2));stroke:var(--blue)"/><text x="310" y="108" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">GENERATORS</text><text x="310" y="127" font-size="10" text-anchor="middle" style="fill:var(--muted)">wrap the target: HF, OpenAI,</text><text x="310" y="142" font-size="10" text-anchor="middle" style="fill:var(--muted)">NIM, REST, Bedrock, Replicate…</text>
+      <rect x="450" y="80" width="130" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 16%, var(--bg2));stroke:var(--green)"/><text x="515" y="113" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">Target LLM</text><text x="515" y="135" font-size="10" text-anchor="middle" style="fill:var(--muted)">responds to attacks</text>
+      <rect x="640" y="80" width="150" height="78" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--yellow) 16%, var(--bg2));stroke:var(--yellow)"/><text x="715" y="108" font-size="14" text-anchor="middle" font-weight="700" style="fill:var(--text)">DETECTORS</text><text x="715" y="127" font-size="10" text-anchor="middle" style="fill:var(--muted)">score each response</text><text x="715" y="142" font-size="10" text-anchor="middle" style="fill:var(--muted)">for the failure mode</text>
       <rect x="850" y="80" width="170" height="78" rx="10" stroke-width="2" style="fill:var(--panel2);stroke:var(--muted)"/><text x="935" y="105" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">HARNESS</text><text x="935" y="123" font-size="10" text-anchor="middle" style="fill:var(--muted)">orchestrates; default probewise:</text><text x="935" y="138" font-size="10" text-anchor="middle" style="fill:var(--muted)">probe ↔ recommended detectors</text>
       <line x1="170" y1="119" x2="228" y2="119" stroke-width="2" marker-end="url(#gar)" style="stroke:var(--green)"/>
       <line x1="390" y1="119" x2="448" y2="119" stroke-width="2" marker-end="url(#gar)" style="stroke:var(--green)"/>
@@ -1126,15 +1155,15 @@ garak --list_probes</pre>
       <div class="body">Social scoring, manipulative techniques, untargeted facial scraping, real-time remote biometric ID by law enforcement (narrow exceptions).</div>
     </div>
     <div class="rung">
-      <div class="head" style="background:color-mix(in srgb, var(--orange) 15%, transparent);color:var(--orange)">HIGH<small>ALLOWED + HEAVY OBLIGATIONS</small></div>
+      <div class="head" style="background:color-mix(in srgb, #c9c9c7 22%, transparent);color:var(--text)">HIGH<small>ALLOWED + HEAVY OBLIGATIONS</small></div>
       <div class="body"><b>Annex III uses:</b> employment/HR screening, credit scoring, education, critical infrastructure, law enforcement → risk management system, data governance, logging, human oversight, conformity assessment, CE marking.</div>
     </div>
     <div class="rung">
-      <div class="head" style="background:color-mix(in srgb, var(--yellow) 15%, transparent);color:var(--yellow)">LIMITED<small>TRANSPARENCY (ART. 50)</small></div>
+      <div class="head" style="background:color-mix(in srgb, #9a9a9d 18%, transparent);color:var(--text)">LIMITED<small>TRANSPARENCY (ART. 50)</small></div>
       <div class="body">Chatbots must <b>disclose they're AI</b>; deepfakes/synthetic content must be labeled / machine-readably marked.</div>
     </div>
     <div class="rung">
-      <div class="head" style="background:var(--green-glow);color:var(--green)">MINIMAL<small>NO NEW OBLIGATIONS</small></div>
+      <div class="head" style="background:color-mix(in srgb, #6a6a6e 14%, transparent);color:var(--muted)">MINIMAL<small>NO NEW OBLIGATIONS</small></div>
       <div class="body">Spam filters, game AI — voluntary codes.</div>
     </div>
   </div>
@@ -1143,11 +1172,11 @@ garak --list_probes</pre>
   <div class="svgbox">
     <svg viewBox="0 0 980 130" width="980" height="130" font-family="Segoe UI, Arial, sans-serif">
       <line x1="60" y1="65" x2="920" y2="65" stroke-width="4" style="stroke:var(--line)"/>
-      <circle cx="110" cy="65" r="10" style="fill:var(--green)"/><text x="110" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--green)">Aug 2024</text><text x="110" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">entered into force</text>
+      <circle cx="110" cy="65" r="10" style="fill:#3a3a3e"/><text x="110" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--text)">Aug 2024</text><text x="110" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">entered into force</text>
       <circle cx="360" cy="65" r="10" style="fill:var(--red)"/><text x="360" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--red)">Feb 2025</text><text x="360" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">prohibitions applied</text>
-      <circle cx="610" cy="65" r="10" style="fill:var(--blue)"/><text x="610" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--blue)">Aug 2025</text><text x="610" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">GPAI obligations</text>
-      <circle cx="780" cy="65" r="10" style="fill:var(--orange)"/><text x="780" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--orange)">Aug 2026</text><text x="780" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">AI Office enforcement powers</text>
-      <circle cx="900" cy="65" r="10" style="fill:var(--purple)"/><text x="900" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--purple)">Dec 2027</text><text x="900" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">Annex III high-risk (deferred)</text>
+      <circle cx="610" cy="65" r="10" style="fill:#6a6a6e"/><text x="610" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--text)">Aug 2025</text><text x="610" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">GPAI obligations</text>
+      <circle cx="780" cy="65" r="10" style="fill:#9a9a9d"/><text x="780" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--text)">Aug 2026</text><text x="780" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">AI Office enforcement powers</text>
+      <circle cx="900" cy="65" r="10" style="fill:#c9c9c7"/><text x="900" y="38" font-size="13" font-weight="700" text-anchor="middle" style="fill:var(--text)">Dec 2027</text><text x="900" y="100" font-size="11" text-anchor="middle" style="fill:var(--muted)">Annex III high-risk (deferred)</text>
     </svg>
   </div>
   <div class="callout"><b>Currency caveat (June 2026):</b> <strong>Aug 2, 2026</strong> = the original date the <strong>EU AI Office gains full enforcement powers (fines)</strong> AND the original Annex III high-risk application date — but the <strong>Digital Omnibus</strong> reached a <strong>provisional trilogue agreement on May 7, 2026</strong> (Council + Parliament + Commission) that <em>defers stand-alone Annex III high-risk obligations to <strong>Dec 2, 2027</strong></em> (Annex I embedded high-risk → Aug 2, 2028). It takes full legal effect only on formal adoption + publication in the Official Journal (expected before Aug 2, 2026). For the exam, the Aug 2, 2026 dates are the canonical "textbook" answer; in practice the high-risk deadline has been pushed to Dec 2, 2027.</div>
@@ -1240,10 +1269,10 @@ garak --list_probes</pre>
   <div class="svgbox">
     <svg viewBox="0 0 1040 190" width="1040" height="190" font-family="Segoe UI, Arial, sans-serif">
       <defs><marker id="nar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" style="fill:var(--green)"/></marker></defs>
-      <rect x="20" y="45" width="160" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--red) 12%, var(--bg2));stroke:var(--red)"/><text x="100" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--red)">1 · Garak scans</text><text x="100" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">the model (offline)</text>
-      <rect x="232" y="45" width="180" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--yellow) 12%, var(--bg2));stroke:var(--yellow)"/><text x="322" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--yellow)">2 · Findings inform</text><text x="322" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">NeMo Guardrails config</text>
-      <rect x="464" y="45" width="230" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 12%, var(--bg2));stroke:var(--green)"/><text x="579" y="68" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--green)">3 · NemoGuard NIMs as rails</text><text x="579" y="87" font-size="10" text-anchor="middle" style="fill:var(--muted)">ContentSafety + TopicControl +</text><text x="579" y="102" font-size="10" text-anchor="middle" style="fill:var(--muted)">JailbreakDetect at inference</text>
-      <rect x="746" y="45" width="160" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 12%, var(--bg2));stroke:var(--blue)"/><text x="826" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--blue)">4 · Traces logged</text><text x="826" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">for audit</text>
+      <rect x="20" y="45" width="160" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--muted) 14%, var(--bg2));stroke:var(--muted)"/><text x="100" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">1 · Garak scans</text><text x="100" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">the model (offline)</text>
+      <rect x="232" y="45" width="180" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--yellow) 16%, var(--bg2));stroke:var(--yellow)"/><text x="322" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">2 · Findings inform</text><text x="322" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">NeMo Guardrails config</text>
+      <rect x="464" y="45" width="230" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--green) 16%, var(--bg2));stroke:var(--green)"/><text x="579" y="68" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">3 · NemoGuard NIMs as rails</text><text x="579" y="87" font-size="10" text-anchor="middle" style="fill:var(--muted)">ContentSafety + TopicControl +</text><text x="579" y="102" font-size="10" text-anchor="middle" style="fill:var(--muted)">JailbreakDetect at inference</text>
+      <rect x="746" y="45" width="160" height="70" rx="10" stroke-width="2" style="fill:color-mix(in srgb, var(--blue) 14%, var(--bg2));stroke:var(--blue)"/><text x="826" y="74" font-size="13" text-anchor="middle" font-weight="700" style="fill:var(--text)">4 · Traces logged</text><text x="826" y="94" font-size="10" text-anchor="middle" style="fill:var(--muted)">for audit</text>
       <line x1="180" y1="80" x2="230" y2="80" stroke-width="2" marker-end="url(#nar)" style="stroke:var(--green)"/>
       <line x1="412" y1="80" x2="462" y2="80" stroke-width="2" marker-end="url(#nar)" style="stroke:var(--green)"/>
       <line x1="694" y1="80" x2="744" y2="80" stroke-width="2" marker-end="url(#nar)" style="stroke:var(--green)"/>

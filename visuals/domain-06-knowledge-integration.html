@@ -6,10 +6,10 @@
 <title>NCP-AAI Domain 6 — Knowledge Integration &amp; Data Handling</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --card:#141c2c; --panel:#141c2c; --panel2:#182236;
-    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
-    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --border:#243349; --on-accent:#0b0f17;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --card:#151517; --panel:#151517; --panel2:#202023;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08);
+    --red:#cf6b5e; --amber:#cfcfcb; --blue:#a6a6a9; --purple:#bcb9c0; --cyan:#848489;
+    --text:#eaeaea; --muted:#9a9a9d; --line:#2a2a2d; --border:#2a2a2d; --on-accent:#111112;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -36,26 +36,27 @@
   .hero p.hook b{color:var(--text)}
 
   /* 3D SCENE — stays hardcoded dark in both themes */
-  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12;overflow:hidden}
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0e0e0f;overflow:hidden}
   #scene-canvas{width:100%;height:100%;display:block}
-  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
-  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#f4f4f3;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
   .scene-legend ul{list-style:none}
-  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
-  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
-  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8;max-width:calc(100% - 28px)}
-  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5);color:#dfe7f3}
-  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
-  #scene-tooltip span{color:#8fa0b8}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#c9c9c7}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px;border:1px solid rgba(244,244,243,.25)}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(14,14,15,.9);border:1px solid #3a3a3e;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#c9c9c7;max-width:calc(100% - 28px)}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(14,14,15,.95);border:1px solid #f4f4f3;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5);color:#eaeaea}
+  #scene-tooltip b{color:#f4f4f3;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#c9c9c7}
 
   /* LAYOUT */
   main{max-width:1180px;margin:0 auto;padding:0 24px}
-  section{padding:56px 0 18px}
+  section{padding:56px 0 18px;scroll-margin-top:64px}
   .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
-  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
-  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
-  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h2{font-size:clamp(1.45rem,4.2vw,1.75rem);font-weight:800;letter-spacing:-.01em;margin-bottom:8px;line-height:1.2}
+  .lede{color:var(--muted);max-width:72ch;margin-bottom:26px;font-size:.98rem;line-height:1.6}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text);line-height:1.3}
   h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
+  .callout, .card p, .trap p{max-width:74ch}
 
   /* CARDS */
   .grid{display:grid;gap:16px}
@@ -160,6 +161,23 @@
     .tbl{display:block;overflow-x:auto;white-space:nowrap}
     footer ul{columns:1}
   }
+  @media(max-width:640px){
+    main{padding:0 16px}
+    section{padding:40px 0 14px}
+    header.hero{padding:48px 18px 32px}
+    .hero .domain-chip{flex-wrap:wrap;justify-content:center}
+    .hero p.hook{font-size:1rem}
+    #scene-wrap{height:52vh;min-height:380px}
+    .scene-legend{max-width:calc(100% - 28px);font-size:.72rem}
+    .scene-hint{font-size:.66rem;padding:5px 10px}
+    .grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}
+    .mantra,.trap-grid{grid-template-columns:1fr}
+    .lede{font-size:.94rem}
+    h2{font-size:clamp(1.3rem,6vw,1.6rem)}
+    pre.code-block{font-size:.72rem;padding:12px 12px}
+    /* keep the floating controls clear of content at the bottom */
+    main{padding-bottom:64px}
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -206,11 +224,11 @@
   <div class="scene-legend">
     <h4>Legend — the knowledge refinery</h4>
     <ul>
-      <li><span class="sw" style="background:#6aa3cf"></span><span>Raw doc slabs (PDF, table, image) drop onto the ingestion conveyor</span></li>
-      <li><span class="sw" style="background:#e8a33d"></span><span>Chunker saw slices docs into chunk tiles; embedding portal converts them</span></li>
-      <li><span class="sw" style="background:#3fd2c7"></span><span>Glowing vector points fly into the 3D vector cloud, clustered by topic color</span></li>
-      <li><span class="sw" style="background:#b07cff"></span><span>Query orb → retrieval beam lights candidates → reranker gate keeps the best few</span></li>
-      <li><span class="sw" style="background:#76b900"></span><span>Survivors dock into the generation core; side lattice = GraphRAG multi-hop walk</span></li>
+      <li><span class="sw" style="background:#9a9a9d"></span><span>Raw doc slabs (PDF, table, image) drop onto the ingestion conveyor</span></li>
+      <li><span class="sw" style="background:#c9c9c7"></span><span>Chunker saw slices docs into chunk tiles; embedding portal converts them</span></li>
+      <li><span class="sw" style="background:#6a6a6e"></span><span>Glowing vector points fly into the 3D vector cloud, clustered by topic shade</span></li>
+      <li><span class="sw" style="background:#84848a"></span><span>Query orb → retrieval beam lights candidates → reranker gate keeps the best few</span></li>
+      <li><span class="sw" style="background:#f4f4f3"></span><span>Survivors dock into the generation core; side lattice = GraphRAG multi-hop walk</span></li>
     </ul>
   </div>
   <div id="scene-tooltip"></div>
@@ -913,8 +931,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 80, 170);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 80, 170);
 
 const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
 camera.position.set(4, 18, 46);
@@ -928,35 +946,35 @@ controls.minDistance = 14;
 controls.maxDistance = 120;
 
 // ---------- lights ----------
-scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
-const key = new THREE.DirectionalLight(0xdfe7f3, 1.35);
+scene.add(new THREE.AmbientLight(0x4a4a4e, 1.1));
+const key = new THREE.DirectionalLight(0xf4f4f3, 1.35);
 key.position.set(14, 30, 16);
 scene.add(key);
-const greenFill = new THREE.PointLight(0x76b900, 70, 70);
+const greenFill = new THREE.PointLight(0xf4f4f3, 70, 70);
 greenFill.position.set(26, 12, 6);
 scene.add(greenFill);
-const cyanFill = new THREE.PointLight(0x3fd2c7, 60, 80);
+const cyanFill = new THREE.PointLight(0xc9c9c7, 60, 80);
 cyanFill.position.set(0, 16, 10);
 scene.add(cyanFill);
-const purpleFill = new THREE.PointLight(0xb07cff, 50, 70);
+const purpleFill = new THREE.PointLight(0x8a8a8d, 50, 70);
 purpleFill.position.set(-22, 14, -8);
 scene.add(purpleFill);
 
 // ---------- ground + grid ----------
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(260, 260),
-  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+  new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.95, metalness: 0.1 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -2.0;
 scene.add(ground);
-const grid = new THREE.GridHelper(260, 130, 0x1b2840, 0x121a2a);
+const grid = new THREE.GridHelper(260, 130, 0x3a3a3e, 0x1c1c1f);
 grid.position.y = -1.98;
 scene.add(grid);
 
 // ---------- text sprite helper ----------
 function makeLabel(text, opts = {}) {
-  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const { size = 46, color = '#eaeaea', bg = 'rgba(14,14,15,0.88)', border = '#f4f4f3', scale = 1 } = opts;
   const pad = 28;
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
@@ -988,7 +1006,7 @@ function makeLabel(text, opts = {}) {
 const hoverables = [];
 
 // topic palette for vector-space clustering
-const TOPIC = [0x3fd2c7, 0x4da3ff, 0xb07cff, 0xe8a33d, 0x76b900];
+const TOPIC = [0xf4f4f3, 0xc9c9c7, 0x9a9a9d, 0x6a6a6e, 0x4a4a4e];
 
 // ============================================================
 //  STAGE LAYOUT (left → right along X)
@@ -1001,27 +1019,27 @@ const TOPIC = [0x3fd2c7, 0x4da3ff, 0xb07cff, 0xe8a33d, 0x76b900];
 const CONV_Y = 0.4, CONV_X0 = -46, CONV_X1 = -26;
 const belt = new THREE.Mesh(
   new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.5, 5),
-  new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.7, metalness: 0.4 })
+  new THREE.MeshStandardMaterial({ color: 0x202023, roughness: 0.7, metalness: 0.4 })
 );
 belt.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.4, 0);
 scene.add(belt);
 for (const dz of [-2.55, 2.55]) {
   const strip = new THREE.Mesh(
     new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.12, 0.12),
-    new THREE.MeshBasicMaterial({ color: 0x6aa3cf })
+    new THREE.MeshBasicMaterial({ color: 0x9a9a9d })
   );
   strip.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.12, dz);
   scene.add(strip);
 }
 const chevrons = [];
-const chevMat = new THREE.MeshBasicMaterial({ color: 0x24364f });
+const chevMat = new THREE.MeshBasicMaterial({ color: 0x4a4a4e });
 for (let i = 0; i < 9; i++) {
   const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 4.2), chevMat);
   ch.position.set(CONV_X0 + i * 2.4, CONV_Y - 0.1, 0);
   scene.add(ch);
   chevrons.push(ch);
 }
-const ingLabel = makeLabel('① INGESTION CONVEYOR — raw docs', { border: '#6aa3cf', color: '#6aa3cf', scale: 1.15 });
+const ingLabel = makeLabel('① INGESTION CONVEYOR — raw docs', { border: '#9a9a9d', color: '#c9c9c7', scale: 1.15 });
 ingLabel.position.set(-36, 9, 0);
 scene.add(ingLabel);
 const ingHit = new THREE.Mesh(new THREE.BoxGeometry(22, 6, 6), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1032,9 +1050,9 @@ scene.add(ingHit); hoverables.push(ingHit);
 // raw doc slab spawner (3 kinds: PDF slab, table, image)
 const slabs = [];
 const slabKinds = [
-  { name: 'PDF slab', col: 0x6aa3cf, geo: new THREE.BoxGeometry(2.2, 0.4, 2.8) },
-  { name: 'Table doc', col: 0x58bfae, geo: new THREE.BoxGeometry(2.4, 0.4, 2.4) },
-  { name: 'Image / scan', col: 0xe0b14b, geo: new THREE.BoxGeometry(2.0, 0.4, 2.6) },
+  { name: 'PDF slab', col: 0xc9c9c7, geo: new THREE.BoxGeometry(2.2, 0.4, 2.8) },
+  { name: 'Table doc', col: 0x9a9a9d, geo: new THREE.BoxGeometry(2.4, 0.4, 2.4) },
+  { name: 'Image / scan', col: 0x6a6a6e, geo: new THREE.BoxGeometry(2.0, 0.4, 2.6) },
 ];
 function spawnSlab() {
   const kind = slabKinds[Math.floor(Math.random() * slabKinds.length)];
@@ -1048,17 +1066,17 @@ function spawnSlab() {
 
 // ---------- ② chunker saw ----------
 const SAW_X = -24.5;
-const sawHousing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 7, 6.2), new THREE.MeshStandardMaterial({ color: 0x2a231b, roughness: 0.6, metalness: 0.5 }));
+const sawHousing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 7, 6.2), new THREE.MeshStandardMaterial({ color: 0x26262a, roughness: 0.6, metalness: 0.5 }));
 sawHousing.position.set(SAW_X, 1.5, 0);
 scene.add(sawHousing);
 const sawBlade = new THREE.Mesh(
   new THREE.CylinderGeometry(2.4, 2.4, 0.18, 28),
-  new THREE.MeshStandardMaterial({ color: 0xe8a33d, emissive: 0xe8a33d, emissiveIntensity: 0.55, metalness: 0.8, roughness: 0.3 })
+  new THREE.MeshStandardMaterial({ color: 0xc9c9c7, emissive: 0xc9c9c7, emissiveIntensity: 0.55, metalness: 0.8, roughness: 0.3 })
 );
 sawBlade.rotation.x = Math.PI / 2;
 sawBlade.position.set(SAW_X, 2.6, 0);
 scene.add(sawBlade);
-const sawLabel = makeLabel('② CHUNKER SAW', { border: '#e8a33d', color: '#e8a33d', scale: 1.0 });
+const sawLabel = makeLabel('② CHUNKER SAW', { border: '#c9c9c7', color: '#c9c9c7', scale: 1.0 });
 sawLabel.position.set(SAW_X, 7.4, 0);
 scene.add(sawLabel);
 sawHousing.userData = { title: 'Chunker', desc: 'Slices documents into retrieval-unit tiles. Recursive ~512-token splitting is the production default; page-level structure-aware chunking won NVIDIA\'s study on average. Overlap (10–20%) stops answers being severed at boundaries.' };
@@ -1068,17 +1086,17 @@ hoverables.push(sawHousing);
 const PORTAL_X = -16;
 const portalRing = new THREE.Mesh(
   new THREE.TorusGeometry(3.0, 0.34, 20, 48),
-  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.7, metalness: 0.6, roughness: 0.3 })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 0.7, metalness: 0.6, roughness: 0.3 })
 );
 portalRing.position.set(PORTAL_X, 3.0, 0);
 scene.add(portalRing);
 const portalDisc = new THREE.Mesh(
   new THREE.CircleGeometry(2.7, 40),
-  new THREE.MeshBasicMaterial({ color: 0x0e3b16, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ color: 0x2a2a2d, transparent: true, opacity: 0.6, side: THREE.DoubleSide })
 );
 portalDisc.position.copy(portalRing.position);
 scene.add(portalDisc);
-const portalLabel = makeLabel('③ EMBEDDING PORTAL — input_type: passage', { border: '#76b900', color: '#a4e040', scale: 0.95 });
+const portalLabel = makeLabel('③ EMBEDDING PORTAL — input_type: passage', { border: '#f4f4f3', color: '#f4f4f3', scale: 0.95 });
 portalLabel.position.set(PORTAL_X, 7.6, 0);
 scene.add(portalLabel);
 const portalHit = new THREE.Mesh(new THREE.BoxGeometry(6.4, 6.4, 1.5), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1096,11 +1114,11 @@ const clusterAnchor = TOPIC.map((_, i) => {
 });
 const cloudBox = new THREE.Mesh(
   new THREE.BoxGeometry(CLOUD_R * 2.1, CLOUD_R * 2.0, CLOUD_R * 2.1),
-  new THREE.MeshBasicMaterial({ color: 0x3fd2c7, wireframe: true, transparent: true, opacity: 0.06 })
+  new THREE.MeshBasicMaterial({ color: 0xc9c9c7, wireframe: true, transparent: true, opacity: 0.08 })
 );
 cloudBox.position.copy(cloudCenter);
 scene.add(cloudBox);
-const cloudLabel = makeLabel('④ VECTOR SPACE — clustered by topic', { border: '#3fd2c7', color: '#3fd2c7', scale: 1.1 });
+const cloudLabel = makeLabel('④ VECTOR SPACE — clustered by topic', { border: '#c9c9c7', color: '#c9c9c7', scale: 1.1 });
 cloudLabel.position.set(CLOUD_CX, 15, 0);
 scene.add(cloudLabel);
 const cloudHit = new THREE.Mesh(new THREE.SphereGeometry(CLOUD_R, 16, 16), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1126,16 +1144,16 @@ for (let i = 0; i < 220; i++) {
 // ---------- query orb ----------
 const queryOrb = new THREE.Mesh(
   new THREE.SphereGeometry(0.85, 24, 24),
-  new THREE.MeshStandardMaterial({ color: 0xb07cff, emissive: 0xb07cff, emissiveIntensity: 0.9 })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 0.9 })
 );
 scene.add(queryOrb);
 queryOrb.userData = { title: 'Query orb', desc: 'Embedded with input_type="query". A retrieval beam sweeps the cloud; candidate points light up, then pass through the reranker gate.' };
 hoverables.push(queryOrb);
-const queryLabel = makeLabel('input_type: query', { border: '#b07cff', color: '#c9aef5', scale: 0.7 });
+const queryLabel = makeLabel('input_type: query', { border: '#c9c9c7', color: '#eaeaea', scale: 0.7 });
 scene.add(queryLabel);
 
 // retrieval beam (query → cloud), shown when active
-const beamMat = new THREE.LineBasicMaterial({ color: 0xb07cff, transparent: true, opacity: 0.0 });
+const beamMat = new THREE.LineBasicMaterial({ color: 0xf4f4f3, transparent: true, opacity: 0.0 });
 const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), beamMat);
 scene.add(beam);
 
@@ -1143,15 +1161,15 @@ scene.add(beam);
 const GATE_X = 16;
 const gatePosts = [];
 for (const dz of [-3.2, 3.2]) {
-  const post = new THREE.Mesh(new THREE.BoxGeometry(0.7, 8, 0.7), new THREE.MeshStandardMaterial({ color: 0x2a231b, roughness: 0.5, metalness: 0.6 }));
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.7, 8, 0.7), new THREE.MeshStandardMaterial({ color: 0x26262a, roughness: 0.5, metalness: 0.6 }));
   post.position.set(GATE_X, 3.5, dz);
   scene.add(post);
   gatePosts.push(post);
 }
-const gateBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 7.3), new THREE.MeshStandardMaterial({ color: 0xb07cff, emissive: 0xb07cff, emissiveIntensity: 0.45 }));
+const gateBar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 7.3), new THREE.MeshStandardMaterial({ color: 0xc9c9c7, emissive: 0xc9c9c7, emissiveIntensity: 0.45 }));
 gateBar.position.set(GATE_X, 7.3, 0);
 scene.add(gateBar);
-const gateLabel = makeLabel('⑤ RERANKER GATE — cross-encoder, keep top 3–5', { border: '#b07cff', color: '#c9aef5', scale: 0.95 });
+const gateLabel = makeLabel('⑤ RERANKER GATE — cross-encoder, keep top 3–5', { border: '#c9c9c7', color: '#eaeaea', scale: 0.95 });
 gateLabel.position.set(GATE_X, 9.4, 0);
 scene.add(gateLabel);
 const gateHit = new THREE.Mesh(new THREE.BoxGeometry(2, 8, 7.5), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1163,11 +1181,11 @@ scene.add(gateHit); hoverables.push(gateHit);
 const CORE_X = 26;
 const core = new THREE.Mesh(
   new THREE.IcosahedronGeometry(2.6, 1),
-  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.6, metalness: 0.5, roughness: 0.35, flatShading: true })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 0.6, metalness: 0.5, roughness: 0.35, flatShading: true })
 );
 core.position.set(CORE_X, 4.5, 0);
 scene.add(core);
-const coreLabel = makeLabel('⑥ GENERATION CORE — grounded + cited', { border: '#76b900', color: '#a4e040', scale: 1.0 });
+const coreLabel = makeLabel('⑥ GENERATION CORE — grounded + cited', { border: '#f4f4f3', color: '#f4f4f3', scale: 1.0 });
 coreLabel.position.set(CORE_X, 9, 0);
 scene.add(coreLabel);
 core.userData = { title: 'LLM generation core', desc: 'The surviving top-3–5 chunks dock here; the LLM answers grounded in them, with citations. Even perfect retrieval can\'t fix an ungrounded prompt — but that\'s a generation-side fix.' };
@@ -1189,7 +1207,7 @@ const graphEdges = [[0,1],[1,2],[2,3],[0,4],[4,2],[1,5],[5,0]];
 const graphNodes = [];
 const nodeGeo = new THREE.SphereGeometry(0.6, 16, 16);
 nodeDefs.forEach((d, i) => {
-  const m = new THREE.Mesh(nodeGeo, new THREE.MeshStandardMaterial({ color: 0xb08ee6, emissive: 0xb08ee6, emissiveIntensity: 0.4 }));
+  const m = new THREE.Mesh(nodeGeo, new THREE.MeshStandardMaterial({ color: 0xc9c9c7, emissive: 0xc9c9c7, emissiveIntensity: 0.4 }));
   m.position.copy(d.p);
   graphGroup.add(m);
   graphNodes.push(m);
@@ -1197,12 +1215,12 @@ nodeDefs.forEach((d, i) => {
 const edgeLines = [];
 graphEdges.forEach(([a, b]) => {
   const g = new THREE.BufferGeometry().setFromPoints([nodeDefs[a].p, nodeDefs[b].p]);
-  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x5a4a78, transparent: true, opacity: 0.7 }));
+  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x5a5a5e, transparent: true, opacity: 0.7 }));
   graphGroup.add(line);
   edgeLines.push({ line, a, b });
 });
 graphGroup.position.set(GRAPH_CX, GRAPH_CY, GRAPH_CZ);
-const graphLabel = makeLabel('SIDE PATH · GRAPHRAG — multi-hop walk', { border: '#b08ee6', color: '#c9aef5', scale: 1.0 });
+const graphLabel = makeLabel('SIDE PATH · GRAPHRAG — multi-hop walk', { border: '#c9c9c7', color: '#eaeaea', scale: 1.0 });
 graphLabel.position.set(GRAPH_CX, GRAPH_CY + 6.5, GRAPH_CZ);
 scene.add(graphLabel);
 const graphHit = new THREE.Mesh(new THREE.BoxGeometry(18, 10, 8), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1219,7 +1237,7 @@ scene.add(graphHit); hoverables.push(graphHit);
     a[i * 3 + 2] = (Math.random() - 0.5) * 200;
   }
   g.setAttribute('position', new THREE.BufferAttribute(a, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x5a5a5e, size: 0.16, transparent: true, opacity: 0.7 })));
 }
 
 // flying vector points (chunk → embedded vector → cloud)
@@ -1399,7 +1417,7 @@ function animate() {
   const seg = Math.min(Math.floor(walkT * (path.length - 1)), path.length - 2);
   edgeLines.forEach(el => {
     const onPath = (el.a === path[seg] && el.b === path[seg + 1]) || (el.b === path[seg] && el.a === path[seg + 1]);
-    el.line.material.color.setHex(onPath ? 0xb08ee6 : 0x5a4a78);
+    el.line.material.color.setHex(onPath ? 0xf4f4f3 : 0x5a5a5e);
     el.line.material.opacity = onPath ? 1.0 : 0.5;
   });
   graphNodes.forEach((n, i) => {

@@ -5,16 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NCP-AAI Domain 0 — Builder's Pulse</title>
 <style>
+  /* Neutral B&W fallbacks — theme.css loads AFTER this and is the source of truth.
+     These values keep the page coherent (no legacy navy/green) even standalone. */
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
-    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
-    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --panel:#151517; --panel2:#202023;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08); --on-accent:#111112;
+    --red:#cf6b5e; --amber:#cfcfcb; --blue:#a6a6a9; --purple:#bcb9c0; --cyan:#848489;
+    --text:#eaeaea; --muted:#9a9a9d; --line:#2a2a2d; --border:#2a2a2d;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;overflow-x:hidden}
   ::selection{background:var(--green);color:var(--on-accent)}
 
   /* NAV */
@@ -51,17 +53,18 @@
   .hero .domain-chip .pct{background:var(--green);color:var(--on-accent);border-radius:999px;padding:2px 10px;font-weight:800}
   .hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:18px 0 10px;font-weight:800;letter-spacing:-.02em}
   .hero h1 .accent{color:var(--green)}
-  .hero p.hook{color:var(--muted);max-width:820px;margin:0 auto;font-size:1.08rem}
+  .hero p.hook{color:var(--muted);max-width:74ch;margin:0 auto;font-size:clamp(1rem,2.2vw,1.08rem);line-height:1.65}
   .hero p.hook b{color:var(--text)}
 
   /* LAYOUT */
   main{max-width:1180px;margin:0 auto;padding:0 24px}
-  section{padding:56px 0 18px}
-  .kicker{color:var(--green);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
-  h2{font-size:1.75rem;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
-  .lede{color:var(--muted);max-width:880px;margin-bottom:26px;font-size:.98rem}
+  section{padding:clamp(40px,7vw,60px) 0 18px;scroll-margin-top:64px}
+  section + section{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+  .kicker{color:var(--green-dim);font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.16em;margin-bottom:6px}
+  h2{font-size:clamp(1.45rem,3.4vw,1.85rem);font-weight:800;letter-spacing:-.01em;margin-bottom:10px;line-height:1.25}
+  .lede{color:var(--muted);max-width:72ch;margin-bottom:26px;font-size:1rem;line-height:1.65}
   .lede b{color:var(--text)}
-  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text)}
+  h3{font-size:1.12rem;margin:30px 0 12px;color:var(--text);line-height:1.3}
   h3 .tag{font-size:.68rem;background:var(--bg3);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:2px 10px;vertical-align:2px;margin-left:8px;font-weight:600}
   a.inline{color:var(--blue);text-decoration:none}
   a.inline:hover{text-decoration:underline}
@@ -86,6 +89,9 @@
   .card.red{border-top:3px solid var(--red)}
   .card.purple{border-top:3px solid var(--purple)}
   .card.cyan{border-top:3px solid var(--cyan)}
+  /* neutral grey accent — for "con/skeptic/problem" cards that are NOT genuine danger
+     (distinguished from the white --green accent by a darker, dashed top edge) */
+  .card.neutral{border-top:3px dashed var(--green-dim)}
   .card a{color:var(--blue);text-decoration:none}
   .card a:hover{text-decoration:underline}
   code{font-family:var(--mono);font-size:.82em;background:var(--bg3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
@@ -95,6 +101,7 @@
   .pill.r{background:color-mix(in srgb, var(--red) 13%, transparent);color:var(--red);border:1px solid color-mix(in srgb, var(--red) 40%, transparent)}
   .pill.a{background:color-mix(in srgb, var(--amber) 13%, transparent);color:var(--amber);border:1px solid color-mix(in srgb, var(--amber) 40%, transparent)}
   .pill.p{background:color-mix(in srgb, var(--purple) 13%, transparent);color:var(--purple);border:1px solid color-mix(in srgb, var(--purple) 40%, transparent)}
+  .pill.n{background:var(--bg3);color:var(--muted);border:1px solid var(--line)}
 
   /* TABLES */
   .tbl{width:100%;border-collapse:collapse;font-size:.85rem;margin:14px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:table}
@@ -115,8 +122,11 @@
   .callout a{color:var(--blue);text-decoration:none}
   .callout a:hover{text-decoration:underline}
   .callout .exam-chip{display:inline-block;background:var(--green);color:var(--on-accent);border-radius:999px;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 11px;margin-right:10px;vertical-align:1px}
-  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 10%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
-  .callout.warn b{color:var(--amber)}
+  .callout.warn{background:linear-gradient(90deg,color-mix(in srgb, var(--amber) 14%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--amber) 45%, transparent);border-left-color:var(--amber)}
+  .callout.warn b{color:var(--text)}
+  /* genuine danger — the ONLY hue on the page */
+  .callout.danger{background:linear-gradient(90deg,color-mix(in srgb, var(--red) 12%, transparent),transparent 60%);border-color:color-mix(in srgb, var(--red) 45%, transparent);border-left-color:var(--red)}
+  .callout.danger b{color:var(--red)}
 
   /* READING LIST */
   .reading-group{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:14px 0}
@@ -134,7 +144,30 @@
   footer a{color:var(--blue);text-decoration:none;word-break:break-all}
   footer a:hover{text-decoration:underline}
   footer .fine{color:var(--muted);font-size:.74rem;margin-top:24px}
+
+  /* ---------- RESPONSIVE ---------- */
   @media(max-width:760px){footer ul{columns:1}}
+  @media(max-width:640px){
+    nav{padding:0 12px;gap:0}
+    nav a{font-size:.76rem;padding:11px 10px}
+    header.hero{padding:48px 18px 38px}
+    main{padding:0 16px}
+    section{padding:34px 0 14px;scroll-margin-top:56px}
+    h2{font-size:clamp(1.3rem,6vw,1.6rem)}
+    /* single-column grids on phones */
+    .grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}
+    .card{padding:16px 16px}
+    .reading-group{padding:16px 16px}
+    .callout{padding:13px 15px}
+    /* keep wide tables scrollable, never overflow the page */
+    .tbl{min-width:540px}
+    /* keep the fixed bottom-right controls clear of footer text */
+    footer{padding-bottom:72px}
+  }
+  /* horizontal-scroll affordance on phones for wide tables */
+  @media(max-width:640px){
+    .tbl-scroll{-webkit-overflow-scrolling:touch}
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -194,7 +227,7 @@
 
   <h3>The technical anchor <span class="tag">Context Rot</span></h3>
   <div class="grid c2">
-    <div class="card red"><h4><span class="icon">📉</span>Chroma's <a href="https://research.trychroma.com/context-rot" target="_blank">Context Rot report</a></h4><p>Kelly Hong, Anton Troynikov, Jeff Huber — July 2025.</p>
+    <div class="card neutral"><h4><span class="icon">📉</span>Chroma's <a href="https://research.trychroma.com/context-rot" target="_blank">Context Rot report</a></h4><p>Kelly Hong, Anton Troynikov, Jeff Huber — July 2025.</p>
       <ul>
         <li>Tested <b>18 models</b> (GPT-4.1, Claude 4, Gemini 2.5, Qwen3...) on tasks of controlled input length.</li>
         <li>Finding: models do <b>not</b> process context uniformly — the 10,000th token is not handled as reliably as the 100th, and performance grows increasingly unreliable as input grows, even on simple tasks.</li>
@@ -309,7 +342,7 @@
   </div>
 
   <h3>The backlash <span class="tag">anti side</span></h3>
-  <div class="card red"><p>September 2025 brought a wave of "evals are overrated" posts across X and Substack. The recurring arguments:</p>
+  <div class="card neutral"><p>September 2025 brought a wave of "evals are overrated" posts across X and Substack. The recurring arguments:</p>
     <ul>
       <li>Top labs ship on <b>taste, dogfooding, and fast feedback loops</b> rather than formal harnesses.</li>
       <li>Eval suites <b>ossify around stale failure modes</b> while the product and models move on.</li>
@@ -387,7 +420,7 @@
   </div>
   <p class="lede" style="margin-top:18px">The composability that makes MCP attractive is exactly what assembles the trifecta by accident: mix community servers and you've granted all three legs without noticing.</p>
 
-  <div class="callout warn"><b>Now codified:</b> this discourse hardened into a standard — the <a href="https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/" target="_blank">OWASP Top 10 for Agentic Applications (2026)</a>, released <b>Dec 9, 2025</b> by the OWASP GenAI Security Project (IDs <b>ASI01–ASI10</b>: agent goal hijacking, tool misuse, identity/privilege abuse, supply chain, unexpected code execution, memory poisoning, insecure inter-agent comms, cascading failures, human-agent trust exploitation, rogue agents). It sits <b>alongside</b> the established <b>OWASP Top 10 for LLM Applications 2025</b> (<code>LLM01:2025</code>… — prompt injection still LLM01). Cite both.</div>
+  <div class="callout danger"><b>Now codified:</b> this discourse hardened into a standard — the <a href="https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/" target="_blank">OWASP Top 10 for Agentic Applications (2026)</a>, released <b>Dec 9, 2025</b> by the OWASP GenAI Security Project (IDs <b>ASI01–ASI10</b>: agent goal hijacking, tool misuse, identity/privilege abuse, supply chain, unexpected code execution, memory poisoning, insecure inter-agent comms, cascading failures, human-agent trust exploitation, rogue agents). It sits <b>alongside</b> the established <b>OWASP Top 10 for LLM Applications 2025</b> (<code>LLM01:2025</code>… — prompt injection still LLM01). Cite both.</div>
 
   <div class="callout"><span class="exam-chip">For your exam</span>Know <b>MCP vs A2A roles cold</b>. The mitigation for the trifecta is <b>removing one leg</b> — sandbox egress, allowlist tools, isolate untrusted content from privileged context. That's <a href="domain-09-safety-ethics-compliance.html">domain 09</a> (safety/compliance) plus approval gates on tool use (<a href="domain-10-human-ai-interaction.html">domain 10</a>). When a question references an <b>"agent-specific" risk catalog</b>, the answer is the <b>OWASP Agentic Apps Top 10 (ASI01–ASI10)</b>, not the LLM Top 10.</div>
 </section>
@@ -399,7 +432,7 @@
   <p class="lede"><b>What the debate is.</b> June 2025, dueling posts days apart — the field's sharpest public disagreement.</p>
 
   <div class="grid c2">
-    <div class="card red"><span class="pill r">Skeptic</span><h4><span class="icon">🙅</span>Cognition's Walden Yan — <a href="https://cognition.ai/blog/dont-build-multi-agents" target="_blank">Don't Build Multi-Agents</a></h4><p>Parallel sub-agents make conflicting decisions based on implicit assumptions they can't share; stitching their outputs produces incoherent results. Two principles: <b>share full context</b> (every agent sees the full trace, not a summary) and <b>actions carry implicit decisions</b> (parallel actors inevitably contradict each other). For deep, stateful work like coding — Devin's domain — use one agent, one continuous context. His line: <b>"At the core of reliability is Context Engineering."</b></p></div>
+    <div class="card neutral"><span class="pill n">Skeptic</span><h4><span class="icon">🙅</span>Cognition's Walden Yan — <a href="https://cognition.ai/blog/dont-build-multi-agents" target="_blank">Don't Build Multi-Agents</a></h4><p>Parallel sub-agents make conflicting decisions based on implicit assumptions they can't share; stitching their outputs produces incoherent results. Two principles: <b>share full context</b> (every agent sees the full trace, not a summary) and <b>actions carry implicit decisions</b> (parallel actors inevitably contradict each other). For deep, stateful work like coding — Devin's domain — use one agent, one continuous context. His line: <b>"At the core of reliability is Context Engineering."</b></p></div>
     <div class="card green"><span class="pill g">Advocate</span><h4><span class="icon">🙌</span>Anthropic — <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system" target="_blank">How we built our multi-agent research system</a></h4><p>An orchestrator (Opus 4) spawning parallel search sub-agents (Sonnet 4) beat single-agent Opus 4 by <b>90.2%</b> on internal research evals — at roughly <b>15× the tokens</b> of a chat interaction. Token spend explained most of the performance variance; parallelization compresses wall-clock time for breadth-first work.</p></div>
   </div>
 
@@ -473,7 +506,7 @@
 
   <h3>The skeptical take &amp; practical resolution</h3>
   <div class="grid c2">
-    <div class="card red"><span class="pill r">Skeptics</span><h4><span class="icon">🤨</span>Files are enough</h4><p>A vocal camp holds that a files-and-notes filesystem plus good retrieval (thread #5) covers most real needs, and a dedicated memory layer adds an extraction pipeline that can <b>hallucinate facts or go stale</b>.</p></div>
+    <div class="card neutral"><span class="pill n">Skeptics</span><h4><span class="icon">🤨</span>Files are enough</h4><p>A vocal camp holds that a files-and-notes filesystem plus good retrieval (thread #5) covers most real needs, and a dedicated memory layer adds an extraction pipeline that can <b>hallucinate facts or go stale</b>.</p></div>
     <div class="card green"><span class="pill g">Resolution circulating</span><h4><span class="icon">⚖️</span>Default vs reach</h4><ul>
       <li>Default to <b>filesystem + retrieval</b> for single-agent, project-scoped work.</li>
       <li>Reach for a memory product when you need <b>cross-session personalization, multi-user fact stores, or temporal reasoning</b> ("what did we believe last Tuesday") at scale.</li>

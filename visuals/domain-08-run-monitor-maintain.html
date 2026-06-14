@@ -7,10 +7,10 @@
 <style>
   :root{
     /* Canonical theme variables (overridden by theme.css; defined here so the page works standalone) */
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a29; --card:#141d2e; --panel:#141d2e; --panel2:#18233a;
-    --line:#22304a; --border:#22304a; --text:#dbe4f0; --muted:#8fa1b8; --faint:#5d6f88;
-    --green:#76b900; --green-dim:#4e7a00; --green-glow:rgba(118,185,0,0.12); --on-accent:#0b0f17;
-    --blue:#4da3ff; --amber:#ffd24d; --red:#ff5c5c; --purple:#b07cff; --cyan:#3fd8d2;
+    --bg:#0e0e0f; --bg2:#141416; --bg3:#1a1a1d; --card:#161618; --panel:#161618; --panel2:#1c1c1f;
+    --line:#2a2a2e; --border:#2a2a2e; --text:#ececea; --muted:#9a9a9d; --faint:#6a6a6e;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,0.08); --on-accent:#0e0e0f;
+    --blue:#a6a6a9; --amber:#cfcfcb; --red:#cf6b5e; --purple:#bcb9c0; --cyan:#848489;
     --mono:Consolas,Menlo,monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -55,37 +55,39 @@
   .hero .hook em{color:var(--text); font-style:normal; font-weight:600;}
 
   /* ---------- 3D scene ---------- */
-  #scene-wrap{position:relative; width:100%; height:70vh; min-height:520px; background:#070b12; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  #scene-wrap{position:relative; width:100%; height:70vh; min-height:520px; background:#0e0e0f; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
   #scene-wrap canvas{display:block;}
   .overlay-card{
-    position:absolute; background:rgba(10,14,22,.88); border:1px solid #3a4a66;
-    border-radius:10px; padding:12px 14px; font-size:.78rem; color:#8fa0b8;
+    position:absolute; background:rgba(14,14,15,.92); border:1px solid #3a3a3e;
+    border-radius:10px; padding:12px 14px; font-size:.78rem; color:#c9c9c7;
     backdrop-filter:blur(6px); pointer-events:none;
   }
   #legend{left:14px; bottom:14px; pointer-events:auto; max-width:300px;}
-  #legend h4{color:#dfe7f3; font-size:.8rem; margin-bottom:7px; letter-spacing:.05em; text-transform:uppercase;}
+  #legend h4{color:#f4f4f3; font-size:.8rem; margin-bottom:7px; letter-spacing:.05em; text-transform:uppercase;}
   #legend .row{display:flex; align-items:center; gap:8px; margin:3px 0;}
-  .dot{width:10px; height:10px; border-radius:50%; flex:none;}
+  .dot{width:11px; height:11px; border-radius:50%; flex:none; border:1px solid rgba(244,244,243,.25);}
+  .dot.sq{border-radius:2px;}
+  .dot.ring{background:transparent !important; border-width:2px;}
   #scene-tip{
-    display:none; top:14px; right:14px; max-width:300px; border-color:#4e7a00;
+    display:none; top:14px; right:14px; max-width:300px; border-color:#f4f4f3;
   }
-  #scene-tip h4{color:#76b900; font-size:.85rem; margin-bottom:4px;}
+  #scene-tip h4{color:#f4f4f3; font-size:.85rem; margin-bottom:4px;}
   #scene-hint{
     top:14px; left:14px; font-size:.72rem; letter-spacing:.04em;
   }
 
   /* ---------- layout ---------- */
   main{max-width:1180px; margin:0 auto; padding:0 22px 80px;}
-  section{padding:58px 0 8px;}
+  section{padding:58px 0 8px; scroll-margin-top:64px;}
   h2.sec{
-    font-size:1.7rem; font-weight:800; letter-spacing:-.01em; margin-bottom:6px;
-    display:flex; align-items:center; gap:12px;
+    font-size:clamp(1.42rem,1.1rem + 1.4vw,1.7rem); font-weight:800; letter-spacing:-.01em; margin-bottom:6px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   }
   h2.sec .num{
     color:var(--green); font-size:.95rem; font-weight:700; border:1px solid var(--green-dim);
     border-radius:8px; padding:2px 10px; background:var(--green-glow); flex:none;
   }
-  .sub{color:var(--muted); margin-bottom:26px; max-width:840px;}
+  .sub{color:var(--muted); margin-bottom:26px; max-width:72ch; line-height:1.6;}
   h3.block{font-size:1.12rem; font-weight:700; color:var(--green); margin:34px 0 14px;}
 
   /* cards */
@@ -206,7 +208,34 @@
   footer li{margin:5px 0; font-size:.8rem; break-inside:avoid;}
   footer a{color:var(--muted); text-decoration:none;}
   footer a:hover{color:var(--green);}
-  @media(max-width:760px){footer ul{columns:1;} .bar-row{grid-template-columns:120px 1fr 56px;}}
+  @media(max-width:760px){footer ul{columns:1;} .bar-row{grid-template-columns:108px 1fr 52px;}}
+
+  /* ---------- responsive / mobile ---------- */
+  @media(max-width:640px){
+    nav{padding:0 14px;}
+    nav a{font-size:.72rem; padding:11px 9px;}
+    header.hero{padding:46px 18px 34px;}
+    main{padding:0 16px 64px;}
+    section{padding:42px 0 6px; scroll-margin-top:54px;}
+    .hero .hook{font-size:.98rem;}
+    .sub{font-size:.92rem;}
+    /* single-column grids */
+    .g2,.g3{grid-template-columns:1fr;}
+    /* 3D scene shorter + drag-friendly on touch */
+    #scene-wrap{height:52vh; min-height:0; touch-action:pan-y;}
+    #legend{max-width:none; right:14px; font-size:.72rem;}
+    #scene-tip{max-width:none; left:14px; right:14px;}
+    .bar-row{grid-template-columns:88px 1fr 46px; gap:8px; font-size:.78rem;}
+    .ladder .rung{grid-template-columns:38px 1fr; gap:11px;}
+    h3.block{font-size:1.04rem;}
+    .twrap,.diagram,pre.codeblock{ -webkit-overflow-scrolling:touch; }
+    /* keep the theme toggle clear of content */
+    .theme-toggle{transform:scale(.9);}
+  }
+  @media(max-width:380px){
+    nav a{padding:10px 7px;}
+    .bar-row{grid-template-columns:76px 1fr 42px;}
+  }
   .pill{display:inline-block; font-size:.7rem; font-weight:700; padding:2px 10px; border-radius:999px; letter-spacing:.04em;}
   .p-blue{background:color-mix(in srgb, var(--blue) 14%, transparent); color:var(--blue); border:1px solid color-mix(in srgb, var(--blue) 40%, transparent);}
   .p-green{background:var(--green-glow); color:var(--green); border:1px solid color-mix(in srgb, var(--green) 40%, transparent);}
@@ -274,13 +303,13 @@
   <div class="overlay-card" id="scene-hint">Drag to orbit &middot; scroll to zoom &middot; hover buildings, tower &amp; storm for info</div>
   <div class="overlay-card" id="legend">
     <h4>Observability City</h4>
-    <div class="row"><span class="dot" style="background:#4da3ff"></span>Blue particles = <b>&nbsp;traces</b>&nbsp;(span trees)</div>
-    <div class="row"><span class="dot" style="background:#76b900"></span>Green particles = <b>&nbsp;metrics</b>&nbsp;(Prometheus)</div>
-    <div class="row"><span class="dot" style="background:#ffd24d"></span>Yellow particles = <b>&nbsp;logs</b>&nbsp;(intermediate steps)</div>
-    <div class="row"><span class="dot" style="background:#ff5c5c"></span>Red stream = drift-degraded telemetry</div>
-    <div class="row"><span class="dot" style="background:#b07cff"></span>Storm cloud = drift (data/concept/behavior)</div>
-    <div class="row"><span class="dot" style="background:#e8f4ff"></span>Tower screens = latency / cost / error SLIs</div>
-    <div class="row"><span class="dot" style="background:#76b900;box-shadow:0 0 6px #76b900"></span>Green ring = rollback (label re-point)</div>
+    <div class="row"><span class="dot" style="background:#f4f4f3"></span>Bright round = <b>&nbsp;traces</b>&nbsp;(span trees)</div>
+    <div class="row"><span class="dot sq" style="background:#c9c9c7"></span>Mid square = <b>&nbsp;metrics</b>&nbsp;(Prometheus)</div>
+    <div class="row"><span class="dot" style="background:#8a8a8d"></span>Dim round = <b>&nbsp;logs</b>&nbsp;(intermediate steps)</div>
+    <div class="row"><span class="dot" style="background:#cf6b5e"></span>Red stream = drift-degraded telemetry</div>
+    <div class="row"><span class="dot" style="background:#6a6a6e"></span>Storm cloud = drift (data/concept/behavior)</div>
+    <div class="row"><span class="dot" style="background:#e8e8e6"></span>Tower screens = latency / cost / error SLIs</div>
+    <div class="row"><span class="dot ring" style="border-color:#f4f4f3;box-shadow:0 0 6px rgba(244,244,243,.7)"></span>White ring = rollback (label re-point)</div>
   </div>
   <div class="overlay-card" id="scene-tip"><h4 id="tip-title"></h4><div id="tip-body"></div></div>
 </div>
@@ -291,8 +320,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const wrap = document.getElementById('scene-wrap');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 60, 160);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 60, 160);
 
 const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth/wrap.clientHeight, 0.1, 400);
 camera.position.set(34, 24, 44);
@@ -310,23 +339,23 @@ controls.maxPolarAngle = Math.PI * 0.49;
 controls.minDistance = 18; controls.maxDistance = 120;
 
 // lights
-scene.add(new THREE.AmbientLight(0x4a5878, 0.7));
-const moon = new THREE.DirectionalLight(0x9db8ff, 0.8);
+scene.add(new THREE.AmbientLight(0x55555a, 0.7));
+const moon = new THREE.DirectionalLight(0xc9c9c7, 0.8);
 moon.position.set(-30, 50, 20); scene.add(moon);
-const towerGlow = new THREE.PointLight(0x76b900, 25, 60);
+const towerGlow = new THREE.PointLight(0xf4f4f3, 25, 60);
 towerGlow.position.set(0, 16, 0); scene.add(towerGlow);
 
 // ground grid
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(220, 220),
-  new THREE.MeshStandardMaterial({color:0x0a0f1a, roughness:0.95})
+  new THREE.MeshStandardMaterial({color:0x111113, roughness:0.95})
 );
 ground.rotation.x = -Math.PI/2; scene.add(ground);
-const grid = new THREE.GridHelper(220, 70, 0x1c2840, 0x141d2e);
+const grid = new THREE.GridHelper(220, 70, 0x2e2e32, 0x1c1c1f);
 grid.position.y = 0.02; scene.add(grid);
 
 // --- helpers ---
-function labelSprite(text, color='#dbe4f0', size=0.018, bg='rgba(10,14,22,0.78)'){
+function labelSprite(text, color='#ececea', size=0.018, bg='rgba(14,14,15,0.82)'){
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
   ctx.font = '600 44px "Segoe UI", Arial, sans-serif';
@@ -335,7 +364,7 @@ function labelSprite(text, color='#dbe4f0', size=0.018, bg='rgba(10,14,22,0.78)'
   const g = c.getContext('2d');
   g.fillStyle = bg;
   g.beginPath(); g.roundRect(0, 6, w, 72, 14); g.fill();
-  g.strokeStyle = 'rgba(118,185,0,0.45)'; g.lineWidth = 2; g.stroke();
+  g.strokeStyle = 'rgba(244,244,243,0.40)'; g.lineWidth = 2; g.stroke();
   g.font = '600 44px "Segoe UI", Arial, sans-serif';
   g.fillStyle = color; g.textBaseline = 'middle';
   g.fillText(text, 24, 44);
@@ -348,19 +377,19 @@ function labelSprite(text, color='#dbe4f0', size=0.018, bg='rgba(10,14,22,0.78)'
 
 // --- buildings (agent services) ---
 const BUILDINGS = [
-  {name:'Agent Service A', sub:'LangGraph support agent', pos:new THREE.Vector3(-24, 0, -10), h:8,  color:0x1d2c47},
-  {name:'NIM LLM Service', sub:'vLLM-style /v1/metrics: queue depth, KV-cache %', pos:new THREE.Vector3(-16, 0, 16), h:11, color:0x203150},
-  {name:'Agent Service B', sub:'RAG pipeline + tools', pos:new THREE.Vector3(22, 0, -14), h:9,  color:0x1d2c47},
-  {name:'Triton Server', sub:'metrics on :8002 — nv_inference_queue_duration_us', pos:new THREE.Vector3(20, 0, 14), h:7,  color:0x203150},
+  {name:'Agent Service A', sub:'LangGraph support agent', pos:new THREE.Vector3(-24, 0, -10), h:8,  color:0x3a3a3e},
+  {name:'NIM LLM Service', sub:'vLLM-style /v1/metrics: queue depth, KV-cache %', pos:new THREE.Vector3(-16, 0, 16), h:11, color:0x4a4a4e},
+  {name:'Agent Service B', sub:'RAG pipeline + tools', pos:new THREE.Vector3(22, 0, -14), h:9,  color:0x3a3a3e},
+  {name:'Triton Server', sub:'metrics on :8002 — nv_inference_queue_duration_us', pos:new THREE.Vector3(20, 0, 14), h:7,  color:0x4a4a4e},
 ];
 const hoverables = [];
 const buildings = BUILDINGS.map(b=>{
   const grp = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({color:b.color, roughness:0.6, metalness:0.3, emissive:0x0a1322, emissiveIntensity:0.8});
+  const mat = new THREE.MeshStandardMaterial({color:b.color, roughness:0.6, metalness:0.3, emissive:0x202023, emissiveIntensity:0.8});
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(6, b.h, 6), mat);
   mesh.position.y = b.h/2; grp.add(mesh);
   // windows
-  const winMat = new THREE.MeshBasicMaterial({color:0x6f87ad});
+  const winMat = new THREE.MeshBasicMaterial({color:0xc9c9c7});
   for(let f=0; f<Math.floor(b.h/2); f++){
     for(let wx=-1; wx<=1; wx++){
       if(Math.random()<0.3) continue;
@@ -372,27 +401,27 @@ const buildings = BUILDINGS.map(b=>{
   const lbl = labelSprite(b.name);
   lbl.position.y = b.h + 2.0; grp.add(lbl);
   grp.position.copy(b.pos);
-  grp.userData = {kind:'building', title:b.name, body:b.sub + ' — emits traces (blue), metrics (green), logs (yellow) to the observability tower.'};
+  grp.userData = {kind:'building', title:b.name, body:b.sub + ' — emits traces (bright streams), metrics (mid-grey squares), logs (dim streams) to the observability tower.'};
   mesh.userData = grp.userData;
   hoverables.push(mesh);
   scene.add(grp);
-  return {cfg:b, grp, mesh, mat, baseEmissive:new THREE.Color(0x0a1322)};
+  return {cfg:b, grp, mesh, mat, baseEmissive:new THREE.Color(0x202023)};
 });
 
 // --- central observability tower ---
 const tower = new THREE.Group();
-const towerMat = new THREE.MeshStandardMaterial({color:0x16283c, roughness:0.4, metalness:0.5, emissive:0x09301a, emissiveIntensity:0.6});
+const towerMat = new THREE.MeshStandardMaterial({color:0x2a2a2e, roughness:0.4, metalness:0.5, emissive:0x2c2c30, emissiveIntensity:0.6});
 const towerMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 22, 8), towerMat);
 towerMesh.position.y = 11; tower.add(towerMesh);
 towerMesh.userData = {kind:'tower', title:'Observability Tower',
   body:'OTel Collector + Prometheus + Grafana + eval-in-production. Receives OTLP spans, scrapes /metrics (pull model), scores sampled answers with an LLM judge. Screens: latency, cost/request, error & judge-fail rate.'};
 hoverables.push(towerMesh);
 // antenna
-const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,6), new THREE.MeshBasicMaterial({color:0x76b900}));
+const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,6), new THREE.MeshBasicMaterial({color:0xf4f4f3}));
 ant.position.y = 25; tower.add(ant);
-const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.45), new THREE.MeshBasicMaterial({color:0x76b900}));
+const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.45), new THREE.MeshBasicMaterial({color:0xf4f4f3}));
 antTip.position.y = 28; tower.add(antTip);
-const towerLbl = labelSprite('Observability Tower  ·  OTel / Prometheus / Grafana / Evals', '#b9e07c', 0.016);
+const towerLbl = labelSprite('Observability Tower  ·  OTel / Prometheus / Grafana / Evals', '#f4f4f3', 0.016);
 towerLbl.position.y = 30.5; tower.add(towerLbl);
 scene.add(tower);
 
@@ -408,24 +437,24 @@ function makeScreen(title, color, yPos, rotY, zOff){
   return {c, ctx:c.getContext('2d'), tex, title, color, data:Array.from({length:40},()=>Math.random()*0.3+0.35)};
 }
 const screens = [
-  makeScreen('p95 LATENCY', '#76b900', 17, 0, 4.06),
-  makeScreen('COST / REQ',  '#ff9f43', 12, 0, 4.06),
-  makeScreen('ERROR + JUDGE-FAIL %', '#ff5c5c', 7, 0, 4.06),
-  makeScreen('p95 LATENCY', '#76b900', 17, Math.PI, 4.06),
-  makeScreen('COST / REQ',  '#ff9f43', 12, Math.PI, 4.06),
-  makeScreen('ERROR + JUDGE-FAIL %', '#ff5c5c', 7, Math.PI, 4.06),
-  makeScreen('QUEUE DEPTH', '#4da3ff', 17, Math.PI/2, 4.06),
-  makeScreen('KV-CACHE %', '#3fd8d2', 12, Math.PI/2, 4.06),
-  makeScreen('GPU UTIL (DCGM :9400)', '#b07cff', 7, Math.PI/2, 4.06),
-  makeScreen('TOKENS / REQ', '#ffd24d', 17, -Math.PI/2, 4.06),
-  makeScreen('TTFT', '#76b900', 12, -Math.PI/2, 4.06),
-  makeScreen('BURN RATE', '#ff5c5c', 7, -Math.PI/2, 4.06),
+  makeScreen('p95 LATENCY', '#f4f4f3', 17, 0, 4.06),
+  makeScreen('COST / REQ',  '#c9c9c7', 12, 0, 4.06),
+  makeScreen('ERROR + JUDGE-FAIL %', '#cf6b5e', 7, 0, 4.06),
+  makeScreen('p95 LATENCY', '#f4f4f3', 17, Math.PI, 4.06),
+  makeScreen('COST / REQ',  '#c9c9c7', 12, Math.PI, 4.06),
+  makeScreen('ERROR + JUDGE-FAIL %', '#cf6b5e', 7, Math.PI, 4.06),
+  makeScreen('QUEUE DEPTH', '#c9c9c7', 17, Math.PI/2, 4.06),
+  makeScreen('KV-CACHE %', '#8a8a8d', 12, Math.PI/2, 4.06),
+  makeScreen('GPU UTIL (DCGM :9400)', '#a0a0a3', 7, Math.PI/2, 4.06),
+  makeScreen('TOKENS / REQ', '#f4f4f3', 17, -Math.PI/2, 4.06),
+  makeScreen('TTFT', '#c9c9c7', 12, -Math.PI/2, 4.06),
+  makeScreen('BURN RATE', '#cf6b5e', 7, -Math.PI/2, 4.06),
 ];
 function drawScreen(s, alertLevel){
   const {ctx, c} = s;
-  ctx.fillStyle = '#060a12'; ctx.fillRect(0,0,c.width,c.height);
-  ctx.strokeStyle = 'rgba(118,185,0,0.35)'; ctx.lineWidth = 3; ctx.strokeRect(1,1,c.width-2,c.height-2);
-  ctx.fillStyle = '#8fa1b8'; ctx.font = '600 15px "Segoe UI", Arial';
+  ctx.fillStyle = '#0a0a0b'; ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle = 'rgba(244,244,243,0.30)'; ctx.lineWidth = 3; ctx.strokeRect(1,1,c.width-2,c.height-2);
+  ctx.fillStyle = '#9a9a9d'; ctx.font = '600 15px "Segoe UI", Arial';
   ctx.fillText(s.title, 12, 24);
   // shift data
   s.data.shift();
@@ -433,7 +462,7 @@ function drawScreen(s, alertLevel){
   const isErr = s.title.includes('ERROR') || s.title.includes('BURN');
   if(alertLevel > 0 && isErr) v = Math.min(0.95, 0.5 + alertLevel*0.45 + Math.random()*0.1);
   s.data.push(v);
-  const col = (alertLevel>0.4 && isErr) ? '#ff5c5c' : s.color;
+  const col = (alertLevel>0.4 && isErr) ? '#cf6b5e' : s.color;
   ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath();
   s.data.forEach((d,i)=>{
     const x = 12 + i*(c.width-24)/39, y = c.height-14 - d*(c.height-56);
@@ -446,7 +475,27 @@ function drawScreen(s, alertLevel){
 }
 
 // --- telemetry particle streams (building -> tower) ---
-const STREAM_COLORS = [0x4da3ff, 0x76b900, 0xffd24d]; // traces, metrics, logs
+// Three stream TYPES distinguished by GREY LIGHTNESS + SHAPE (not hue):
+//   traces  = bright round   (0xf4f4f3, soft disc)
+//   metrics = mid-grey square (0xc9c9c7, square sprite)
+//   logs    = dim round       (0x8a8a8d, soft disc)
+function makePointTexture(shape){
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  if(shape === 'square'){
+    g.fillStyle = '#fff'; g.fillRect(12,12,40,40);
+  } else {
+    const grd = g.createRadialGradient(32,32,2,32,32,30);
+    grd.addColorStop(0,'rgba(255,255,255,1)'); grd.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.beginPath(); g.arc(32,32,30,0,Math.PI*2); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
+}
+const discTex = makePointTexture('disc');
+const sqTex = makePointTexture('square');
+const STREAM_COLORS = [0xf4f4f3, 0xc9c9c7, 0x8a8a8d]; // traces (bright), metrics (mid), logs (dim)
+const STREAM_TEX    = [discTex, sqTex, discTex];       // metrics = square shape
+const STREAM_SIZE   = [0.40, 0.46, 0.34];
 const streams = [];
 buildings.forEach((b, bi)=>{
   STREAM_COLORS.forEach((col, si)=>{
@@ -461,7 +510,7 @@ buildings.forEach((b, bi)=>{
     for(let i=0;i<N;i++) prog[i] = Math.random();
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({color:col, size:0.42, transparent:true, opacity:0.95, sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false});
+    const mat = new THREE.PointsMaterial({color:col, map:STREAM_TEX[si], size:STREAM_SIZE[si], transparent:true, opacity:0.95, sizeAttenuation:true, blending:THREE.NormalBlending, depthWrite:false});
     const pts = new THREE.Points(geo, mat);
     scene.add(pts);
     streams.push({curve, prog, geo, mat, baseColor:new THREE.Color(col), buildingIdx:bi, speed:0.0035 + si*0.0009});
@@ -470,7 +519,7 @@ buildings.forEach((b, bi)=>{
 
 // --- drift storm cloud ---
 const cloud = new THREE.Group();
-const cloudMat = new THREE.MeshStandardMaterial({color:0x3a2d55, roughness:1, transparent:true, opacity:0.85, emissive:0x4b2a7a, emissiveIntensity:0.5});
+const cloudMat = new THREE.MeshStandardMaterial({color:0x3a3a3e, roughness:1, transparent:true, opacity:0.85, emissive:0x4a4a4e, emissiveIntensity:0.5});
 [[0,0,0,3.4],[2.8,0.5,1,2.6],[-2.8,0.4,-0.8,2.7],[1.2,1.4,-1.6,2.2],[-1.4,1.2,1.6,2.1]].forEach(([x,y,z,r])=>{
   const blob = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), cloudMat);
   blob.position.set(x,y,z); blob.scale.y = 0.62;
@@ -478,7 +527,7 @@ const cloudMat = new THREE.MeshStandardMaterial({color:0x3a2d55, roughness:1, tr
   hoverables.push(blob);
   cloud.add(blob);
 });
-const cloudLbl = labelSprite('DRIFT STORM — quality decays, no errors', '#d9c4ff', 0.015, 'rgba(35,20,60,0.85)');
+const cloudLbl = labelSprite('DRIFT STORM — quality decays, no errors', '#d4d4d2', 0.015, 'rgba(28,28,31,0.88)');
 cloudLbl.position.y = 4.6; cloud.add(cloudLbl);
 scene.add(cloud);
 
@@ -488,24 +537,24 @@ const rainPos = new Float32Array(rainN*3);
 for(let i=0;i<rainN;i++){ rainPos[i*3]= (Math.random()-0.5)*7; rainPos[i*3+1]=-Math.random()*8; rainPos[i*3+2]=(Math.random()-0.5)*5; }
 const rainGeo = new THREE.BufferGeometry();
 rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos,3));
-const rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({color:0xb07cff, size:0.16, transparent:true, opacity:0.7}));
+const rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({color:0x9a9a9d, size:0.16, transparent:true, opacity:0.7}));
 cloud.add(rain);
 
 // --- alert beacon + rollback ring on victim building ---
 const victim = buildings[2]; // Agent Service B
-const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({color:0xff5c5c, transparent:true, opacity:0}));
+const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({color:0xcf6b5e, transparent:true, opacity:0}));
 beacon.position.set(victim.cfg.pos.x, victim.cfg.h + 0.8, victim.cfg.pos.z);
 scene.add(beacon);
-const beaconLight = new THREE.PointLight(0xff5c5c, 0, 30);
+const beaconLight = new THREE.PointLight(0xcf6b5e, 0, 30);
 beaconLight.position.copy(beacon.position); scene.add(beaconLight);
-const alertLbl = labelSprite('ALERT: judge pass-rate SLO burn!', '#ffb3b3', 0.016, 'rgba(60,12,12,0.9)');
+const alertLbl = labelSprite('ALERT: judge pass-rate SLO burn!', '#e6a59c', 0.016, 'rgba(40,16,14,0.92)');
 alertLbl.position.set(victim.cfg.pos.x, victim.cfg.h + 4.6, victim.cfg.pos.z);
 alertLbl.material.opacity = 0; scene.add(alertLbl);
-const rbRing = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.16, 10, 48), new THREE.MeshBasicMaterial({color:0x76b900, transparent:true, opacity:0}));
+const rbRing = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.16, 10, 48), new THREE.MeshBasicMaterial({color:0xf4f4f3, transparent:true, opacity:0}));
 rbRing.rotation.x = Math.PI/2;
 rbRing.position.set(victim.cfg.pos.x, 0.4, victim.cfg.pos.z);
 scene.add(rbRing);
-const rbLbl = labelSprite("ROLLBACK: re-point 'production' label → prev version", '#b9e07c', 0.015, 'rgba(15,35,8,0.9)');
+const rbLbl = labelSprite("ROLLBACK: re-point 'production' label → prev version", '#f4f4f3', 0.015, 'rgba(20,20,22,0.92)');
 rbLbl.position.set(victim.cfg.pos.x, victim.cfg.h + 4.6, victim.cfg.pos.z);
 rbLbl.material.opacity = 0; scene.add(rbLbl);
 
@@ -586,7 +635,7 @@ function animate(){
   streams.forEach(s=>{
     const isVictim = s.buildingIdx===2;
     if(isVictim){
-      s.mat.color.copy(s.baseColor).lerp(new THREE.Color(0xff5c5c), alert);
+      s.mat.color.copy(s.baseColor).lerp(new THREE.Color(0xcf6b5e), alert);
     }
     const arr = s.geo.attributes.position.array;
     const v = new THREE.Vector3();
@@ -598,7 +647,7 @@ function animate(){
     }
     s.geo.attributes.position.needsUpdate = true;
   });
-  victim.mat.emissive.copy(victim.baseEmissive).lerp(new THREE.Color(0x661111), alert*(0.6+0.4*Math.sin(t*8)));
+  victim.mat.emissive.copy(victim.baseEmissive).lerp(new THREE.Color(0x5a2420), alert*(0.6+0.4*Math.sin(t*8)));
 
   // beacon flash
   const flash = alert * (0.55 + 0.45*Math.sin(t*10));

@@ -6,10 +6,10 @@
 <title>NCP-AAI Domain 2 — Agent Development</title>
 <style>
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
-    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
-    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --panel:#151517; --panel2:#202023;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08);
+    --red:#cf6b5e; --amber:#cfcfcb; --blue:#a6a6a9; --purple:#bcb9c0; --cyan:#848489;
+    --text:#eaeaea; --muted:#9a9a9d; --line:#2a2a2d;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -36,17 +36,17 @@
   .hero p.hook b{color:var(--text)}
 
   /* 3D SCENE — stays hardcoded dark in both themes */
-  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#070b12}
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0e0e0f}
   #scene-canvas{width:100%;height:100%;display:block;max-width:100%}
-  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(10,14,22,.88);border:1px solid #3a4a66;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
-  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#f4f4f3;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
   .scene-legend ul{list-style:none}
-  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#8fa0b8}
-  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
-  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(10,14,22,.85);border:1px solid #3a4a66;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#8fa0b8}
-  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(8,12,20,.95);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
-  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
-  #scene-tooltip span{color:#8fa0b8}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#c9c9c7}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px;border:1px solid rgba(255,255,255,.18)}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(14,14,15,.9);border:1px solid #3a3a3e;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#c9c9c7}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(14,14,15,.96);border:1px solid #f4f4f3;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#f4f4f3;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#c9c9c7}
 
   /* LAYOUT */
   main{max-width:1180px;margin:0 auto;padding:0 24px}
@@ -174,6 +174,46 @@
   @media(max-width:760px){footer ul{columns:1}}
 
   .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
+
+  /* ---------- TYPOGRAPHY / RHYTHM POLISH ---------- */
+  h2{font-size:clamp(1.4rem,3.4vw,1.75rem)}
+  .lede{max-width:70ch;line-height:1.6}
+  .hero p.hook{line-height:1.6}
+  .card p,.card li,.trap p,.callout,.tbl td{line-height:1.6}
+  section{scroll-margin-top:64px}
+
+  /* ---------- RESPONSIVE / MOBILE ---------- */
+  @media (max-width:900px){
+    main{padding:0 18px}
+    section{padding:44px 0 16px}
+  }
+  @media (max-width:640px){
+    nav{padding:0 12px;gap:0}
+    nav a{font-size:.74rem;padding:11px 9px}
+    header.hero{padding:44px 18px 30px}
+    .hero h1{font-size:clamp(1.7rem,8vw,2.4rem)}
+    .hero p.hook{font-size:.98rem}
+    main{padding:0 14px}
+    section{padding:38px 0 14px}
+    /* single-column grids */
+    .grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}
+    /* smaller, drag-friendly 3D scene */
+    #scene-wrap{height:52vh;min-height:380px}
+    .scene-legend{max-width:none;left:8px;right:8px;bottom:8px;font-size:.7rem;padding:10px 12px}
+    .scene-hint{font-size:.66rem;padding:5px 10px;top:8px;right:8px}
+    /* tables + code scroll instead of overflowing */
+    .tbl{font-size:.8rem}
+    pre.code-block{font-size:.72rem}
+    .diagram{padding:12px}
+    /* ladder scrolls horizontally, rungs keep min width */
+    .ladder{gap:6px}
+    .arrow-up{transform:rotate(90deg)}
+    h2{font-size:clamp(1.3rem,6vw,1.6rem)}
+    h3{font-size:1.02rem}
+  }
+  @media (max-width:430px){
+    .bar-row{grid-template-columns:1fr}
+  }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -222,10 +262,10 @@
   <div class="scene-legend">
     <h4>Legend — the agent assembly line</h4>
     <ul>
-      <li><span class="sw" style="background:#76b900"></span><span>Green gate = Prompt Assembly — each request orb gets its system prompt + few-shot ring</span></li>
-      <li><span class="sw" style="background:#3fd2c7"></span><span>Cyan validator reshapes orbs into schema-true cubes; <span style="color:#ff8fa0">red</span> = malformed, bounced back to re-decode</span></li>
-      <li><span class="sw" style="background:#4da3ff"></span><span>Blue Tool-Call station — parallel arms hit tool pods; one pod errors and retries with <span style="color:#e8a33d">amber backoff glow</span></span></li>
-      <li><span class="sw" style="background:#b07cff"></span><span>Purple Streaming Exit — finished cubes dissolve into a token stream toward the user</span></li>
+      <li><span class="sw" style="background:#f4f4f3"></span><span>Bright gate = Prompt Assembly — each request orb gets its system prompt + few-shot ring</span></li>
+      <li><span class="sw" style="background:#c9c9c7"></span><span>Light-grey validator reshapes orbs into schema-true cubes; <span style="color:#cf6b5e">red</span> = malformed, bounced back to re-decode</span></li>
+      <li><span class="sw" style="background:#8a8a8d"></span><span>Mid-grey Tool-Call station — parallel arms hit tool pods; one pod errors and retries with <span style="color:#cf6b5e">muted-red fault flash → grey backoff glow</span></span></li>
+      <li><span class="sw" style="background:#6a6a6e"></span><span>Dark-grey Streaming Exit — finished cubes dissolve into a token stream toward the user</span></li>
     </ul>
   </div>
   <div id="scene-tooltip"></div>
@@ -458,13 +498,13 @@
 
   <h3>The reliability mantra <span class="tag">cheapest first</span></h3>
   <div class="ladder">
-    <div class="rung" style="border-bottom:4px solid var(--cyan)"><span class="step-num">1</span><h5>✅ Validate</h5><p>Pydantic / JSON schema on every parsed output; re-prompt with the error</p><div class="cost" style="color:var(--cyan)">cheapest</div></div>
+    <div class="rung" style="border-bottom:4px solid #f4f4f3"><span class="step-num">1</span><h5>✅ Validate</h5><p>Pydantic / JSON schema on every parsed output; re-prompt with the error</p><div class="cost" style="color:#f4f4f3">cheapest</div></div>
     <div class="arrow-up">➜</div>
-    <div class="rung" style="border-bottom:4px solid var(--green)"><span class="step-num">2</span><h5>🔁 Retry</h5><p>Exponential backoff + jitter; 429/5xx/timeout only</p><div class="cost" style="color:var(--green)">same target, later</div></div>
+    <div class="rung" style="border-bottom:4px solid #c9c9c7"><span class="step-num">2</span><h5>🔁 Retry</h5><p>Exponential backoff + jitter; 429/5xx/timeout only</p><div class="cost" style="color:#c9c9c7">same target, later</div></div>
     <div class="arrow-up">➜</div>
-    <div class="rung" style="border-bottom:4px solid var(--amber)"><span class="step-num">3</span><h5>🔀 Fall back</h5><p>Ordered model chain when retries are exhausted</p><div class="cost" style="color:var(--amber)">different target, now</div></div>
+    <div class="rung" style="border-bottom:4px solid #8a8a8d"><span class="step-num">3</span><h5>🔀 Fall back</h5><p>Ordered model chain when retries are exhausted</p><div class="cost" style="color:#8a8a8d">different target, now</div></div>
     <div class="arrow-up">➜</div>
-    <div class="rung" style="border-bottom:4px solid var(--red)"><span class="step-num">4</span><h5>🪂 Degrade gracefully</h5><p>Canned response, escalate to a human</p><div class="cost" style="color:var(--red)">last resort</div></div>
+    <div class="rung" style="border-bottom:4px solid #4a4a4e"><span class="step-num">4</span><h5>🪂 Degrade gracefully</h5><p>Canned response, escalate to a human</p><div class="cost" style="color:#9a9a9d">last resort</div></div>
   </div>
   <div class="callout"><b>Mantra:</b> validate, then retry, then fall back, then degrade gracefully — <b>in that order, cheapest first</b> (rhymes with Domain 3's tuning ladder).</div>
 </section>
@@ -475,8 +515,8 @@
   <p class="lede">Streaming does <b>not</b> reduce total generation time; it slashes <b>perceived</b> latency by optimizing <b>TTFT</b> (time to first token). Metrics: TTFT (snappiness), TPOT/inter-token latency (smoothness), total time.</p>
 
   <div class="bars">
-    <div class="bar-row"><div class="label">No streaming</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,var(--red),var(--amber))">blank spinner for the full 45 s run</div></div><div class="note">users abandon</div></div>
-    <div class="bar-row"><div class="label">Streaming</div><div class="track"><div class="fill" style="width:8%;background:linear-gradient(90deg,var(--green-dim),var(--green))">TTFT</div></div><div class="note">first token + progress events; total time unchanged — and that's fine</div></div>
+    <div class="bar-row"><div class="label">No streaming</div><div class="track"><div class="fill" style="width:100%;background:linear-gradient(90deg,#3a3a3e,#6a6a6e);color:#f4f4f3">blank spinner for the full 45 s run</div></div><div class="note" style="color:var(--red)">users abandon</div></div>
+    <div class="bar-row"><div class="label">Streaming</div><div class="track"><div class="fill" style="width:8%;background:linear-gradient(90deg,#c9c9c7,#f4f4f3);color:#111112">TTFT</div></div><div class="note">first token + progress events; total time unchanged — and that's fine</div></div>
   </div>
 
   <div class="grid c2">
@@ -1079,8 +1119,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x070b12);
-scene.fog = new THREE.Fog(0x070b12, 60, 140);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 60, 140);
 
 const camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 300);
 camera.position.set(0, 15, 36);
@@ -1094,35 +1134,35 @@ controls.minDistance = 10;
 controls.maxDistance = 95;
 
 // ---------- lights ----------
-scene.add(new THREE.AmbientLight(0x3a4a66, 1.1));
-const key = new THREE.DirectionalLight(0xdfe7f3, 1.4);
+scene.add(new THREE.AmbientLight(0x4a4a4e, 1.1));
+const key = new THREE.DirectionalLight(0xf4f4f3, 1.4);
 key.position.set(12, 26, 14);
 scene.add(key);
-const greenFill = new THREE.PointLight(0x76b900, 60, 60);
+const greenFill = new THREE.PointLight(0xf4f4f3, 60, 60);
 greenFill.position.set(-20, 10, 6);
 scene.add(greenFill);
-const blueFill = new THREE.PointLight(0x4da3ff, 55, 60);
+const blueFill = new THREE.PointLight(0xc9c9c7, 55, 60);
 blueFill.position.set(6, 12, -6);
 scene.add(blueFill);
-const purpleFill = new THREE.PointLight(0xb07cff, 50, 60);
+const purpleFill = new THREE.PointLight(0x8a8a8d, 50, 60);
 purpleFill.position.set(20, 10, 5);
 scene.add(purpleFill);
 
 // ---------- ground ----------
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(220, 220),
-  new THREE.MeshStandardMaterial({ color: 0x0a0f18, roughness: 0.95, metalness: 0.1 })
+  new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.95, metalness: 0.1 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -2.0;
 scene.add(ground);
-const grid = new THREE.GridHelper(220, 110, 0x1b2840, 0x121a2a);
+const grid = new THREE.GridHelper(220, 110, 0x33333a, 0x1f1f22);
 grid.position.y = -1.98;
 scene.add(grid);
 
 // ---------- text sprite helper ----------
 function makeLabel(text, opts = {}) {
-  const { size = 46, color = '#dfe7f3', bg = 'rgba(13,19,30,0.85)', border = '#76b900', scale = 1 } = opts;
+  const { size = 46, color = '#f4f4f3', bg = 'rgba(14,14,15,0.88)', border = '#c9c9c7', scale = 1 } = opts;
   const pad = 28;
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
@@ -1155,21 +1195,21 @@ function makeLabel(text, opts = {}) {
 const CONV_Y = 0.0, CONV_X0 = -32, CONV_X1 = 20;
 const belt = new THREE.Mesh(
   new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.5, 4),
-  new THREE.MeshStandardMaterial({ color: 0x182236, roughness: 0.7, metalness: 0.4 })
+  new THREE.MeshStandardMaterial({ color: 0x202023, roughness: 0.7, metalness: 0.4 })
 );
 belt.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.3, 0);
 scene.add(belt);
 for (const dz of [-2.05, 2.05]) {
   const strip = new THREE.Mesh(
     new THREE.BoxGeometry(CONV_X1 - CONV_X0, 0.12, 0.12),
-    new THREE.MeshBasicMaterial({ color: 0x2c4a78 })
+    new THREE.MeshBasicMaterial({ color: 0x55555a })
   );
   strip.position.set((CONV_X0 + CONV_X1) / 2, CONV_Y - 0.05, dz);
   scene.add(strip);
 }
 // moving chevrons (motion cue)
 const chevrons = [];
-const chevMat = new THREE.MeshBasicMaterial({ color: 0x24364f });
+const chevMat = new THREE.MeshBasicMaterial({ color: 0x3a3a3e });
 for (let i = 0; i < 19; i++) {
   const ch = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 3.4), chevMat);
   ch.position.set(CONV_X0 + i * 2.8, CONV_Y - 0.02, 0);
@@ -1177,7 +1217,7 @@ for (let i = 0; i < 19; i++) {
   chevrons.push(ch);
 }
 
-const lineTitle = makeLabel('THE AGENT ASSEMBLY LINE — prompt → validate → tools → stream', { border: '#76b900', color: '#a4e040', scale: 1.2 });
+const lineTitle = makeLabel('THE AGENT ASSEMBLY LINE — prompt → validate → tools → stream', { border: '#c9c9c7', color: '#f4f4f3', scale: 1.2 });
 lineTitle.position.set(-6, 12.6, 0);
 scene.add(lineTitle);
 
@@ -1185,18 +1225,18 @@ scene.add(lineTitle);
 const PROMPT_X = -22, VALID_X = -10, TOOL_X = 3, EXIT_X = 15;
 const stations = [];
 const stationDefs = [
-  { x: PROMPT_X, name: 'PROMPT ASSEMBLY', color: 0x76b900,
+  { x: PROMPT_X, name: 'PROMPT ASSEMBLY', color: 0xf4f4f3,
     desc: 'System prompt + few-shot examples + template from the versioned registry are attached to each request. Stable instructions live here; per-request data never gets buried in the system prompt.' },
-  { x: VALID_X, name: 'STRUCTURED OUTPUT', color: 0x3fd2c7,
+  { x: VALID_X, name: 'STRUCTURED OUTPUT', color: 0xc9c9c7,
     desc: 'Schema-constrained (guided) decoding — nvext.guided_json on NIM. Logits are masked so only schema-legal tokens can be sampled; orbs leave as neat schema-true cubes. Malformed output (prompt-only JSON) flashes red and is bounced back to re-decode.' },
-  { x: TOOL_X, name: 'TOOL-CALL STATION', color: 0x4da3ff,
-    desc: 'One assistant message can carry MANY tool_calls — parallel arms execute independent calls concurrently. Every tool_call_id must get a role:"tool" reply. Errors return to the model as tool results; transient faults retry with exponential backoff + jitter (amber glow).' },
-  { x: EXIT_X, name: 'STREAMING EXIT', color: 0xb07cff,
+  { x: TOOL_X, name: 'TOOL-CALL STATION', color: 0x8a8a8d,
+    desc: 'One assistant message can carry MANY tool_calls — parallel arms execute independent calls concurrently. Every tool_call_id must get a role:"tool" reply. Errors return to the model as tool results; transient faults retry with exponential backoff + jitter (grey backoff glow).' },
+  { x: EXIT_X, name: 'STREAMING EXIT', color: 0x6a6a6e,
     desc: 'stream=True — the finished response dissolves into SSE token chunks flowing to the user. Total generation time is unchanged; TTFT (time to first token) is what improves. Event streams ("updates") narrate progress alongside tokens.' },
 ];
 for (const def of stationDefs) {
   const g = new THREE.Group();
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x223149, roughness: 0.5, metalness: 0.6 });
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x2e2e33, roughness: 0.5, metalness: 0.6 });
   for (const dz of [-2.6, 2.6]) {
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5.4, 0.5), postMat);
     post.position.set(0, 2.4, dz);
@@ -1205,7 +1245,7 @@ for (const def of stationDefs) {
   const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 5.7), new THREE.MeshStandardMaterial({ color: def.color, emissive: def.color, emissiveIntensity: 0.35, roughness: 0.4 }));
   bar.position.set(0, 5.1, 0);
   g.add(bar);
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), new THREE.MeshBasicMaterial({ color: 0x44587a }));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 16), new THREE.MeshBasicMaterial({ color: 0x6a6a6e }));
   lamp.position.set(0, 6.05, 0);
   g.add(lamp);
   const lbl = makeLabel(def.name, { border: '#' + def.color.toString(16).padStart(6, '0'), scale: 0.95 });
@@ -1223,7 +1263,7 @@ for (const def of stationDefs) {
 // prompt-station stamp head (drops a few-shot ring onto each orb)
 const promptStamp = new THREE.Mesh(
   new THREE.CylinderGeometry(0.55, 0.75, 1.1, 16),
-  new THREE.MeshStandardMaterial({ color: 0x76b900, emissive: 0x76b900, emissiveIntensity: 0.5 })
+  new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0xf4f4f3, emissiveIntensity: 0.5 })
 );
 promptStamp.position.set(PROMPT_X, 3.6, 0);
 scene.add(promptStamp);
@@ -1232,7 +1272,7 @@ let promptStampT = -1;
 // validator scanning frame (a glowing square the orbs pass through)
 const scanFrame = new THREE.Mesh(
   new THREE.TorusGeometry(1.7, 0.12, 10, 4),
-  new THREE.MeshStandardMaterial({ color: 0x3fd2c7, emissive: 0x3fd2c7, emissiveIntensity: 0.7 })
+  new THREE.MeshStandardMaterial({ color: 0xc9c9c7, emissive: 0xc9c9c7, emissiveIntensity: 0.7 })
 );
 scanFrame.rotation.y = Math.PI / 2;
 scanFrame.rotation.z = Math.PI / 4;
@@ -1241,28 +1281,28 @@ scene.add(scanFrame);
 
 // ---------- tool pods + robotic arms ----------
 const podDefs = [
-  { z: -5.2, name: 'get_weather', color: 0x4da3ff, err: false,
+  { z: -5.2, name: 'get_weather', color: 0x8a8a8d, err: false,
     desc: 'Tool pod — an OpenAI-spec function. The description IS prompt engineering: the model picks tools by reading it. Arguments are validated against the JSON schema BEFORE execution.' },
-  { z: -7.8, name: 'search_db', color: 0x4da3ff, err: true,
-    desc: 'A flaky tool. Its 5xx error is returned AS the tool result so the model can self-correct; the runtime retries with exponential backoff + jitter (watch the amber pulses spread apart: 1s → 2s → 4s), then succeeds green. Never retry 400/422.' },
-  { z: -10.4, name: 'create_refund', color: 0x4da3ff, err: false,
+  { z: -7.8, name: 'search_db', color: 0x8a8a8d, err: true,
+    desc: 'A flaky tool. Its 5xx error is returned AS the tool result so the model can self-correct; the runtime retries with exponential backoff + jitter (watch the grey pulses spread apart: 1s → 2s → 4s), then succeeds (bright white). Never retry 400/422.' },
+  { z: -10.4, name: 'create_refund', color: 0x8a8a8d, err: false,
     desc: 'A side-effecting tool — retried calls must be idempotent (pass an idempotency key so a retried refund never refunds twice). Risky calls sit behind a HITL interrupt.' },
 ];
 const pods = [];
 for (const pd of podDefs) {
   const pod = new THREE.Mesh(
     new THREE.CylinderGeometry(0.9, 0.9, 1.5, 18),
-    new THREE.MeshStandardMaterial({ color: 0x16213a, emissive: pd.color, emissiveIntensity: 0.4, roughness: 0.35, metalness: 0.3 })
+    new THREE.MeshStandardMaterial({ color: 0x222226, emissive: pd.color, emissiveIntensity: 0.4, roughness: 0.35, metalness: 0.3 })
   );
   pod.position.set(TOOL_X, 2.6, pd.z);
   pod.userData = { title: 'Tool pod: ' + pd.name, desc: pd.desc };
   scene.add(pod);
-  const lbl = makeLabel(pd.name, { border: '#4da3ff', color: '#9cc6ff', scale: 0.7 });
+  const lbl = makeLabel(pd.name, { border: '#8a8a8d', color: '#c9c9c7', scale: 0.7 });
   lbl.position.set(TOOL_X, 4.1, pd.z);
   scene.add(lbl);
   // pedestal
   const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 3.6, 12),
-    new THREE.MeshStandardMaterial({ color: 0x1a2438, roughness: 0.6, metalness: 0.5 }));
+    new THREE.MeshStandardMaterial({ color: 0x26262a, roughness: 0.6, metalness: 0.5 }));
   ped.position.set(TOOL_X, 0, pd.z);
   scene.add(ped);
   // backoff glow ring (for the flaky pod)
@@ -1270,7 +1310,7 @@ for (const pd of podDefs) {
   if (pd.err) {
     ring = new THREE.Mesh(
       new THREE.TorusGeometry(1.3, 0.09, 10, 32),
-      new THREE.MeshBasicMaterial({ color: 0xe8a33d, transparent: true, opacity: 0 })
+      new THREE.MeshBasicMaterial({ color: 0xc9c9c7, transparent: true, opacity: 0 })
     );
     ring.rotation.x = Math.PI / 2;
     ring.position.copy(pod.position);
@@ -1286,13 +1326,13 @@ for (let i = 0; i < podDefs.length; i++) {
   pivot.position.set(TOOL_X, 4.9, -1.6);
   const seg = new THREE.Mesh(
     new THREE.BoxGeometry(0.32, 0.32, 4.2),
-    new THREE.MeshStandardMaterial({ color: 0x4da3ff, emissive: 0x4da3ff, emissiveIntensity: 0.35, metalness: 0.5, roughness: 0.4 })
+    new THREE.MeshStandardMaterial({ color: 0x8a8a8d, emissive: 0x8a8a8d, emissiveIntensity: 0.35, metalness: 0.5, roughness: 0.4 })
   );
   seg.position.z = -2.1;
   pivot.add(seg);
   const claw = new THREE.Mesh(
     new THREE.SphereGeometry(0.3, 12, 12),
-    new THREE.MeshStandardMaterial({ color: 0x9cc6ff, emissive: 0x4da3ff, emissiveIntensity: 0.6 })
+    new THREE.MeshStandardMaterial({ color: 0xc9c9c7, emissive: 0x8a8a8d, emissiveIntensity: 0.6 })
   );
   claw.position.z = -4.3;
   pivot.add(claw);
@@ -1310,15 +1350,15 @@ const OK_AT = 13.6;                 // success flash
 const userGroup = new THREE.Group();
 const monitor = new THREE.Mesh(
   new THREE.BoxGeometry(3.4, 2.3, 0.3),
-  new THREE.MeshStandardMaterial({ color: 0x101828, emissive: 0xb07cff, emissiveIntensity: 0.35, roughness: 0.4 })
+  new THREE.MeshStandardMaterial({ color: 0x1a1a1d, emissive: 0x6a6a6e, emissiveIntensity: 0.35, roughness: 0.4 })
 );
 monitor.position.set(0, 3.4, 0);
 userGroup.add(monitor);
 const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 2.4, 10),
-  new THREE.MeshStandardMaterial({ color: 0x1a2438, metalness: 0.5, roughness: 0.6 }));
+  new THREE.MeshStandardMaterial({ color: 0x26262a, metalness: 0.5, roughness: 0.6 }));
 stand.position.set(0, 1.0, 0);
 userGroup.add(stand);
-const userLbl = makeLabel('USER', { border: '#b07cff', color: '#d3b8ff', scale: 0.95 });
+const userLbl = makeLabel('USER', { border: '#6a6a6e', color: '#c9c9c7', scale: 0.95 });
 userLbl.position.set(0, 5.4, 0);
 userGroup.add(userLbl);
 userGroup.position.set(28, 0, 0);
@@ -1339,11 +1379,11 @@ const sPos = new Float32Array(N_S * 3);
 const sT = new Float32Array(N_S);
 for (let i = 0; i < N_S; i++) sT[i] = Math.random();
 sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
-const streamPts = new THREE.Points(sGeo, new THREE.PointsMaterial({ color: 0xd3b8ff, size: 0.26, transparent: true, opacity: 0.9 }));
+const streamPts = new THREE.Points(sGeo, new THREE.PointsMaterial({ color: 0xc9c9c7, size: 0.26, transparent: true, opacity: 0.9 }));
 scene.add(streamPts);
 
 // reject return path marker (where malformed orbs land back)
-const rejectLbl = makeLabel('malformed → bounced back to re-decode', { border: '#e0455a', color: '#ff8fa0', scale: 0.72 });
+const rejectLbl = makeLabel('malformed → bounced back to re-decode', { border: '#cf6b5e', color: '#cf6b5e', scale: 0.72 });
 rejectLbl.position.set(VALID_X - 5, 4.6, 3.4);
 scene.add(rejectLbl);
 
@@ -1356,7 +1396,7 @@ scene.add(rejectLbl);
     a[i * 3 + 2] = (Math.random() - 0.5) * 160;
   }
   g.setAttribute('position', new THREE.BufferAttribute(a, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x55555a, size: 0.16, transparent: true, opacity: 0.7 })));
 }
 
 // ---------- request objects (orb → cube) ----------
@@ -1366,13 +1406,13 @@ const cubeGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
 function spawnRequest() {
   const willMalform = Math.random() < 0.28;
   const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({ color: 0xdfe7f3, emissive: 0x8fa0b8, emissiveIntensity: 0.35, roughness: 0.35 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xf4f4f3, emissive: 0x8a8a8d, emissiveIntensity: 0.35, roughness: 0.35 });
   const orb = new THREE.Mesh(orbGeo, mat);
   const cube = new THREE.Mesh(cubeGeo, mat.clone());
   cube.visible = false;
   group.add(orb); group.add(cube);
   // few-shot ring, attached at the prompt station
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x76b900, transparent: true, opacity: 0 });
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xf4f4f3, transparent: true, opacity: 0 });
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.07, 8, 28), ringMat);
   ring.rotation.x = Math.PI / 2;
   group.add(ring);
@@ -1455,8 +1495,8 @@ function animate() {
         rq.bouncing = false;
         rq.retried = true;
         rq.willMalform = false;          // second decode is schema-constrained → passes
-        rq.orb.material.color.setHex(0xdfe7f3);
-        rq.orb.material.emissive.setHex(0x8fa0b8);
+        rq.orb.material.color.setHex(0xf4f4f3);
+        rq.orb.material.emissive.setHex(0x8a8a8d);
         g.rotation.z = 0;
       }
       continue;
@@ -1476,49 +1516,49 @@ function animate() {
     if (!rq.prompted && g.position.x >= PROMPT_X) {
       rq.prompted = true;
       rq.ring.material.opacity = 0.95;
-      rq.orb.material.emissive.setHex(0x76b900);
+      rq.orb.material.emissive.setHex(0xf4f4f3);
       rq.orb.material.emissiveIntensity = 0.45;
       promptStampT = 0;
-      flashLamp(stations[0], 0x76b900);
+      flashLamp(stations[0], 0xf4f4f3);
     }
 
     // station 2: structured-output validator
     if (!rq.validated && g.position.x >= VALID_X) {
       if (rq.willMalform) {
-        // malformed: flash red, bounce back to re-decode
-        rq.orb.material.color.setHex(0xe0455a);
-        rq.orb.material.emissive.setHex(0xe0455a);
+        // malformed: flash muted red, bounce back to re-decode
+        rq.orb.material.color.setHex(0xcf6b5e);
+        rq.orb.material.emissive.setHex(0xcf6b5e);
         rq.orb.material.emissiveIntensity = 0.9;
         rq.bouncing = true;
         rq.vx = -7.5;
         rq.vy = 4.2;
-        flashLamp(stations[1], 0xe0455a);
+        flashLamp(stations[1], 0xcf6b5e);
         continue;
       }
       rq.validated = true;
       rq.orb.visible = false;
       rq.cube.visible = true;
-      rq.cube.material.color.setHex(0x3fd2c7);
-      rq.cube.material.emissive.setHex(0x3fd2c7);
+      rq.cube.material.color.setHex(0xc9c9c7);
+      rq.cube.material.emissive.setHex(0xc9c9c7);
       rq.cube.material.emissiveIntensity = 0.55;
-      flashLamp(stations[1], rq.retried ? 0xe8a33d : 0x76b900);
+      flashLamp(stations[1], rq.retried ? 0x8a8a8d : 0xf4f4f3);
     }
 
     // station 3: tool calls — dwell while arms work
     if (rq.validated && !rq.tooled && g.position.x >= TOOL_X) {
       rq.tooled = true;
       rq.dwell = 1.5;
-      rq.cube.material.emissive.setHex(0x4da3ff);
-      rq.cube.material.color.setHex(0x4da3ff);
-      flashLamp(stations[2], 0x4da3ff);
+      rq.cube.material.emissive.setHex(0x8a8a8d);
+      rq.cube.material.color.setHex(0x8a8a8d);
+      flashLamp(stations[2], 0x8a8a8d);
     }
 
     // station 4: streaming exit — dissolve into the token stream
     if (!rq.dissolving && g.position.x >= EXIT_X) {
       rq.dissolving = true;
-      rq.cube.material.emissive.setHex(0xb07cff);
-      rq.cube.material.color.setHex(0xb07cff);
-      flashLamp(stations[3], 0xb07cff);
+      rq.cube.material.emissive.setHex(0x6a6a6e);
+      rq.cube.material.color.setHex(0x6a6a6e);
+      flashLamp(stations[3], 0x6a6a6e);
     }
   }
 
@@ -1534,7 +1574,7 @@ function animate() {
   for (const s of stations) {
     if (s.lampT >= 0) {
       s.lampT += dt;
-      if (s.lampT > 1.1) { s.lampT = -1; s.lamp.material.color.setHex(0x44587a); }
+      if (s.lampT > 1.1) { s.lampT = -1; s.lamp.material.color.setHex(0x6a6a6e); }
     }
   }
 
@@ -1556,12 +1596,12 @@ function animate() {
     const ct = t % ERR_CYCLE;
     const m = pod.mesh.material;
     if (ct < ERR_AT) {
-      m.emissive.setHex(0x4da3ff); m.emissiveIntensity = 0.4;
+      m.emissive.setHex(0x8a8a8d); m.emissiveIntensity = 0.4;
       pod.ring.material.opacity = 0;
     } else if (ct < ERR_AT + 0.6) {
-      m.emissive.setHex(0xe0455a); m.emissiveIntensity = 1.1;        // 5xx flash
+      m.emissive.setHex(0xcf6b5e); m.emissiveIntensity = 1.1;        // 5xx flash (muted red = genuine fault)
     } else if (ct < OK_AT) {
-      m.emissive.setHex(0xe8a33d);                                    // backoff window
+      m.emissive.setHex(0xc9c9c7);                                    // backoff window (grey, not a fault)
       let pulse = 0.25;
       let ringP = 0;
       for (const rt of RETRIES) {
@@ -1577,10 +1617,10 @@ function animate() {
         pod.ring.scale.setScalar(1);
       }
     } else if (ct < OK_AT + 0.8) {
-      m.emissive.setHex(0x76b900); m.emissiveIntensity = 1.0;         // success
+      m.emissive.setHex(0xf4f4f3); m.emissiveIntensity = 1.0;         // success = bright white (never green)
       pod.ring.material.opacity = 0;
     } else {
-      m.emissive.setHex(0x4da3ff); m.emissiveIntensity = 0.4;
+      m.emissive.setHex(0x8a8a8d); m.emissiveIntensity = 0.4;
     }
   }
   // healthy pods gentle pulse

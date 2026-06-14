@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NCP-AAI Domain 5 — Cognition, Planning & Memory</title>
 <style>
-  /* page-local vars mirror the shared warm theme (theme.css); the 3D scene stays hardcoded dark */
+  /* Fallback chrome only — theme.css loads AFTER and supplies the canonical B&W palette. The 3D scene stays hardcoded dark. */
   :root{
-    --bg:#0b0f17; --bg2:#0e1420; --bg3:#121a2a; --panel:#141c2c; --panel2:#182236;
-    --green:#76b900; --green-dim:#5a8f00; --green-glow:rgba(118,185,0,.25);
-    --red:#e0455a; --amber:#e8a33d; --blue:#4da3ff; --purple:#b07cff; --cyan:#3fd2c7;
-    --text:#dfe7f3; --muted:#8fa0b8; --line:#243349; --on-accent:#0b0f17;
+    --bg:#0e0e0f; --bg2:#151517; --bg3:#1c1c1f; --panel:#151517; --panel2:#202023;
+    --green:#f4f4f3; --green-dim:#8f8f90; --green-glow:rgba(244,244,243,.08);
+    --red:#cf6b5e; --amber:#cfcfcb; --blue:#a6a6a9; --purple:#bcb9c0; --cyan:#848489;
+    --text:#eaeaea; --muted:#9a9a9d; --line:#2a2a2d; --on-accent:#111112;
     --mono:ui-monospace,SFMono-Regular,Consolas,'Cascadia Mono',Menlo,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -38,17 +38,17 @@
   .hero p.hook b{color:var(--text)}
 
   /* 3D SCENE — stays dark in both themes; overlays dark with light text */
-  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#06090f}
+  #scene-wrap{position:relative;width:100%;height:72vh;min-height:520px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0e0e0f}
   #scene-canvas{width:100%;height:100%;display:block;max-width:100%}
-  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(8,11,18,.9);border:1px solid #38496a;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
-  .scene-legend h4{color:#76b900;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+  .scene-legend{position:absolute;left:14px;bottom:14px;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:12px;padding:12px 16px;font-size:.76rem;max-width:340px;backdrop-filter:blur(6px)}
+  .scene-legend h4{color:#f4f4f3;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
   .scene-legend ul{list-style:none}
-  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#9aacc4}
-  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px}
-  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(8,11,18,.85);border:1px solid #38496a;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#9aacc4}
-  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(6,9,15,.96);border:1px solid #76b900;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.55)}
-  #scene-tooltip b{color:#76b900;display:block;margin-bottom:3px}
-  #scene-tooltip span{color:#9aacc4}
+  .scene-legend li{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:#c9c9c7}
+  .scene-legend .sw{flex:0 0 11px;height:11px;border-radius:3px;margin-top:4px;border:1px solid rgba(255,255,255,.18)}
+  .scene-hint{position:absolute;top:12px;right:14px;background:rgba(14,14,15,.92);border:1px solid #3a3a3e;border-radius:999px;padding:6px 14px;font-size:.72rem;color:#c9c9c7}
+  #scene-tooltip{position:absolute;pointer-events:none;display:none;background:rgba(14,14,15,.96);border:1px solid #f4f4f3;border-radius:10px;padding:10px 13px;font-size:.78rem;max-width:300px;z-index:10;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #scene-tooltip b{color:#f4f4f3;display:block;margin-bottom:3px}
+  #scene-tooltip span{color:#c9c9c7}
   @media(max-width:760px){.scene-legend{max-width:none;right:14px;font-size:.72rem}.scene-hint{display:none}}
 
   /* LAYOUT */
@@ -146,11 +146,50 @@
 
   .flow-note{font-size:.78rem;color:var(--muted);margin-top:6px}
 
-  /* MOBILE: code companion grid must collapse cleanly, no horizontal overflow */
+  /* code companion grid must collapse cleanly, no horizontal overflow */
   .cc-grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
-  @media(max-width:760px){
-    .tbl{display:block;overflow-x:auto;white-space:nowrap}
+
+  /* ---------- TYPOGRAPHY / RHYTHM POLISH ---------- */
+  h2{font-size:clamp(1.45rem,3.4vw,1.75rem)}
+  .lede{line-height:1.6;max-width:72ch}
+  .lede b{color:var(--text)}
+  .hero p.hook{line-height:1.62;max-width:74ch}
+  .card p{line-height:1.55}
+  .card li{line-height:1.5}
+  .callout{line-height:1.55}
+  .trap p{line-height:1.5}
+  details.drill .answer{line-height:1.55}
+
+  /* ---------- MOBILE / RESPONSIVE ---------- */
+  @media (max-width:760px){
     section{padding:44px 0 14px}
+  }
+  @media (max-width:640px){
+    body{line-height:1.6}
+    nav{padding:0 12px;-webkit-overflow-scrolling:touch}
+    nav a{padding:11px 10px;font-size:.76rem}
+    header.hero{padding:44px 18px 30px}
+    .hero h1{font-size:clamp(1.7rem,8vw,2.4rem)}
+    .hero p.hook{font-size:.98rem}
+    main{padding:0 16px}
+    section{padding:40px 0 14px}
+    h2{font-size:clamp(1.35rem,6vw,1.6rem)}
+    h3{font-size:1.04rem}
+    /* collapse every multi-column grid to a single column */
+    .grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}
+    /* shorter, touch-friendly 3D scene */
+    #scene-wrap{height:52vh;min-height:360px}
+    .scene-legend{max-width:none;left:10px;right:10px;bottom:10px;font-size:.72rem}
+    .scene-hint{top:8px;right:10px;left:10px;text-align:center}
+    /* keep wide tables/code scrollable instead of overflowing the page */
+    .tbl{min-width:560px}
+    pre.code-block{font-size:.72rem}
+    .card{padding:16px}
+    /* don't let the floating controls cover content */
+    footer{padding-bottom:72px}
+  }
+  @media (max-width:380px){
+    nav a{font-size:.72rem;padding:10px 8px}
   }
 </style>
 <link rel="stylesheet" href="theme.css">
@@ -197,11 +236,11 @@
   <div class="scene-legend">
     <h4>Legend — the agent's mind</h4>
     <ul>
-      <li><span class="sw" style="background:#76b900"></span><span>Central ring = the <b>context window</b> as finite token slots that visibly fill (compaction frees them)</span></li>
-      <li><span class="sw" style="background:#4da3ff"></span><span>Close fast-pulsing buffer = <b>short-term</b> thread state; recall beams pull memories into the ring</span></li>
-      <li><span class="sw" style="background:#3fd2c7"></span><span>Crystal lattice = <b>long-term vector store</b>; spiral tape = <b>episodic log</b>; gear cluster = <b>procedural store</b></span></li>
-      <li><span class="sw" style="background:#b07cff"></span><span>Compaction beam compresses old tokens into a <b>summary crystal</b></span></li>
-      <li><span class="sw" style="background:#e0455a"></span><span>Planner satellite decomposes a task orb into sub-tasks; one <b>fails red</b> → visible re-planning</span></li>
+      <li><span class="sw" style="background:#f4f4f3"></span><span>Central ring = the <b>context window</b> as finite token slots that visibly fill (compaction frees them)</span></li>
+      <li><span class="sw" style="background:#c9c9c7"></span><span>Close fast-pulsing buffer = <b>short-term</b> thread state; recall beams pull memories into the ring</span></li>
+      <li><span class="sw" style="background:#9a9a9d"></span><span>Crystal lattice = <b>long-term vector store</b>; spiral tape = <b>episodic log</b>; gear cluster = <b>procedural store</b></span></li>
+      <li><span class="sw" style="background:#6a6a6e"></span><span>Compaction beam compresses old tokens into a <b>summary crystal</b></span></li>
+      <li><span class="sw" style="background:#cf6b5e"></span><span>Planner satellite decomposes a task orb into sub-tasks; one <b>fails (muted red)</b> → visible re-planning</span></li>
     </ul>
   </div>
   <div id="scene-tooltip"></div>
@@ -932,8 +971,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(wrap.clientWidth, wrap.clientHeight);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x06090f);
-scene.fog = new THREE.Fog(0x06090f, 55, 140);
+scene.background = new THREE.Color(0x0e0e0f);
+scene.fog = new THREE.Fog(0x0e0e0f, 55, 140);
 
 const camera = new THREE.PerspectiveCamera(52, wrap.clientWidth / wrap.clientHeight, 0.1, 400);
 camera.position.set(0, 14, 38);
@@ -946,20 +985,20 @@ controls.minDistance = 14;
 controls.maxDistance = 100;
 
 // ---------- lights ----------
-scene.add(new THREE.AmbientLight(0x3a4a66, 1.0));
-const key = new THREE.DirectionalLight(0xdfe7f3, 1.1);
+scene.add(new THREE.AmbientLight(0x3a3a3e, 1.1));
+const key = new THREE.DirectionalLight(0xf4f4f3, 1.2);
 key.position.set(10, 24, 16);
 scene.add(key);
-const coreLight = new THREE.PointLight(0x76b900, 120, 70);
+const coreLight = new THREE.PointLight(0xf4f4f3, 120, 70);
 coreLight.position.set(0, 2, 0);
 scene.add(coreLight);
-const purpleFill = new THREE.PointLight(0xb07cff, 50, 70);
+const purpleFill = new THREE.PointLight(0xc9c9c7, 50, 70);
 purpleFill.position.set(-20, 12, -8);
 scene.add(purpleFill);
 
 // ---------- text sprite helper ----------
 function makeLabel(text, opts = {}) {
-  const { size = 46, color = '#dfe7f3', bg = 'rgba(8,11,18,0.86)', border = '#76b900', scale = 1 } = opts;
+  const { size = 46, color = '#eaeaea', bg = 'rgba(14,14,15,0.9)', border = '#f4f4f3', scale = 1 } = opts;
   const pad = 28;
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
@@ -996,7 +1035,7 @@ scene.add(coreGroup);
 // glowing inner core
 const core = new THREE.Mesh(
   new THREE.IcosahedronGeometry(2.4, 2),
-  new THREE.MeshStandardMaterial({ color: 0x1c3a07, emissive: 0x76b900, emissiveIntensity: 0.85, roughness: 0.3, metalness: 0.3 })
+  new THREE.MeshStandardMaterial({ color: 0x2a2a2c, emissive: 0xf4f4f3, emissiveIntensity: 0.85, roughness: 0.3, metalness: 0.3 })
 );
 core.userData = { title: 'Reasoning core', desc: 'The agent reasoning over its context this turn — CoT / self-consistency / ToT / test-time compute all happen here, against whatever tokens fill the ring.' };
 coreGroup.add(core);
@@ -1006,7 +1045,7 @@ hoverables.push(core);
 const N_SLOTS = 32;
 const slots = [];
 const RING_R = 5.6;
-const slotOff = new THREE.MeshStandardMaterial({ color: 0x1b2840, emissive: 0x101826, emissiveIntensity: 0.2, roughness: 0.6 });
+const slotOff = new THREE.MeshStandardMaterial({ color: 0x2a2a2d, emissive: 0x202023, emissiveIntensity: 0.2, roughness: 0.6 });
 for (let i = 0; i < N_SLOTS; i++) {
   const a = (i / N_SLOTS) * Math.PI * 2;
   const m = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.5), slotOff.clone());
@@ -1022,7 +1061,7 @@ coreGroup.add(ringHit);
 hoverables.push(ringHit);
 coreGroup.rotation.x = -0.35;
 
-const coreLbl = makeLabel('CONTEXT WINDOW — finite token slots', { border: '#76b900', color: '#a4e040', scale: 1.05 });
+const coreLbl = makeLabel('CONTEXT WINDOW — finite token slots', { border: '#f4f4f3', color: '#f4f4f3', scale: 1.05 });
 coreLbl.position.set(0, 9.4, 0);
 scene.add(coreLbl);
 
@@ -1030,17 +1069,17 @@ scene.add(coreLbl);
 // 1) short-term buffer — close, fast-pulsing
 const buffer = new THREE.Mesh(
   new THREE.SphereGeometry(1.3, 24, 24),
-  new THREE.MeshStandardMaterial({ color: 0x123a5a, emissive: 0x4da3ff, emissiveIntensity: 0.7, roughness: 0.35 })
+  new THREE.MeshStandardMaterial({ color: 0x2a2a2d, emissive: 0xc9c9c7, emissiveIntensity: 0.7, roughness: 0.35 })
 );
 buffer.userData = { title: 'Short-term buffer', desc: 'Thread-scoped state: messages, scratchpad, current plan. Persisted by a checkpointer keyed by thread_id. Fast-pulsing because it touches every step.' };
 scene.add(buffer);
 hoverables.push(buffer);
-const bufferLbl = makeLabel('short-term buffer', { border: '#4da3ff', color: '#a9d4ff', scale: 0.62 });
+const bufferLbl = makeLabel('short-term buffer', { border: '#c9c9c7', color: '#dcdcda', scale: 0.62 });
 scene.add(bufferLbl);
 
 // 2) long-term vector store — crystal lattice, further out
 const latticeGroup = new THREE.Group();
-const latMat = new THREE.MeshStandardMaterial({ color: 0x0c3a37, emissive: 0x3fd2c7, emissiveIntensity: 0.55, roughness: 0.25, metalness: 0.4, transparent: true, opacity: 0.92 });
+const latMat = new THREE.MeshStandardMaterial({ color: 0x252527, emissive: 0x8a8a8d, emissiveIntensity: 0.6, roughness: 0.25, metalness: 0.4, transparent: true, opacity: 0.92 });
 for (let xi = -1; xi <= 1; xi++) for (let yi = -1; yi <= 1; yi++) for (let zi = -1; zi <= 1; zi++) {
   if (xi === 0 && yi === 0 && zi === 0) continue;
   const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.42, 0), latMat);
@@ -1052,7 +1091,7 @@ latHit.userData = { title: 'Long-term vector store', desc: 'Cross-thread semanti
 latticeGroup.add(latHit);
 hoverables.push(latHit);
 scene.add(latticeGroup);
-const latLbl = makeLabel('long-term vector store', { border: '#3fd2c7', color: '#a6efe8', scale: 0.62 });
+const latLbl = makeLabel('long-term vector store', { border: '#8a8a8d', color: '#c9c9c7', scale: 0.62 });
 scene.add(latLbl);
 
 // 3) episodic log — spiral tape
@@ -1065,7 +1104,7 @@ for (let i = 0; i <= 120; i++) {
 }
 const spiral = new THREE.Mesh(
   new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spiralPts), 140, 0.16, 8, false),
-  new THREE.MeshStandardMaterial({ color: 0x3a2a06, emissive: 0xe8a33d, emissiveIntensity: 0.6, roughness: 0.4 })
+  new THREE.MeshStandardMaterial({ color: 0x2a2a2c, emissive: 0xb4b4b2, emissiveIntensity: 0.6, roughness: 0.4 })
 );
 episGroup.add(spiral);
 const episHit = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.6, 12), new THREE.MeshBasicMaterial({ visible: false }));
@@ -1073,45 +1112,45 @@ episHit.userData = { title: 'Episodic log', desc: 'Specific past experiences/eve
 episGroup.add(episHit);
 hoverables.push(episHit);
 scene.add(episGroup);
-const episLbl = makeLabel('episodic log', { border: '#e8a33d', color: '#f4cc88', scale: 0.62 });
+const episLbl = makeLabel('episodic log', { border: '#b4b4b2', color: '#d4d4d2', scale: 0.62 });
 scene.add(episLbl);
 
 // 4) procedural store — gear cluster
 const gearGroup = new THREE.Group();
 function makeGear(r, teeth, col) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.3, 24), new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: col, emissiveIntensity: 0.5, roughness: 0.5, metalness: 0.4 }));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.3, 24), new THREE.MeshStandardMaterial({ color: 0x242426, emissive: col, emissiveIntensity: 0.55, roughness: 0.5, metalness: 0.4 }));
   body.rotation.x = Math.PI / 2;
   g.add(body);
   for (let i = 0; i < teeth; i++) {
     const a = (i / teeth) * Math.PI * 2;
-    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.34), new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: col, emissiveIntensity: 0.5 }));
+    const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.34), new THREE.MeshStandardMaterial({ color: 0x242426, emissive: col, emissiveIntensity: 0.55 }));
     tooth.position.set(Math.cos(a) * (r + 0.12), Math.sin(a) * (r + 0.12), 0);
     g.add(tooth);
   }
   return g;
 }
-const g1 = makeGear(0.85, 12, 0xb07cff); g1.position.set(0, 0.4, 0);
-const g2 = makeGear(0.6, 9, 0xb07cff); g2.position.set(1.3, -0.3, 0.2);
+const g1 = makeGear(0.85, 12, 0x6a6a6e); g1.position.set(0, 0.4, 0);
+const g2 = makeGear(0.6, 9, 0x6a6a6e); g2.position.set(1.3, -0.3, 0.2);
 gearGroup.add(g1, g2);
 const gearHit = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 1.6), new THREE.MeshBasicMaterial({ visible: false }));
 gearHit.userData = { title: 'Procedural store', desc: 'How to act — learned rules and behaviors. Canonically implemented by rewriting the agent\'s own system-prompt instructions, not as vector-store rows.' };
 gearGroup.add(gearHit);
 hoverables.push(gearHit);
 scene.add(gearGroup);
-const gearLbl = makeLabel('procedural store', { border: '#b07cff', color: '#d8c1ff', scale: 0.62 });
+const gearLbl = makeLabel('procedural store', { border: '#9a9a9d', color: '#bcbcbe', scale: 0.62 });
 scene.add(gearLbl);
 
 // ---------- summary crystal (compaction target) ----------
 const summaryCrystal = new THREE.Mesh(
   new THREE.OctahedronGeometry(1.0, 0),
-  new THREE.MeshStandardMaterial({ color: 0x2a1840, emissive: 0xb07cff, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.5, transparent: true, opacity: 0.9 })
+  new THREE.MeshStandardMaterial({ color: 0x242426, emissive: 0x6a6a6e, emissiveIntensity: 0.65, roughness: 0.2, metalness: 0.5, transparent: true, opacity: 0.9 })
 );
 summaryCrystal.position.set(-9, 7.5, -3);
 summaryCrystal.userData = { title: 'Summary crystal (compaction)', desc: 'The compaction beam compresses old tokens into a running summary — preserve decisions/constraints, drop redundant raw output. Lossy: bad summaries cause goal drift.' };
 scene.add(summaryCrystal);
 hoverables.push(summaryCrystal);
-const compLbl = makeLabel('compaction → summary', { border: '#b07cff', color: '#d8c1ff', scale: 0.6 });
+const compLbl = makeLabel('compaction → summary', { border: '#9a9a9d', color: '#bcbcbe', scale: 0.6 });
 compLbl.position.set(-9, 9.2, -3);
 scene.add(compLbl);
 
@@ -1121,12 +1160,12 @@ plannerGroup.position.set(13, 6, -2);
 scene.add(plannerGroup);
 const planner = new THREE.Mesh(
   new THREE.TorusKnotGeometry(0.7, 0.24, 64, 8),
-  new THREE.MeshStandardMaterial({ color: 0x103a3a, emissive: 0x3fd2c7, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5 })
+  new THREE.MeshStandardMaterial({ color: 0x252527, emissive: 0xc9c9c7, emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5 })
 );
 planner.userData = { title: 'Planner satellite', desc: 'Decomposes the goal into ordered sub-tasks. Plan-and-execute: plan upfront, execute one step at a time, validate, and re-plan on failure.' };
 plannerGroup.add(planner);
 hoverables.push(planner);
-const planLbl = makeLabel('planner — decompose & re-plan', { border: '#3fd2c7', color: '#a6efe8', scale: 0.72 });
+const planLbl = makeLabel('planner — decompose & re-plan', { border: '#c9c9c7', color: '#dcdcda', scale: 0.72 });
 planLbl.position.set(13, 8.4, -2);
 scene.add(planLbl);
 
@@ -1139,10 +1178,10 @@ const subDefs = [
 ];
 const subOrbs = [];
 subDefs.forEach((d, i) => {
-  const col = d.ok ? 0x76b900 : 0xe0455a;
+  const col = d.ok ? 0xf4f4f3 : 0xcf6b5e;
   const o = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 18, 18),
-    new THREE.MeshStandardMaterial({ color: 0x111a10, emissive: col, emissiveIntensity: 0.75, roughness: 0.4 })
+    new THREE.MeshStandardMaterial({ color: 0x242426, emissive: col, emissiveIntensity: 0.75, roughness: 0.4 })
   );
   const a = (i / subDefs.length) * Math.PI * 2;
   o.position.set(13 + Math.cos(a) * 3.4, 6 + Math.sin(a) * 1.0, -2 + Math.sin(a) * 3.4);
@@ -1168,7 +1207,7 @@ subDefs.forEach((d, i) => {
     arr[i * 3 + 2] = (Math.random() - 0.5) * 170;
   }
   gg.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-  scene.add(new THREE.Points(gg, new THREE.PointsMaterial({ color: 0x2c4a78, size: 0.16, transparent: true, opacity: 0.7 })));
+  scene.add(new THREE.Points(gg, new THREE.PointsMaterial({ color: 0x4a4a4e, size: 0.16, transparent: true, opacity: 0.7 })));
 }
 
 // ---------- recall + compaction beams (dynamic geometry) ----------
@@ -1177,9 +1216,9 @@ function beam(color, op) {
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
   return new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: op }));
 }
-const recallBeam = beam(0x3fd2c7, 0.0); scene.add(recallBeam);
-const recallBeam2 = beam(0xe8a33d, 0.0); scene.add(recallBeam2);
-const compactBeam = beam(0xb07cff, 0.0); scene.add(compactBeam);
+const recallBeam = beam(0xc9c9c7, 0.0); scene.add(recallBeam);
+const recallBeam2 = beam(0x8a8a8d, 0.0); scene.add(recallBeam2);
+const compactBeam = beam(0x9a9a9d, 0.0); scene.add(compactBeam);
 
 // recall particles travelling store -> ring
 const RP = 40;
@@ -1189,7 +1228,7 @@ const rpT = new Float32Array(RP);
 const rpSrc = new Int8Array(RP);
 for (let i = 0; i < RP; i++) { rpT[i] = Math.random(); rpSrc[i] = Math.floor(Math.random() * 3); }
 rpGeo.setAttribute('position', new THREE.BufferAttribute(rpPos, 3));
-const recallPts = new THREE.Points(rpGeo, new THREE.PointsMaterial({ color: 0x9cd63a, size: 0.3, transparent: true, opacity: 0.9 }));
+const recallPts = new THREE.Points(rpGeo, new THREE.PointsMaterial({ color: 0xe4e4e2, size: 0.3, transparent: true, opacity: 0.9 }));
 scene.add(recallPts);
 
 function setBeam(line, a, b) {
@@ -1241,8 +1280,8 @@ function animate() {
   slots.forEach((s, i) => {
     const lit = i < fillN;
     const frac = i / N_SLOTS;
-    const col = lit ? (frac > 0.78 ? 0xe0455a : 0x76b900) : 0x1b2840;  // near-full slots tint red (rot)
-    s.material.color.setHex(lit ? 0x1c3a07 : 0x1b2840);
+    const col = lit ? (frac > 0.78 ? 0xcf6b5e : 0xf4f4f3) : 0x2a2a2d;  // near-full slots tint muted red (rot)
+    s.material.color.setHex(lit ? 0x2f2f31 : 0x2a2a2d);
     s.material.emissive.setHex(col);
     s.material.emissiveIntensity = lit ? 0.7 : 0.2;
     s.scale.setScalar(lit ? 1.0 + 0.12 * Math.sin(t * 6 + i) : 0.8);
