@@ -1,80 +1,104 @@
 /* ============================================================
-   Shared warm theme — dark & light mode.
+   Shared OFFICIAL theme — monochrome + cream, dark & light.
    Loaded AFTER each page's inline <style>, so the variable
    values here override the page palettes. Pages keep their
-   original variable NAMES (--green = primary accent slot).
+   original variable NAMES (--green = primary accent slot, now
+   a warm cream/espresso accent — no longer NVIDIA green).
+   Palette: ink · charcoal · stone · grey · parchment · cream.
+   The semantic data-viz hues (--red/amber/blue/purple/cyan)
+   are kept as deliberate pops of color for charts & 3D scenes.
    ============================================================ */
 
-/* ---------- WARM DARK (default) ---------- */
+/* ---------- INK DARK (default) ---------- */
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* surfaces — warm charcoal / espresso, not navy */
-  --bg:      #181411;
-  --bg2:     #1e1915;
-  --bg3:     #272019;
-  --card:    #221c16;
-  --panel:   #221c16;
-  --panel2:  #2a231b;
+  /* surfaces — warm near-black ink / charcoal */
+  --bg:      #131210;
+  --bg2:     #181613;
+  --bg3:     #201d18;
+  --card:    #1a1814;
+  --panel:   #1a1814;
+  --panel2:  #221f19;
 
-  /* primary accent (fills the old NVIDIA-green slot) — warm amber */
-  --green:      #e69b3e;
-  --green-dim:  #b37428;
-  --green-glow: rgba(230, 155, 62, .20);
-  --on-accent:  #20150a;   /* text placed on top of the accent color */
+  /* primary accent (the old NVIDIA-green slot) — warm parchment cream */
+  --green:      #e6d9bd;
+  --green-dim:  #b3a888;
+  --green-glow: rgba(230, 217, 189, .12);
+  --on-accent:  #1a160f;   /* ink text placed on top of the cream accent */
 
   /* text */
-  --text:  #ece5da;
-  --muted: #a99d8c;
+  --text:  #ece7da;
+  --muted: #9c9685;
 
   /* lines */
-  --border: #383025;
-  --line:   #383025;
+  --border: #322d24;
+  --line:   #322d24;
 
-  /* secondary semantic colors, warmed */
-  --red:    #e2604f;
-  --amber:  #e0b14b;
-  --blue:   #6aa3cf;
-  --purple: #b08ee6;
-  --cyan:   #58bfae;
+  /* secondary semantic colors — kept as restrained pops for data viz */
+  --red:    #d8695a;
+  --amber:  #d8b563;
+  --blue:   #7ba6c9;
+  --purple: #b196dd;
+  --cyan:   #6abfae;
 
   --mono: ui-monospace, SFMono-Regular, Consolas, 'Cascadia Mono', Menlo, monospace;
 }
 
-/* ---------- WARM LIGHT ---------- */
+/* ---------- CREAM LIGHT ---------- */
 :root[data-theme="light"] {
   color-scheme: light;
 
-  --bg:      #faf6ef;
-  --bg2:     #f3ecdf;
-  --bg3:     #ece2d1;
-  --card:    #fffdf8;
-  --panel:   #fffdf8;
-  --panel2:  #f7f1e6;
+  --bg:      #f6f2e9;
+  --bg2:     #efe9db;
+  --bg3:     #e7dfcd;
+  --card:    #fffefa;
+  --panel:   #fffefa;
+  --panel2:  #f4eee1;
 
-  --green:      #b45309;
-  --green-dim:  #8a3f06;
-  --green-glow: rgba(180, 83, 9, .12);
-  --on-accent:  #ffffff;
+  --green:      #463c2c;   /* deep warm espresso — the accent in light mode */
+  --green-dim:  #6c6150;
+  --green-glow: rgba(70, 60, 44, .10);
+  --on-accent:  #faf7f0;   /* cream text on the espresso accent */
 
-  --text:  #2d251c;
-  --muted: #7d7163;
+  --text:  #211e18;
+  --muted: #6e6757;
 
-  --border: #e5d9c5;
-  --line:   #e5d9c5;
+  --border: #e4dcca;
+  --line:   #e4dcca;
 
-  --red:    #bf4434;
-  --amber:  #b97c10;
-  --blue:   #2a6f9e;
-  --purple: #7a52c7;
-  --cyan:   #1c7f70;
+  --red:    #b3493a;
+  --amber:  #946f1d;
+  --blue:   #356c93;
+  --purple: #6c4cae;
+  --cyan:   #1f7d6f;
 }
 
-/* ---------- shared refinements ---------- */
+/* ---------- shared refinements (polish) ---------- */
+html { scroll-behavior: smooth; }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color .25s ease, color .25s ease;
+}
+
 ::selection { background: var(--green); color: var(--on-accent); }
 
-body { transition: background-color .25s ease, color .25s ease; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* refined monochrome scrollbar */
+* { scrollbar-width: thin; scrollbar-color: var(--green-dim) transparent; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--green-dim);
+  border-radius: 8px;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
 /* floating control cluster (menu + theme toggle) — injected on every page */
 .site-controls {
