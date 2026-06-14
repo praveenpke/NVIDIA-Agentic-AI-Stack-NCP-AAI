@@ -7,7 +7,8 @@ code companions on the NVIDIA stack, a practice exam, a glossary, and a hands-on
 Content is verified against the live NVIDIA documentation (NeMo Agent Toolkit **v1.7**, current
 NIM / NeMo / Nemotron 3 model lineup) and the broader agentic-AI landscape as of mid-2026.
 
-> **Open it:** double-click `visuals/index.html`, or visit the deployed site (see the repo's About link).
+> **Live site:** **[nvidia-agentic-ai-stack-ncp-aai.vercel.app](https://nvidia-agentic-ai-stack-ncp-aai.vercel.app/)**
+> — or run it locally (double-click `visuals/index.html`).
 
 ---
 
