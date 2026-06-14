@@ -49,16 +49,13 @@
   };
 
   function buildChrome() {
-    /* move any page-authored toggle into a control cluster, add menu button */
-    var cluster = document.createElement('div');
-    cluster.className = 'site-controls';
-
+    /* menu button -> top-left; theme toggle -> top-right (positioned by theme.css) */
     var menuBtn = document.createElement('button');
     menuBtn.className = 'site-menu-btn';
     menuBtn.textContent = '☰';
     menuBtn.title = 'Site menu';
     menuBtn.setAttribute('aria-label', 'Open site menu');
-    cluster.appendChild(menuBtn);
+    document.body.appendChild(menuBtn);
 
     var toggle = document.querySelector('.theme-toggle');
     if (!toggle) {
@@ -66,11 +63,8 @@
       toggle.className = 'theme-toggle';
       toggle.setAttribute('onclick', 'toggleTheme()');
       toggle.title = 'Toggle light/dark mode';
-    } else if (toggle.parentNode) {
-      toggle.parentNode.removeChild(toggle);
     }
-    cluster.appendChild(toggle);
-    document.body.appendChild(cluster);
+    document.body.appendChild(toggle);   /* moves a page-authored toggle to be a direct body child */
 
     /* slide-over menu */
     var overlay = document.createElement('div');

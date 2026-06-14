@@ -101,18 +101,12 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
-/* floating control cluster (menu + theme toggle) — injected on every page.
-   Pinned BOTTOM-right so it never overlaps the sticky section-nav / header bar
-   that each page renders across the top. */
-.site-controls {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  top: auto;
-  z-index: 900;
-  display: flex;
-  gap: 8px;
-}
+/* floating controls — injected on every page. Menu (☰) top-LEFT, theme
+   toggle (☀/🌙) top-RIGHT. On viewports that still show the top section-nav
+   (<1200px) the nav reserves left/right room so its tabs don't hide under them. */
+.site-menu-btn { position: fixed; top: 10px; left: 12px; z-index: 900; }
+.theme-toggle  { position: fixed; top: 10px; right: 12px; z-index: 900; }
+nav.section-nav { padding-left: 56px; padding-right: 56px; }
 .theme-toggle, .site-menu-btn {
   width: 38px;
   height: 38px;
@@ -145,14 +139,14 @@ body {
 .site-menu {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   z-index: 960;
   width: min(320px, 88vw);
   background: var(--panel);
-  border-left: 1px solid var(--line);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, .3);
-  transform: translateX(105%);
+  border-right: 1px solid var(--line);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, .3);
+  transform: translateX(-105%);
   transition: transform .22s ease;
   overflow-y: auto;
   padding: 18px 0 28px;
